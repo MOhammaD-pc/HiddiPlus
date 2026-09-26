@@ -934,10 +934,10 @@ function testLiveVmessOutput() {
                     <div class="row g-3">
                         <!-- دکمه کلاسیک -->
                         <div class="col-md-6 col-sm-6">
-                            <label class="brand-style-card w-100 p-3 rounded-3 border cursor-pointer position-relative {% if store_branding_config.button_style == 'classic' or not store_branding_config.button_style %}border-primary shadow-sm bg-white active-style{% else %}bg-light opacity-75{% endif %}" style="transition: all 0.2s; cursor: pointer; user-select: none;" for="btnStyleClassic">
+                            <label class="brand-style-card w-100 p-3 rounded-3 border cursor-pointer position-relative {% if branding.get('button_style') == 'classic' or not branding.get('button_style') %}border-primary shadow-sm bg-white active-style{% else %}bg-light opacity-75{% endif %}" style="transition: all 0.2s; cursor: pointer; user-select: none;" for="btnStyleClassic">
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <div class="form-check m-0">
-                                        <input class="form-check-input" type="radio" name="button_style" value="classic" id="btnStyleClassic" {% if store_branding_config.button_style == 'classic' or not store_branding_config.button_style %}checked{% endif %}>
+                                        <input class="form-check-input" type="radio" name="button_style" value="classic" id="btnStyleClassic" {% if branding.get('button_style') == 'classic' or not branding.get('button_style') %}checked{% endif %}>
                                         <span class="fw-bold small ms-1">کلاسیک (پیش‌فرض)</span>
                                     </div>
                                     <span class="badge bg-primary-subtle text-primary" style="font-size: 0.65rem;">ساده</span>
@@ -950,10 +950,10 @@ function testLiveVmessOutput() {
 
                         <!-- دکمه لیکویید گلس (Liquid Glass) -->
                         <div class="col-md-6 col-sm-6">
-                            <label class="brand-style-card w-100 p-3 rounded-3 border cursor-pointer position-relative {% if store_branding_config.button_style == 'liquid_glass' %}border-primary shadow-sm bg-white active-style{% else %}bg-light opacity-75{% endif %}" style="transition: all 0.2s; cursor: pointer; user-select: none;" for="btnStyleLiquid">
+                            <label class="brand-style-card w-100 p-3 rounded-3 border cursor-pointer position-relative {% if branding.get('button_style') == 'liquid_glass' %}border-primary shadow-sm bg-white active-style{% else %}bg-light opacity-75{% endif %}" style="transition: all 0.2s; cursor: pointer; user-select: none;" for="btnStyleLiquid">
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <div class="form-check m-0">
-                                        <input class="form-check-input" type="radio" name="button_style" value="liquid_glass" id="btnStyleLiquid" {% if store_branding_config.button_style == 'liquid_glass' %}checked{% endif %}>
+                                        <input class="form-check-input" type="radio" name="button_style" value="liquid_glass" id="btnStyleLiquid" {% if branding.get('button_style') == 'liquid_glass' %}checked{% endif %}>
                                         <span class="fw-bold small ms-1">لیکویید گلس اپل (کپسولی)</span>
                                     </div>
                                     <span class="badge bg-info-subtle text-info" style="font-size: 0.65rem;">شیشه‌ای</span>

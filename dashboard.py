@@ -3945,6 +3945,8 @@ def inject_global_branding():
             "tutorial_domain": admin_tutorial_domain
         }
 
+    branding["button_style"] = db.get_setting("button_style", "classic")
+
     reseller_has_credit = False
     reseller_available_credit = 0
     reseller_credit_limit = 0

@@ -2405,7 +2405,7 @@
             color: #60a5fa !important;
         }
     
-{% if store_branding_config.button_style == 'liquid_glass' %}
+{% if branding and branding.get('button_style') == 'liquid_glass' %}
 /* --- Apple Liquid Glass Buttons and Badges --- */
 .btn, .badge {
     backdrop-filter: blur(12px) saturate(180%) !important;
