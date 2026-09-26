@@ -921,6 +921,53 @@ function testLiveVmessOutput() {
                     </div>
                 </div>
 
+                
+
+                <!-- ۲.۵. استایل دکمه‌ها (Button Style) -->
+                <div class="col-12 mt-4 mb-4">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <div class="p-2 bg-info bg-opacity-10 rounded text-info"><i class="fas fa-shapes fs-5"></i></div>
+                        <h6 class="mb-0 fw-bold">استایل دکمه‌های پنل</h6>
+                    </div>
+                    <p class="text-muted small mb-3">از بین دو مدل زیر استایل دکمه‌های سراسر پنل را انتخاب کنید:</p>
+                    
+                    <div class="row g-3">
+                        <!-- دکمه کلاسیک -->
+                        <div class="col-md-6 col-sm-6">
+                            <label class="brand-style-card w-100 p-3 rounded-3 border cursor-pointer position-relative {% if store_branding_config.button_style == 'classic' or not store_branding_config.button_style %}border-primary shadow-sm bg-white active-style{% else %}bg-light opacity-75{% endif %}" style="transition: all 0.2s; cursor: pointer; user-select: none;" for="btnStyleClassic">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="form-check m-0">
+                                        <input class="form-check-input" type="radio" name="button_style" value="classic" id="btnStyleClassic" {% if store_branding_config.button_style == 'classic' or not store_branding_config.button_style %}checked{% endif %}>
+                                        <span class="fw-bold small ms-1">کلاسیک (پیش‌فرض)</span>
+                                    </div>
+                                    <span class="badge bg-primary-subtle text-primary" style="font-size: 0.65rem;">ساده</span>
+                                </div>
+                                <div class="text-center p-3">
+                                    <button type="button" class="btn btn-primary" style="pointer-events: none;">نمونه دکمه</button>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- دکمه لیکویید گلس (Liquid Glass) -->
+                        <div class="col-md-6 col-sm-6">
+                            <label class="brand-style-card w-100 p-3 rounded-3 border cursor-pointer position-relative {% if store_branding_config.button_style == 'liquid_glass' %}border-primary shadow-sm bg-white active-style{% else %}bg-light opacity-75{% endif %}" style="transition: all 0.2s; cursor: pointer; user-select: none;" for="btnStyleLiquid">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="form-check m-0">
+                                        <input class="form-check-input" type="radio" name="button_style" value="liquid_glass" id="btnStyleLiquid" {% if store_branding_config.button_style == 'liquid_glass' %}checked{% endif %}>
+                                        <span class="fw-bold small ms-1">لیکویید گلس اپل (کپسولی)</span>
+                                    </div>
+                                    <span class="badge bg-info-subtle text-info" style="font-size: 0.65rem;">شیشه‌ای</span>
+                                </div>
+                                <div class="text-center p-3">
+                                    <button type="button" class="btn btn-primary" style="pointer-events: none; backdrop-filter: blur(12px) saturate(180%); -webkit-backdrop-filter: blur(12px) saturate(180%); background-color: rgba(10, 132, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2); border-radius: 50rem;">نمونه کپسولی</button>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr class="my-4 text-muted">
+                
                 <!-- ۳. نحوه تعیین نسخه پنل -->
                 <div class="col-md-12">
                     <div class="p-3 border rounded-3 bg-light">

@@ -14637,6 +14637,7 @@ def settings():
             db.save_setting("store_favicon", store_favicon_url)
             db.save_setting("favicon_url", store_favicon_url)
             db.save_setting("brand_header_style", brand_header_style)
+            db.save_setting("button_style", request.form.get("button_style", "classic").strip())
             if "version_icon_type" in request.form:
                 db.save_setting("version_icon_type", request.form.get("version_icon_type").strip())
             if "version_custom_icon" in request.form or request.form.get("clear_version_custom_icon") or ("version_icon_file" in request.files and request.files["version_icon_file"].filename):
@@ -14892,7 +14893,8 @@ def settings():
         "brand_header_style": db.get_setting("brand_header_style", "style_glass"),
         "version_icon_type": db.get_setting("version_icon_type", "branch"),
         "version_custom_icon": db.get_setting("version_custom_icon", ""),
-        "current_active_version": get_store_version()
+        "current_active_version": get_store_version(),
+        "button_style": db.get_setting("button_style", "classic")
     }
     customer_portal_config = {
         "portal_proxy_path": get_portal_proxy_path(),
