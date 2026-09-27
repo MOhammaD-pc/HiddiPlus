@@ -9975,7 +9975,7 @@ async def admin_backup_menu_handler(update: Update, context: ContextTypes.DEFAUL
     text = (
         "💾 <b>مرکز مدیریت پشتیبان‌گیری و بازیابی اطلاعات</b>\n\n"
         "در این بخش می‌توانید از کل داده‌ها و تنظیمات سیستم پشتیبان تهیه نمایید "
-        "یا فایل پشتیبان قبلی (با پسوند <code>.zip</code> یا <code>.db</code>) را با امنیت بالا بازیابی کنید.\n\n"
+        "یا فایل پشتیبان قبلی (با پسوند <code>.zip</code>، <code>.db</code> یا <code>.json</code>) را با امنیت بالا بازیابی کنید.\n\n"
         "📊 <b>وضعیت کنونی سامانه:</b>\n"
         f"• 👥 کل مشتریان: <code>{metrics.get('total_subscriptions', 0):,}</code> "
         f"(فعال: <code>{metrics.get('active_subscriptions', 0):,}</code>)\n"
@@ -9990,7 +9990,7 @@ async def admin_backup_menu_handler(update: Update, context: ContextTypes.DEFAUL
 
     keyboard = [
         [InlineKeyboardButton("⚡ تهیه فوری پشتیبان (اصلی + هیدیفای)", callback_data="adm_instant_backup")],
-        [InlineKeyboardButton("📥 بازیابی فایل پشتیبان (Zip / DB)", callback_data="admin_restore")],
+        [InlineKeyboardButton("📥 بازیابی فایل پشتیبان (Zip / DB / JSON)", callback_data="admin_restore")],
         [InlineKeyboardButton("📂 تاریخچه فایل‌های پشتیبان سرور", callback_data="adm_backup_history")],
         [InlineKeyboardButton("🔙 بازگشت به منوی مدیریت", callback_data="adm_adv_menu")],
     ]
@@ -10059,8 +10059,8 @@ async def admin_restore_handler(update: Update, context: ContextTypes.DEFAULT_TY
     text = (
         "🔄 <b>بازیابی پشتیبان پایگاه داده</b>\n\n"
         "⚠️ <b>نکات مهم قبل از بازیابی:</b>\n"
-        "• فایل فشرده پشتیبان (<code>.zip</code>) یا فایل مستقیم دیتابیس (<code>.db</code>) را ارسال فرمایید.\n"
-        "• فایل ارسالی ابتدا اعتبارسنجی شده (بررسی سلامت SQLite) و سپس اعمال می‌گردد.\n"
+        "• فایل فشرده پشتیبان (<code>.zip</code>) یا فایل پایگاه داده (<code>.db</code> / <code>.json</code>) را ارسال فرمایید.\n"
+        "• فایل ارسالی ابتدا اعتبارسنجی شده و سپس با حفظ امنیت اعمال می‌گردد.\n"
         "• یک فایل پشتیبان امنیتی خودکار از اطلاعات جاری قبل از جایگزینی ذخیره می‌شود.\n"
         "• پس از بازیابی، تغییرات ساختاری و همگام‌سازی به صورت خودکار اعمال می‌گردد.\n\n"
         "📎 لطفاً فایل پشتیبان را به صورت سند (Document) در همین چت ارسال نمایید:"
@@ -10093,16 +10093,16 @@ async def handle_restore_file(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     document = update.message.document
     if not document:
-        await update.message.reply_text("❌ لطفاً فایل پشتیبان (.zip یا .db) را ارسال کنید.")
+        await update.message.reply_text("❌ لطفاً فایل پشتیبان (.zip، .db یا .json) را ارسال کنید.")
         return ADMIN_RESTORE_FILE
 
     # بررسی پسوند فایل
     fname = (document.file_name or "").lower()
-    valid_exts = ('.db', '.zip', '.sqlite', '.sqlite3')
+    valid_exts = ('.db', '.zip', '.sqlite', '.sqlite3', '.json')
     if not any(fname.endswith(ext) for ext in valid_exts):
         await update.message.reply_text(
             "❌ <b>فرمت فایل نامعتبر است!</b>\n\n"
-            "فقط فایل‌های پشتیبان معتبر با پسوند <code>.zip</code> یا <code>.db</code> پذیرفته می‌شوند.",
+            "فقط فایل‌های پشتیبان معتبر با پسوند <code>.zip</code>، <code>.db</code> یا <code>.json</code> پذیرفته می‌شوند.",
             parse_mode="HTML"
         )
         return ADMIN_RESTORE_FILE
@@ -10114,7 +10114,7 @@ async def handle_restore_file(update: Update, context: ContextTypes.DEFAULT_TYPE
         file = await document.get_file()
         file_ext = Path(document.file_name).suffix.lower() if document.file_name else ".db"
         if file_ext not in valid_exts:
-            file_ext = ".db"
+            file_ext = ".zip" if fname.endswith(".zip") else ".db"
         backup_path = BACKUP_DIR / f"restore_{get_now_naive().strftime('%Y%m%d_%H%M%S')}{file_ext}"
         backup_path.parent.mkdir(parents=True, exist_ok=True)
         await file.download_to_drive(str(backup_path))
@@ -10122,7 +10122,7 @@ async def handle_restore_file(update: Update, context: ContextTypes.DEFAULT_TYPE
         await status_msg.edit_text("⏳ فایل دریافت شد. در حال اعتبارسنجی و بازیابی پایگاه داده...")
 
         # بازیابی امن در پس‌زمینه
-        backup_mgr = BackupManager()
+        backup_mgr = BackupManager(db_instance=db)
         result = await asyncio.to_thread(backup_mgr.restore_backup, str(backup_path))
 
         if result.get("success"):

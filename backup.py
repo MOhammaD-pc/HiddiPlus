@@ -202,7 +202,11 @@ class BackupManager:
             if not backup_path.exists():
                 return {"success": False, "error": "فایل پشتیبان انتخاب‌شده یافت نشد."}
 
-            # در صورتی که فایل ارسالی zip باشد، ابتدا فایل .db را استخراج می‌کنیم
+            # در صورت ارسال فایل مستقیم JSON
+            if backup_path.suffix.lower() == ".json":
+                return self.db.restore_from_file(backup_path)
+
+            # در صورتی که فایل ارسالی zip باشد
             actual_db_file = backup_path
             temp_extracted = None
             is_zip = False
@@ -213,9 +217,18 @@ class BackupManager:
 
             if is_zip:
                 with zipfile.ZipFile(backup_path, "r") as zf:
-                    db_names = [n for n in zf.namelist() if n.endswith(".db") or n.endswith(".sqlite") or n.endswith(".sqlite3")]
+                    valid_names = [
+                        n for n in zf.namelist()
+                        if not n.startswith("__MACOSX") and not Path(n).name.startswith("._") and not n.endswith("/")
+                    ]
+                    db_names = [n for n in valid_names if n.lower().endswith((".db", ".sqlite", ".sqlite3"))]
                     if not db_names:
-                        return {"success": False, "error": "هیچ فایل دیتابیسی (.db) درون این فایل فشرده یافت نشد."}
+                        # بررسی وجود فایل JSON ساختار داده
+                        json_names = [n for n in valid_names if n.lower().endswith(".json")]
+                        if json_names:
+                            return self.db.restore_from_file(backup_path)
+                        return {"success": False, "error": "هیچ فایل دیتابیسی (.db) یا داده ساختاریافته (.json) درون این فایل فشرده یافت نشد."}
+
                     target_name = db_names[0]
                     temp_extracted = BACKUP_DIR / f"extracted_{Path(target_name).name}"
                     with open(temp_extracted, "wb") as f_out:

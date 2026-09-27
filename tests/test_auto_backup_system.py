@@ -320,6 +320,66 @@ class TestAutoBackupSystem(unittest.TestCase):
         except Exception:
             pass
 
+    def test_restore_from_file_zip_and_json(self):
+        """تست اختصاصی متد db.restore_from_file برای فایل زیپ دیتابیس، فایل زیپ جیسون و فایل مستقیم جیسون"""
+        # ۱. تست بازیابی فایل زیپ حاوی دیتابیس با db.restore_from_file
+        bm = BackupManager(db_instance=self.db)
+        conn = self.db.get_connection()
+        c = conn.cursor()
+        c.execute("INSERT INTO users (telegram_id, username, created_at, updated_at) VALUES (77777, 'zip_db_user', '2026-09-22', '2026-09-22')")
+        conn.commit()
+        conn.close()
+
+        zip_backup = bm.create_database_backup(compress=True)
+        self.assertTrue(zip_backup["success"])
+        zip_file = Path(zip_backup["file"])
+
+        # تغییر داده
+        conn = self.db.get_connection()
+        c = conn.cursor()
+        c.execute("DELETE FROM users WHERE telegram_id = 77777")
+        conn.commit()
+        conn.close()
+
+        # بازیابی از طریق db.restore_from_file
+        res_file = self.db.restore_from_file(zip_file)
+        self.assertTrue(res_file["success"])
+        self.assertEqual(res_file["type"], "sqlite_zip")
+
+        users = self.db.get_all_users()
+        self.assertTrue(any(u["telegram_id"] == 77777 for u in users))
+
+        # ۲. تست فایل زیپ حاوی داده ساختاریافته JSON
+        test_json_data = {
+            "version": "2.0",
+            "tables": {
+                "users": [
+                    {"telegram_id": 66666, "username": "json_zip_user", "created_at": "2026-09-22", "updated_at": "2026-09-22"}
+                ]
+            }
+        }
+        json_zip_path = zip_file.parent / "test_json_backup.zip"
+        with zipfile.ZipFile(json_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("backup_data.json", json.dumps(test_json_data))
+
+        res_json_zip = self.db.restore_from_file(json_zip_path)
+        self.assertTrue(res_json_zip["success"])
+        self.assertEqual(res_json_zip["type"], "json_zip")
+
+        users_after_json = self.db.get_all_users()
+        self.assertTrue(any(u["telegram_id"] == 66666 for u in users_after_json))
+
+        # ۳. تست BackupManager با فایل زیپ جیسون
+        res_bm_json_zip = bm.restore_backup(json_zip_path)
+        self.assertTrue(res_bm_json_zip["success"])
+
+        # پاک‌سازی
+        try:
+            zip_file.unlink(missing_ok=True)
+            json_zip_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+
 
 if __name__ == "__main__":
     unittest.main()

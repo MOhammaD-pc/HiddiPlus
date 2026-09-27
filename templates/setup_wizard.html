@@ -39,11 +39,11 @@
                             <i class="fas fa-globe text-primary"></i>
                             <span id="currentLangLabel">🇮🇷 فارسی</span>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 py-1" aria-labelledby="langDropdown" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1) !important; min-width: 160px;">
-                            <li><a class="dropdown-item text-light d-flex align-items-center gap-2 py-2" href="javascript:void(0)" onclick="changeSetupLanguage('fa')"><span>🇮🇷</span> <span>فارسی</span></a></li>
-                            <li><a class="dropdown-item text-light d-flex align-items-center gap-2 py-2" href="javascript:void(0)" onclick="changeSetupLanguage('en')"><span>🇬🇧</span> <span>English</span></a></li>
-                            <li><a class="dropdown-item text-light d-flex align-items-center gap-2 py-2" href="javascript:void(0)" onclick="changeSetupLanguage('ru')"><span>🇷🇺</span> <span>Русский</span></a></li>
-                            <li><a class="dropdown-item text-light d-flex align-items-center gap-2 py-2" href="javascript:void(0)" onclick="changeSetupLanguage('zh')"><span>🇨🇳</span> <span>中文</span></a></li>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 py-1" id="setupLangMenu" aria-labelledby="langDropdown" style="min-width: 170px;">
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" data-lang="fa" href="javascript:void(0)" onclick="changeSetupLanguage('fa')"><span>🇮🇷</span> <span>فارسی</span></a></li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" data-lang="en" href="javascript:void(0)" onclick="changeSetupLanguage('en')"><span>🇬🇧</span> <span>English</span></a></li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" data-lang="ru" href="javascript:void(0)" onclick="changeSetupLanguage('ru')"><span>🇷🇺</span> <span>Русский</span></a></li>
+                            <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" data-lang="zh" href="javascript:void(0)" onclick="changeSetupLanguage('zh')"><span>🇨🇳</span> <span>中文</span></a></li>
                         </ul>
                     </div>
                 </div>
@@ -74,7 +74,7 @@
                     <li class="nav-item" role="presentation">
                         <button class="nav-link py-3 fw-bold rounded-2 d-flex align-items-center justify-content-center gap-2" id="restore-tab" data-bs-toggle="tab" data-bs-target="#restore-pane" type="button" role="tab">
                             <i class="fas fa-cloud-arrow-up text-success"></i>
-                            <span data-i18n="tab_restore">بازیابی از فایل پشتیبان (.json / .db)</span>
+                            <span data-i18n="tab_restore">بازیابی از فایل پشتیبان (.zip / .db / .json)</span>
                         </button>
                     </li>
                 </ul>
@@ -213,10 +213,10 @@
                                 <i class="fas fa-file-shield text-primary" style="font-size: 3rem;"></i>
                             </div>
                             <h5 class="fw-bold mb-2" data-i18n="restore_heading">فایل پشتیبان کامل سیستم را انتخاب کنید</h5>
-                            <p class="text-muted small mb-3" data-i18n="restore_sub">پشتیبانی از هر دو فرمت استاندارد .json و دیتابیس .db یا .sqlite</p>
+                            <p class="text-muted small mb-3" data-i18n="restore_sub">پشتیبانی از فرمت فشرده .zip، دیتابیس .db / .sqlite و استاندارد .json</p>
                             
                             <div class="col-md-8 mx-auto mb-3">
-                                <input type="file" name="backup_file" class="form-control form-control-dark py-2" accept=".json,.db,.sqlite,.sqlite3" required>
+                                <input type="file" name="backup_file" class="form-control form-control-dark py-2" accept=".zip,.db,.sqlite,.sqlite3,.json" required>
                             </div>
 
                             <div class="alert alert-info py-2 px-3 small d-inline-flex align-items-center gap-2 rounded-3 text-start">
@@ -250,7 +250,7 @@
     background-color: rgba(15, 23, 42, 0.7) !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     color: #f8fafc !important;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 10px 14px;
 }
 .form-control-dark:focus {
@@ -261,13 +261,108 @@
 .form-control-dark::placeholder {
     color: #64748b !important;
 }
-.nav-pills .nav-link {
-    color: #94a3b8;
-    transition: all 0.2s ease;
+
+/* ─── استایل منوی انتخاب زبان با شیشه مات تاریک و کنتراست ۱۰۰٪ ─── */
+#setupLangMenu {
+    background: #0f172a !important;
+    background-color: rgba(15, 23, 42, 0.96) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+    border-radius: 14px !important;
+    padding: 6px !important;
 }
-.nav-pills .nav-link.active {
-    background-color: #6366f1 !important;
+#setupLangMenu .dropdown-item {
+    color: #f1f5f9 !important;
+    font-size: 0.86rem !important;
+    font-weight: 500 !important;
+    padding: 8px 14px !important;
+    border-radius: 10px !important;
+    transition: all 0.18s ease-in-out !important;
+    background: transparent !important;
+}
+#setupLangMenu .dropdown-item:hover,
+#setupLangMenu .dropdown-item:focus {
+    background: rgba(99, 102, 241, 0.25) !important;
     color: #ffffff !important;
+    transform: translateX(0) !important;
+}
+#setupLangMenu .dropdown-item.active-lang {
+    background: rgba(99, 102, 241, 0.45) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+/* ─── استایل پیش‌فرض دکمه‌ها و تب‌های لیکویید گلس (Apple Liquid Glass) ─── */
+#wizardRoot .btn,
+#wizardRoot .nav-pills .nav-link {
+    backdrop-filter: blur(14px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(190%) !important;
+    transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+#wizardRoot .btn-primary {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.9), rgba(79, 70, 229, 0.98)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 8px 24px -4px rgba(99, 102, 241, 0.55), inset 0 1px 1.5px rgba(255, 255, 255, 0.45), inset 0 -2px 4px rgba(0, 0, 0, 0.2) !important;
+    color: #ffffff !important;
+    border-radius: 14px !important;
+}
+#wizardRoot .btn-primary:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 1), rgba(79, 70, 229, 1)) !important;
+    box-shadow: 0 12px 30px -4px rgba(99, 102, 241, 0.7), inset 0 1px 1.5px rgba(255, 255, 255, 0.6) !important;
+    transform: translateY(-2px);
+}
+#wizardRoot .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4) !important;
+}
+
+#wizardRoot .btn-success {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.98)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 8px 24px -4px rgba(16, 185, 129, 0.55), inset 0 1px 1.5px rgba(255, 255, 255, 0.45), inset 0 -2px 4px rgba(0, 0, 0, 0.2) !important;
+    color: #ffffff !important;
+    border-radius: 14px !important;
+}
+#wizardRoot .btn-success:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 1), rgba(5, 150, 105, 1)) !important;
+    box-shadow: 0 12px 30px -4px rgba(16, 185, 129, 0.7), inset 0 1px 1.5px rgba(255, 255, 255, 0.6) !important;
+    transform: translateY(-2px);
+}
+#wizardRoot .btn-success:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+}
+
+#wizardRoot #langDropdown {
+    background: rgba(15, 23, 42, 0.85) !important;
+    backdrop-filter: blur(12px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.25) !important;
+}
+#wizardRoot #langDropdown:hover {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border-color: rgba(99, 102, 241, 0.5) !important;
+}
+
+#setupTab .nav-link {
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+}
+#setupTab .nav-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f1f5f9;
+}
+#setupTab .nav-link.active {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.85), rgba(79, 70, 229, 0.95)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4), inset 0 1px 1.5px rgba(255, 255, 255, 0.35) !important;
 }
 
 /* RTL / LTR Helpers */
@@ -306,7 +401,7 @@ const I18N_TEXTS = {
         header_subtitle: "راه‌اندازی امن و داینامیک بدون نیاز به ری‌استارت سرور | سازگار با Railway، سرور اختصاصی و لینوکس",
         force_notice: "حالت تنظیم مجدد: اطلاعات ثبت شده جایگزین مقادیر فعلی سیستم خواهند شد.",
         tab_wizard: "راه‌اندازی گام‌به‌گام (پیشنهادی)",
-        tab_restore: "بازیابی از فایل پشتیبان (.json / .db)",
+        tab_restore: "بازیابی از فایل پشتیبان (.zip / .db / .json)",
         sec1_title: "۱. حساب کاربری مدیر ارشد (Super Admin)",
         admin_name_label: "نام نمایشی مدیر:",
         admin_tid_label: "آیدی عددی تلگرام مدیر (جهت دسترسی ربات):",
@@ -338,7 +433,7 @@ const I18N_TEXTS = {
         ssl_check_desc: "تلاش متوالی برای دریافت گواهی رسمی از Let's Encrypt و ZeroSSL؛ در صورت عدم اتصال مستقیم از گواهی امن داخلی با پشتیبانی Cloudflare استفاده خواهد شد.",
         submit_btn: "ذخیره و اتمام راه‌اندازی سامانه",
         restore_heading: "فایل پشتیبان کامل سیستم را انتخاب کنید",
-        restore_sub: "پشتیبانی از هر دو فرمت استاندارد .json و دیتابیس .db یا .sqlite",
+        restore_sub: "پشتیبانی از فرمت فشرده .zip، دیتابیس .db / .sqlite و استاندارد .json",
         restore_alert: "با آپلود این فایل، تمامی کاربران، اشتراک‌ها، تراکنش‌ها، کارت‌های بانکی، تنظیمات و مدیران فوراً بازگردانی خواهند شد.",
         restore_btn: "آپلود و بازیابی اطلاعات سامانه",
         restore_confirm: "آیا از بازگردانی این فایل اطمینان دارید؟ اطلاعات دیتابیس جایگزین خواهند شد.",
@@ -352,7 +447,7 @@ const I18N_TEXTS = {
         header_subtitle: "Secure & dynamic setup without server restart | Compatible with Railway, VPS & Linux",
         force_notice: "Reset mode: Entered information will overwrite existing system settings.",
         tab_wizard: "Step-by-Step Setup (Recommended)",
-        tab_restore: "Restore from Backup (.json / .db)",
+        tab_restore: "Restore from Backup (.zip / .db / .json)",
         sec1_title: "1. Super Admin Account",
         admin_name_label: "Admin Display Name:",
         admin_tid_label: "Admin Telegram ID (for bot access):",
@@ -384,7 +479,7 @@ const I18N_TEXTS = {
         ssl_check_desc: "Attempts certificate issuance via Let's Encrypt / ZeroSSL; falls back to internal SSL with Cloudflare support.",
         submit_btn: "Save & Complete Setup",
         restore_heading: "Select Full System Backup File",
-        restore_sub: "Supports both standard .json and database .db / .sqlite formats",
+        restore_sub: "Supports compressed .zip archives, database files (.db / .sqlite), and standard .json",
         restore_alert: "Uploading this file will immediately restore all users, subscriptions, transactions, cards, settings, and admins.",
         restore_btn: "Upload & Restore System Data",
         restore_confirm: "Are you sure you want to restore this file? Database information will be overwritten.",
@@ -398,7 +493,7 @@ const I18N_TEXTS = {
         header_subtitle: "Безопасная динамическая настройка без перезагрузки | Совместимо с Railway, VPS и Linux",
         force_notice: "Режим сброса: Введенные данные заменят текущие системные настройки.",
         tab_wizard: "Пошаговая настройка (Рекомендуется)",
-        tab_restore: "Восстановление из бэкапа (.json / .db)",
+        tab_restore: "Восстановление из бэкапа (.zip / .db / .json)",
         sec1_title: "1. Учетная запись главного администратора (Super Admin)",
         admin_name_label: "Отображаемое имя администратора:",
         admin_tid_label: "Telegram ID администратора (для доступа к боту):",
@@ -424,13 +519,13 @@ const I18N_TEXTS = {
         custom_domain_label: "Пользовательский домен для панели (необязательно):",
         custom_domain_placeholder: "например: bot.yourdomain.com",
         custom_domain_desc: "Введите домен без https:// (для прямого SSL-соединения).",
-        panel_port_label: "Порт веб-панели (необязательно):",
+        panel_port_label: "Порت веб-панели (необязательно):",
         panel_port_desc: "По умолчанию: 5000 (во избежание конфликтов с другими службами).",
         ssl_check_label: "Автоматический бесплатный выпуск SSL-сертификата",
         ssl_check_desc: "Попытка выпустить сертификат через Let's Encrypt / ZeroSSL; при сбое используется внутренний SSL с поддержкой Cloudflare.",
         submit_btn: "Сохранить и завершить настройку",
         restore_heading: "Выберите файл полной резервной копии системы",
-        restore_sub: "Поддерживаются оба формата: .json и база данных .db / .sqlite",
+        restore_sub: "Поддержка сжатых .zip архивов, баз данных (.db / .sqlite) и формата .json",
         restore_alert: "При загрузке этого файла все пользователи, подписки, транзакции, карты, настройки и администраторы будут мгновенно восстановлены.",
         restore_btn: "Загрузить и восстановить данные системы",
         restore_confirm: "Вы уверены, что хотите восстановить этот файл? Данные в базе будут перезаписаны.",
@@ -444,7 +539,7 @@ const I18N_TEXTS = {
         header_subtitle: "安全动态配置，无需重启服务器 | 兼容 Railway、独立服务器和 Linux",
         force_notice: "重置模式：输入的信息将覆盖现有系统设置。",
         tab_wizard: "逐步配置（推荐）",
-        tab_restore: "从备份恢复 (.json / .db)",
+        tab_restore: "从备份恢复 (.zip / .db / .json)",
         sec1_title: "1. 超级管理员账户 (Super Admin)",
         admin_name_label: "管理员显示名称:",
         admin_tid_label: "管理员 Telegram 数字 ID（用于机器人访问）:",
@@ -476,7 +571,7 @@ const I18N_TEXTS = {
         ssl_check_desc: "尝试通过 Let's Encrypt / ZeroSSL 签发证书；若未直接连接，则使用兼容 Cloudflare 的内置证书。",
         submit_btn: "保存并完成系统配置",
         restore_heading: "选择完整的系统备份文件",
-        restore_sub: "支持标准 .json 及数据库 .db / .sqlite 格式",
+        restore_sub: "支持压缩包 .zip、数据库文件（.db / .sqlite）及标准 .json 格式",
         restore_alert: "上传此文件后，所有用户、订阅、交易、银行卡、设置及管理员将立即恢复。",
         restore_btn: "上传并恢复系统数据",
         restore_confirm: "您确定要恢复此文件吗？数据库数据将被覆盖。",
@@ -504,6 +599,15 @@ function changeSetupLanguage(lang) {
     
     const labelEl = document.getElementById('currentLangLabel');
     if (labelEl) labelEl.textContent = LANG_LABELS[lang];
+
+    // نشان دادن زبان فعال در منوی کشویی
+    document.querySelectorAll('#setupLangMenu .dropdown-item').forEach(el => {
+        if (el.getAttribute('data-lang') === lang) {
+            el.classList.add('active-lang');
+        } else {
+            el.classList.remove('active-lang');
+        }
+    });
 
     const isRtl = (lang === 'fa');
     document.documentElement.setAttribute('dir', isRtl ? 'rtl' : 'ltr');

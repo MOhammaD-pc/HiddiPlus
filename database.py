@@ -2465,14 +2465,133 @@ class Database:
             logger.warning(f"Could not sync cards from restored DB: {e_c}")
 
     def restore_from_file(self, file_path: Union[str, Path]) -> dict:
-        """بازیابی جامع دیتابیس از فایل بارگذاری شده (.json یا .db / .sqlite)"""
+        """بازیابی جامع دیتابیس از فایل بارگذاری شده (.zip، .db / .sqlite یا .json)"""
         try:
+            import zipfile
+            import shutil
             path = Path(file_path)
             if not path.exists():
                 return {"success": False, "error": "فایل مورد نظر یافت نشد."}
 
             suffix = path.suffix.lower()
-            if suffix == ".json":
+            is_zip = False
+            try:
+                is_zip = suffix == ".zip" or zipfile.is_zipfile(path)
+            except Exception:
+                is_zip = False
+
+            if is_zip:
+                temp_extract_dir = DB_DIR / f"temp_unzip_{int(time.time())}_{secrets.token_hex(4)}"
+                temp_extract_dir.mkdir(parents=True, exist_ok=True)
+                try:
+                    with zipfile.ZipFile(path, "r") as zf:
+                        all_names = zf.namelist()
+                        valid_names = [
+                            n for n in all_names
+                            if not n.startswith("__MACOSX") and not Path(n).name.startswith("._") and not n.endswith("/")
+                        ]
+                        
+                        # اولویت ۱: جستجوی فایل دیتابیس مستقیم SQLite درون فایل فشرده
+                        db_names = [n for n in valid_names if n.lower().endswith((".db", ".sqlite", ".sqlite3"))]
+                        if db_names:
+                            target_db_name = db_names[0]
+                            extracted_db = temp_extract_dir / Path(target_db_name).name
+                            with open(extracted_db, "wb") as f_out:
+                                f_out.write(zf.read(target_db_name))
+                            
+                            # اعتبارسنجی یکپارچگی دیتابیس استخراج‌شده
+                            try:
+                                test_conn = sqlite3.connect(f"file:{extracted_db.resolve()}?mode=ro", uri=True)
+                                test_cur = test_conn.cursor()
+                                test_cur.execute("PRAGMA integrity_check")
+                                row = test_cur.fetchone()
+                                test_conn.close()
+                                if not row or row[0] != "ok":
+                                    return {"success": False, "error": f"دیتابیس موجود در فایل فشرده معتبر نیست (integrity_check: {row})."}
+                            except Exception as e_check:
+                                return {"success": False, "error": f"خطا در اعتبارسنجی دیتابیس استخراج شده: {e_check}"}
+                            
+                            # پشتیبان امنیتی از دیتابیس فعلی قبل از جایگزینی
+                            current_backup = DB_DIR / f"pre_restore_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+                            target_db_path = Path(self.db_path)
+                            if target_db_path.exists():
+                                try:
+                                    conn_pre = sqlite3.connect(str(target_db_path))
+                                    conn_pre.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                                    conn_pre.close()
+                                except Exception:
+                                    pass
+                                shutil.copy2(target_db_path, current_backup)
+                            
+                            # پاک‌سازی فایل‌های جانبی WAL و SHM
+                            for extra_suffix in ("-wal", "-shm"):
+                                wal_extra = target_db_path.with_name(target_db_path.name + extra_suffix)
+                                if wal_extra.exists():
+                                    try:
+                                        wal_extra.unlink()
+                                    except Exception:
+                                        pass
+                            
+                            shutil.copy2(extracted_db, target_db_path)
+                            self.migrate_add_columns()
+                            self.save_setting("setup_completed", "1")
+                            self.sync_configs_from_settings()
+                            return {
+                                "success": True,
+                                "type": "sqlite_zip",
+                                "file": str(self.db_path),
+                                "extracted_file": Path(target_db_name).name,
+                                "message": f"دیتابیس با موفقیت از فایل فشرده ({Path(target_db_name).name}) بازیابی شد."
+                            }
+                        
+                        # اولویت ۲: جستجوی فایل بکاپ JSON حاوی ساختار جداول
+                        json_names = [n for n in valid_names if n.lower().endswith(".json") and not Path(n).name.lower().startswith("backup_metadata")]
+                        if not json_names:
+                            json_names = [n for n in valid_names if n.lower().endswith(".json")]
+
+                        for jname in json_names:
+                            try:
+                                raw_json = zf.read(jname).decode("utf-8")
+                                bdata = json.loads(raw_json)
+                                if isinstance(bdata, dict) and "tables" in bdata:
+                                    tables_data = bdata.get("tables", {})
+                                    conn = self.get_connection()
+                                    cursor = conn.cursor()
+                                    restored_stats = {}
+                                    for table_name, rows in tables_data.items():
+                                        if not rows:
+                                            continue
+                                        try:
+                                            for row in rows:
+                                                columns = list(row.keys())
+                                                placeholders = ", ".join(["?"] * len(columns))
+                                                col_names = ", ".join(columns)
+                                                values = [row[c] for c in columns]
+                                                cursor.execute(f"INSERT OR REPLACE INTO {table_name} ({col_names}) VALUES ({placeholders})", values)
+                                            restored_stats[table_name] = len(rows)
+                                        except Exception as ex:
+                                            logger.warning(f"Error restoring table {table_name}: {ex}")
+                                    conn.commit()
+                                    conn.close()
+                                    self.migrate_add_columns()
+                                    self.save_setting("setup_completed", "1")
+                                    self.sync_configs_from_settings()
+                                    return {
+                                        "success": True,
+                                        "type": "json_zip",
+                                        "stats": restored_stats,
+                                        "extracted_file": Path(jname).name,
+                                        "message": f"داده‌ها با موفقیت از ساختار JSON درون فایل فشرده ({Path(jname).name}) بازیابی شدند."
+                                    }
+                            except Exception as ex_json:
+                                logger.warning(f"Failed to parse JSON {jname} inside zip: {ex_json}")
+                                continue
+
+                        return {"success": False, "error": "هیچ فایل معتبر پایگاه داده (.db) یا داده ساختاریافته (.json) درون فایل فشرده یافت نشد."}
+                finally:
+                    shutil.rmtree(temp_extract_dir, ignore_errors=True)
+
+            elif suffix == ".json":
                 with open(path, "r", encoding="utf-8") as f:
                     backup_data = json.load(f)
 
@@ -2502,23 +2621,39 @@ class Database:
                 self.migrate_add_columns()
                 self.save_setting("setup_completed", "1")
                 self.sync_configs_from_settings()
-                return {"success": True, "type": "json", "stats": restored_stats}
+                return {"success": True, "type": "json", "stats": restored_stats, "message": "اطلاعات جداول با موفقیت از فایل JSON بازیابی شد."}
 
             elif suffix in [".db", ".sqlite", ".sqlite3"]:
                 import shutil
                 # پشتیبان از دیتابیس فعلی
                 current_backup = DB_DIR / f"pre_restore_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
-                if self.db_path.exists():
-                    shutil.copy2(self.db_path, current_backup)
+                target_db_path = Path(self.db_path)
+                if target_db_path.exists():
+                    try:
+                        conn_pre = sqlite3.connect(str(target_db_path))
+                        conn_pre.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                        conn_pre.close()
+                    except Exception:
+                        pass
+                    shutil.copy2(target_db_path, current_backup)
+
+                # پاک‌سازی فایل‌های جانبی WAL و SHM
+                for extra_suffix in ("-wal", "-shm"):
+                    wal_extra = target_db_path.with_name(target_db_path.name + extra_suffix)
+                    if wal_extra.exists():
+                        try:
+                            wal_extra.unlink()
+                        except Exception:
+                            pass
 
                 # جایگزینی فایل دیتابیس
-                shutil.copy2(path, self.db_path)
+                shutil.copy2(path, target_db_path)
                 self.migrate_add_columns()
                 self.save_setting("setup_completed", "1")
                 self.sync_configs_from_settings()
-                return {"success": True, "type": "sqlite", "file": str(self.db_path)}
+                return {"success": True, "type": "sqlite", "file": str(self.db_path), "message": "پایگاه داده با موفقیت از فایل انتخابی بازیابی شد."}
             else:
-                return {"success": False, "error": "فرمت فایل نامعتبر است. فقط .json یا .db پشتیبانی می‌شود."}
+                return {"success": False, "error": "فرمت فایل نامعتبر است. فقط فایل فشرده (.zip)، پایگاه داده (.db) یا فایل داده (.json) پشتیبانی می‌شود."}
         except Exception as e:
             logger.error(f"Error restoring database from file: {e}")
             return {"success": False, "error": str(e)}
