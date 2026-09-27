@@ -1207,6 +1207,42 @@
             border-color: var(--primary);
         }
 
+        /* ۶. استایل لیکویید گلس اپل برای کارت‌های بسته‌ها (Apple Liquid Glass) */
+        .plan-style-liquid_glass .plan-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.18) !important;
+            border-radius: 20px !important;
+            backdrop-filter: blur(16px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+            box-shadow: 0 8px 30px 0 rgba(0, 0, 0, 0.25), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25) !important;
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        }
+        .plan-style-liquid_glass .plan-card:hover {
+            transform: translateY(-4px) scale(1.015) !important;
+            border-color: rgba(255, 255, 255, 0.45) !important;
+            box-shadow: 0 14px 36px 0 rgba(0, 0, 0, 0.35), inset 0 1px 2px 0 rgba(255, 255, 255, 0.5) !important;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
+        }
+        .plan-style-liquid_glass .plan-card.selected {
+            border-color: rgba(52, 199, 89, 0.7) !important;
+            background: linear-gradient(135deg, rgba(52, 199, 89, 0.24) 0%, rgba(16, 185, 129, 0.08) 100%) !important;
+            box-shadow: 0 0 25px rgba(52, 199, 89, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.6) !important;
+        }
+        [data-bs-theme="light"] .plan-style-liquid_glass .plan-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.45) 100%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.85) !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.9) !important;
+        }
+        [data-bs-theme="light"] .plan-style-liquid_glass .plan-card:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.65) 100%) !important;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1), inset 0 1px 2px rgba(255, 255, 255, 1) !important;
+        }
+        [data-bs-theme="light"] .plan-style-liquid_glass .plan-card.selected {
+            border-color: rgba(52, 199, 89, 0.8) !important;
+            background: linear-gradient(135deg, rgba(52, 199, 89, 0.2) 0%, rgba(52, 199, 89, 0.06) 100%) !important;
+            box-shadow: 0 0 20px rgba(52, 199, 89, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+        }
+
         /* ─── استایل‌های اختصاصی طرح‌بندی‌ها (Layout Specifics) ─── */
         /* الف) بنتو گرید ماژولار (Bento Grid) */
         .bento-card {
@@ -2199,6 +2235,184 @@
             filter: none;
             opacity: 0.7;
         }
+
+        {% if (branding and branding.get('button_style') == 'liquid_glass') or button_style == 'liquid_glass' %}
+        /* ═══ استایل دکمه‌های پرتال مشتری به سبک شیشه‌ای و لیکویید گلس اپل (Apple Liquid Glass) ═══ */
+        .btn {
+            backdrop-filter: blur(14px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.22) !important;
+            border-radius: 50rem !important; /* کپسولی لوکس اپل */
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        }
+
+        .input-group .btn {
+            border-radius: 50rem 0 0 50rem !important;
+        }
+        [dir="rtl"] .input-group .btn {
+            border-radius: 50rem 0 0 50rem !important;
+        }
+
+        /* دکمه‌های اوت‌لاین پایه در حالت تیره */
+        .btn-outline-light, .btn-outline-info, .btn-outline-warning, .btn-outline-primary, .btn-outline-success, .btn-outline-danger, .btn-outline-secondary {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.16) !important;
+        }
+
+        /* پالت رنگی دکمه‌های شیشه‌ای */
+        .btn-primary {
+            background: linear-gradient(135deg, rgba(10, 132, 255, 0.38) 0%, rgba(10, 132, 255, 0.14) 100%) !important;
+            border: 1px solid rgba(10, 132, 255, 0.45) !important;
+            color: #93c5fd !important;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, rgba(10, 132, 255, 0.58) 0%, rgba(10, 132, 255, 0.26) 100%) !important;
+            color: #ffffff !important;
+            box-shadow: 0 6px 20px rgba(10, 132, 255, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.4) !important;
+        }
+
+        .btn-warning, .btn-outline-warning {
+            background: linear-gradient(135deg, rgba(255, 159, 10, 0.32) 0%, rgba(255, 159, 10, 0.12) 100%) !important;
+            border: 1px solid rgba(255, 159, 10, 0.45) !important;
+            color: #fde047 !important;
+        }
+        .btn-warning:hover, .btn-outline-warning:hover {
+            background: linear-gradient(135deg, rgba(255, 159, 10, 0.52) 0%, rgba(255, 159, 10, 0.24) 100%) !important;
+            color: #ffffff !important;
+            box-shadow: 0 6px 20px rgba(255, 159, 10, 0.32), inset 0 1px 2px rgba(255, 255, 255, 0.5) !important;
+        }
+
+        .btn-info, .btn-outline-info {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.28) 0%, rgba(56, 189, 248, 0.08) 100%) !important;
+            border: 1px solid rgba(56, 189, 248, 0.4) !important;
+            color: #7dd3fc !important;
+        }
+        .btn-info:hover, .btn-outline-info:hover {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.46) 0%, rgba(56, 189, 248, 0.18) 100%) !important;
+            color: #ffffff !important;
+            box-shadow: 0 6px 20px rgba(56, 189, 248, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.4) !important;
+        }
+
+        .btn-success, .btn-outline-success {
+            background: linear-gradient(135deg, rgba(48, 209, 88, 0.3) 0%, rgba(48, 209, 88, 0.08) 100%) !important;
+            border: 1px solid rgba(48, 209, 88, 0.4) !important;
+            color: #86efac !important;
+        }
+        .btn-success:hover, .btn-outline-success:hover {
+            background: linear-gradient(135deg, rgba(48, 209, 88, 0.48) 0%, rgba(48, 209, 88, 0.2) 100%) !important;
+            color: #ffffff !important;
+            box-shadow: 0 6px 20px rgba(48, 209, 88, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.4) !important;
+        }
+
+        .btn-danger, .btn-outline-danger {
+            background: linear-gradient(135deg, rgba(255, 69, 58, 0.3) 0%, rgba(255, 69, 58, 0.08) 100%) !important;
+            border: 1px solid rgba(255, 69, 58, 0.4) !important;
+            color: #fca5a5 !important;
+        }
+        .btn-danger:hover, .btn-outline-danger:hover {
+            background: linear-gradient(135deg, rgba(255, 69, 58, 0.48) 0%, rgba(255, 69, 58, 0.2) 100%) !important;
+            color: #ffffff !important;
+            box-shadow: 0 6px 20px rgba(255, 69, 58, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.4) !important;
+        }
+
+        .btn-outline-light {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.22) !important;
+            color: #f1f5f9 !important;
+        }
+        .btn-outline-light:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.08) 100%) !important;
+            color: #ffffff !important;
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.4) !important;
+        }
+
+        .btn-secondary, .btn-outline-secondary {
+            background: linear-gradient(135deg, rgba(148, 163, 184, 0.22) 0%, rgba(148, 163, 184, 0.06) 100%) !important;
+            border: 1px solid rgba(148, 163, 184, 0.3) !important;
+            color: #cbd5e1 !important;
+        }
+
+        /* دکمه طلایی باشگاه مشتریان در حالت شیشه‌ای اپل */
+        .customer-club-btn {
+            background: linear-gradient(135deg, rgba(255, 179, 0, 0.35) 0%, rgba(245, 158, 11, 0.15) 100%) !important;
+            border: 1px solid rgba(255, 215, 0, 0.45) !important;
+            backdrop-filter: blur(14px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
+            box-shadow: 0 4px 18px rgba(245, 158, 11, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
+            color: #fef08a !important;
+        }
+        .customer-club-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 179, 0, 0.55) 0%, rgba(245, 158, 11, 0.25) 100%) !important;
+            box-shadow: 0 6px 24px rgba(245, 158, 11, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+            color: #ffffff !important;
+        }
+
+        /* دکمه شناور گفتگوی آنلاین به سبک لیکویید گلس اپل */
+        .floating-chat-btn {
+            backdrop-filter: blur(16px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+            background: linear-gradient(135deg, rgba(10, 132, 255, 0.45) 0%, rgba(10, 132, 255, 0.2) 100%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.35) !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.5) !important;
+            color: #ffffff !important;
+            border-radius: 50rem !important;
+        }
+        .floating-chat-btn:hover {
+            background: linear-gradient(135deg, rgba(10, 132, 255, 0.62) 0%, rgba(10, 132, 255, 0.3) 100%) !important;
+            box-shadow: 0 12px 36px rgba(10, 132, 255, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.7) !important;
+            transform: translateY(-4px) scale(1.03) !important;
+        }
+
+        /* بج دکمه‌مانند «مشاهده» در تحلیل و نمودار مصرف */
+        .traffic-analytics-icon-badge + span + .badge,
+        .bento-card .badge.bg-info {
+            backdrop-filter: blur(10px) saturate(160%) !important;
+            -webkit-backdrop-filter: blur(10px) saturate(160%) !important;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.35), rgba(14, 165, 233, 0.12)) !important;
+            border: 1px solid rgba(56, 189, 248, 0.35) !important;
+            color: #7dd3fc !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        }
+
+        /* تنظیمات حالت روشن (Light Theme) */
+        [data-bs-theme="light"] .btn {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+        }
+        [data-bs-theme="light"] .btn-outline-light, 
+        [data-bs-theme="light"] .btn-outline-info, 
+        [data-bs-theme="light"] .btn-outline-warning, 
+        [data-bs-theme="light"] .btn-outline-primary, 
+        [data-bs-theme="light"] .btn-outline-success, 
+        [data-bs-theme="light"] .btn-outline-danger, 
+        [data-bs-theme="light"] .btn-outline-secondary {
+            background-color: rgba(255, 255, 255, 0.5) !important;
+            border: 1px solid rgba(0, 0, 0, 0.12) !important;
+        }
+        [data-bs-theme="light"] .btn-primary {
+            background: linear-gradient(135deg, rgba(0, 122, 255, 0.2) 0%, rgba(0, 122, 255, 0.08) 100%) !important;
+            color: #007aff !important;
+            border-color: rgba(0, 122, 255, 0.3) !important;
+        }
+        [data-bs-theme="light"] .btn-warning, [data-bs-theme="light"] .btn-outline-warning {
+            background: linear-gradient(135deg, rgba(255, 149, 0, 0.2) 0%, rgba(255, 149, 0, 0.08) 100%) !important;
+            color: #d97706 !important;
+            border-color: rgba(255, 149, 0, 0.3) !important;
+        }
+        [data-bs-theme="light"] .customer-club-btn {
+            background: linear-gradient(135deg, rgba(255, 179, 0, 0.45) 0%, rgba(245, 158, 11, 0.25) 100%) !important;
+            color: #78350f !important;
+        }
+
+        /* انیمیشن و تعامل با کلیک و هاور */
+        .btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+            filter: brightness(1.08);
+        }
+        .btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+        {% endif %}
 
     </style>
 </head>
@@ -3417,10 +3631,12 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, msg in messages %}
+                {% if 'دسترسی به این صفحه فقط برای مدیران مجاز است' not in msg %}
                 <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show rounded-3" role="alert">
                     {{ msg }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
+                {% endif %}
             {% endfor %}
         {% endif %}
     {% endwith %}

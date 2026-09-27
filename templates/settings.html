@@ -2034,6 +2034,22 @@ function selectPalette(pid) {
                                     </p>
                                 </label>
                             </div>
+
+                            <!-- استایل ۶: لیکویید گلس اپل (Liquid Glass) -->
+                            <div class="col-md-6 col-lg">
+                                <label class="card h-100 border p-3 cursor-pointer plan-style-card {% if customer_portal_config.portal_plan_style == 'liquid_glass' %}border-primary shadow-sm bg-white{% else %}bg-light opacity-75{% endif %}" style="cursor: pointer; transition: all 0.2s ease;">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="fw-bold small text-dark">لیکویید گلس اپل</span>
+                                        <input class="form-check-input mt-0" type="radio" name="portal_plan_style" value="liquid_glass" {% if customer_portal_config.portal_plan_style == 'liquid_glass' %}checked{% endif %} onchange="updateStyleCards(this)">
+                                    </div>
+                                    <div class="p-2 rounded mb-2 text-center small border fw-bold shadow-sm" style="background: linear-gradient(135deg, rgba(14,165,233,0.15), rgba(56,189,248,0.05)); border-color: rgba(56,189,248,0.4) !important; color: #0284c7;">
+                                        <i class="fab fa-apple text-primary me-1"></i> شیشه‌ای مایع اپل
+                                    </div>
+                                    <p class="small text-muted mb-0" style="font-size: 0.76rem; line-height: 1.4;">
+                                        طراحی بسیار لوکس با لبه‌های درخشان نئونی، بلور عمیق و انیمیشن ژله‌ای با هاور.
+                                    </p>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -4400,13 +4416,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 <hr>
 
                 <h6 class="fw-bold mb-2">📤 بازیابی دستی از فایل پشتیبان:</h6>
+                <p class="text-muted small">
+                    پشتیبانی کامل از فایل‌های فشرده (<code>.zip</code>)، پایگاه داده (<code>.db</code> / <code>.sqlite</code>) و داده‌های ساختاریافته (<code>.json</code>).
+                </p>
                 <form action="{{ url_for('upload_backup') }}" method="POST" enctype="multipart/form-data" onsubmit="return confirm('هشدار: بازیابی فایل پشتیبان اطلاعات فعلی را با داده‌های فایل جایگزین خواهد کرد. آیا ادامه می‌دهید؟');">
                     <div class="mb-3">
-                        <label class="form-label small text-muted">انتخاب فایل .db پشتیبان:</label>
-                        <input type="file" name="backup_file" class="form-control" accept=".db" required>
+                        <label class="form-label small text-muted">انتخاب فایل پشتیبان (.zip / .db / .json):</label>
+                        <input type="file" name="backup_file" class="form-control" accept=".zip,.db,.sqlite,.sqlite3,.json" required>
                     </div>
                     <button type="submit" class="btn btn-warning">
-                        <i class="fas fa-upload me-1"></i> آپلود و بازیابی دیتابیس
+                        <i class="fas fa-upload me-1"></i> آپلود و بازیابی اطلاعات
                     </button>
                 </form>
             </div>

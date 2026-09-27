@@ -3664,7 +3664,6 @@ def permission_required(perm: str):
         @functools.wraps(f)
         def decorated_function(*args, **kwargs):
             if not session.get("logged_in") or session.get("role") != "admin":
-                flash("دسترسی به این صفحه فقط برای مدیران مجاز است.", "danger")
                 return redirect(get_login_url())
             if not has_permission(perm):
                 flash("⛔ دسترسی غیرمجاز: نقش شما مجوز استفاده از این بخش را ندارد.", "danger")
@@ -3685,7 +3684,6 @@ def admin_required(f):
     @functools.wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get("logged_in") or session.get("role") != "admin":
-            flash("دسترسی به این صفحه فقط برای مدیران مجاز است.", "danger")
             return redirect(get_login_url())
         return f(*args, **kwargs)
     return decorated_function
@@ -3696,7 +3694,6 @@ def super_admin_required(f):
     @functools.wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get("logged_in") or session.get("role") != "admin":
-            flash("دسترسی به این صفحه فقط برای مدیران مجاز است.", "danger")
             return redirect(get_login_url())
         if session.get("admin_role") != "super_admin":
             flash("⛔ این عملیات حساس و کلیدی فقط توسط مدیر ارشد (Super Admin) قابل انجام است.", "danger")
@@ -3945,7 +3942,7 @@ def inject_global_branding():
             "tutorial_domain": admin_tutorial_domain
         }
 
-    branding["button_style"] = db.get_setting("button_style", "classic")
+    branding["button_style"] = db.get_setting("button_style", "liquid_glass")
 
     reseller_has_credit = False
     reseller_available_credit = 0
@@ -4263,7 +4260,7 @@ def setup_wizard():
         if mode == "restore":
             backup_file = request.files.get("backup_file")
             if not backup_file or not backup_file.filename:
-                flash("لطفاً یک فایل پشتیبان معتبر (.json یا .db) انتخاب نمایید.", "warning")
+                flash("لطفاً یک فایل پشتیبان معتبر (.zip، .db یا .json) انتخاب نمایید.", "warning")
                 return redirect(url_for("setup_wizard", force="1" if force else None))
 
             fname = secure_filename(backup_file.filename)
@@ -14639,7 +14636,7 @@ def settings():
             db.save_setting("store_favicon", store_favicon_url)
             db.save_setting("favicon_url", store_favicon_url)
             db.save_setting("brand_header_style", brand_header_style)
-            db.save_setting("button_style", request.form.get("button_style", "classic").strip())
+            db.save_setting("button_style", request.form.get("button_style", "liquid_glass").strip())
             if "version_icon_type" in request.form:
                 db.save_setting("version_icon_type", request.form.get("version_icon_type").strip())
             if "version_custom_icon" in request.form or request.form.get("clear_version_custom_icon") or ("version_icon_file" in request.files and request.files["version_icon_file"].filename):
@@ -14896,7 +14893,7 @@ def settings():
         "version_icon_type": db.get_setting("version_icon_type", "branch"),
         "version_custom_icon": db.get_setting("version_custom_icon", ""),
         "current_active_version": get_store_version(),
-        "button_style": db.get_setting("button_style", "classic")
+        "button_style": db.get_setting("button_style", "liquid_glass")
     }
     customer_portal_config = {
         "portal_proxy_path": get_portal_proxy_path(),
@@ -15209,29 +15206,29 @@ def download_backup():
 @app.route("/admin/backup/upload", methods=["POST"])
 @super_admin_required
 def upload_backup():
-    """آپلود و بازیابی فایل دیتابیس SQLite (.db یا .zip)"""
+    """آپلود و بازیابی فایل دیتابیس (.zip، .db یا .json)"""
     file = request.files.get("backup_file")
     if not file or not file.filename:
         flash("لطفاً یک فایل پشتیبان معتبر انتخاب کنید.", "warning")
         return redirect(url_for("settings"))
 
     fname = file.filename.lower()
-    valid_exts = (".db", ".zip", ".sqlite", ".sqlite3")
+    valid_exts = (".db", ".zip", ".sqlite", ".sqlite3", ".json")
     if not any(fname.endswith(ext) for ext in valid_exts):
-        flash("فرمت فایل نامعتبر است! فقط فایل‌های با پسوند .db یا .zip پشتیبانی می‌شوند.", "warning")
+        flash("فرمت فایل نامعتبر است! فقط فایل‌های فشرده (.zip)، پایگاه داده (.db) یا داده (.json) پشتیبانی می‌شوند.", "warning")
         return redirect(url_for("settings"))
 
     try:
         from backup import BackupManager
-        bm = BackupManager()
+        bm = BackupManager(db_instance=db)
         file_ext = Path(file.filename).suffix.lower()
         if file_ext not in valid_exts:
-            file_ext = ".db"
+            file_ext = ".zip" if fname.endswith(".zip") else ".db"
         temp_path = db.db_dir / f"uploaded_{get_now_naive().strftime('%Y%m%d_%H%M%S')}{file_ext}"
         file.save(temp_path)
         res = bm.restore_backup(str(temp_path))
         if res.get("success"):
-            flash("دیتابیس با موفقیت از فایل آپلود شده بازیابی شد!", "success")
+            flash("پایگاه داده و اطلاعات سامانه با موفقیت از فایل آپلود شده بازیابی شد!", "success")
         else:
             flash(f"خطا در بازیابی دیتابیس: {res.get('error')}", "danger")
         try:
@@ -23776,6 +23773,7 @@ def _handle_customer_portal_view(token: str = None, telegram_id: int = None, res
         support_online_info=support_online_info,
         portal_layout=portal_layout,
         portal_plan_style=portal_plan_style,
+        button_style=db.get_setting("button_style", "classic"),
         portal_payment_methods=portal_payment_methods,
         is_auto_confirm_active=is_auto_confirm_active,
         gw_cfg=gw_cfg,
