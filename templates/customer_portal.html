@@ -134,7 +134,6 @@
             width: 520px;
             height: 520px;
             background: radial-gradient(circle, var(--aura-blob-1, rgba(0,210,255,0.35)) 0%, rgba(255,255,255,0) 70%);
-            animation: portalAura1 20s ease-in-out infinite alternate;
         }
 
         .aura-blob-2 {
@@ -143,7 +142,6 @@
             width: 620px;
             height: 620px;
             background: radial-gradient(circle, var(--aura-blob-2, rgba(217,70,239,0.3)) 0%, rgba(255,255,255,0) 70%);
-            animation: portalAura2 24s ease-in-out infinite alternate;
         }
 
         .aura-blob-3 {
@@ -152,7 +150,6 @@
             width: 480px;
             height: 480px;
             background: radial-gradient(circle, var(--aura-blob-3, rgba(59,130,246,0.25)) 0%, rgba(255,255,255,0) 70%);
-            animation: portalAura3 28s ease-in-out infinite alternate;
         }
 
         .aura-blob-4 {
@@ -161,7 +158,6 @@
             width: 560px;
             height: 560px;
             background: radial-gradient(circle, var(--aura-blob-4, rgba(59,130,246,0.25)) 0%, rgba(255,255,255,0) 70%);
-            animation: portalAura4 28s ease-in-out infinite alternate;
         }
 
         .aura-blob-5 {
@@ -170,7 +166,6 @@
             width: 580px;
             height: 580px;
             background: radial-gradient(circle, var(--aura-blob-5, rgba(236,72,153,0.22)) 0%, rgba(255,255,255,0) 70%);
-            animation: portalAura5 32s ease-in-out infinite alternate;
         }
 
         @keyframes portalAura1 {
@@ -185,28 +180,16 @@
             100% { transform: translate3d(-35px, 25px, 0) scale(0.92); }
         }
 
-        @keyframes portalAura3 {
-            0% { transform: translate3d(0, 0, 0) scale(1); }
-            50% { transform: translate3d(-30px, -40px, 0) scale(1.15); }
-            100% { transform: translate3d(40px, 30px, 0) scale(0.9); }
-        }
-
-        @keyframes portalAura4 {
-            0% { transform: translate3d(0, 0, 0) scale(1); }
-            50% { transform: translate3d(-50px, -35px, 0) scale(1.1); }
-            100% { transform: translate3d(35px, 45px, 0) scale(0.95); }
-        }
-
-        @keyframes portalAura5 {
-            0% { transform: translate3d(0, 0, 0) scale(1); }
-            50% { transform: translate3d(45px, 50px, 0) scale(1.12); }
-            100% { transform: translate3d(-45px, -25px, 0) scale(0.92); }
-        }
-
-        {% if palette_config and palette_config.animation == 'static' %}
+        /* کنترل هوشمند وضعیت انیمیشن: حالت ثابت پیش‌فرض جهت حفظ مصرف ۰٪ کارت گرافیک دسکتاپ */
+        {% if not palette_css or (palette_config and (palette_config.animation == 'off' or palette_config.intensity == 'off' or palette_config.palette_id == 'classic_clean')) %}
+        .aura-mesh-container { display: none !important; opacity: 0 !important; visibility: hidden !important; }
+        .aura-blob { display: none !important; animation: none !important; }
+        {% elif palette_config and palette_config.animation == 'float' %}
+        .aura-blob-1 { animation: portalAura1 24s ease-in-out infinite alternate; }
+        .aura-blob-2 { animation: portalAura2 28s ease-in-out infinite alternate; }
+        .aura-blob-3, .aura-blob-4, .aura-blob-5 { animation: none !important; }
+        {% else %}
         .aura-blob { animation: none !important; }
-        {% elif palette_config and (palette_config.animation == 'off' or palette_config.intensity == 'off') %}
-        .aura-mesh-container { display: none !important; }
         {% endif %}
 
         .portal-container {

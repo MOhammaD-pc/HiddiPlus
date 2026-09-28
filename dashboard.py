@@ -14836,7 +14836,7 @@ def settings():
         elif action == "save_palette_settings":
             active_palette = request.form.get("active_palette", "vps_aurora").strip()
             palette_intensity = request.form.get("palette_intensity", "normal").strip()
-            palette_animation = request.form.get("palette_animation", "float").strip()
+            palette_animation = request.form.get("palette_animation", "static").strip()
             portal_palette = request.form.get("portal_palette", "inherit").strip()
 
             db.save_setting("active_palette", active_palette)
@@ -15039,7 +15039,7 @@ def settings():
     palette_settings = {
         "active_palette": db.get_setting("active_palette", "vps_aurora"),
         "palette_intensity": db.get_setting("palette_intensity", "normal"),
-        "palette_animation": db.get_setting("palette_animation", "float"),
+        "palette_animation": db.get_setting("palette_animation", "static"),
         "portal_palette": db.get_setting("portal_palette", "inherit")
     }
     chat_settings = db.get_chat_settings()

@@ -23,23 +23,23 @@
     {% if show_bg_effect %}
     <div class="login-bg-decorations position-absolute w-100 h-100 top-0 start-0 overflow-hidden" style="z-index: 0; pointer-events: none;">
         {% if active_style in ('liquid_glass', 'ios_glass') %}
-            <div class="ios-fluid-orb orb-apple-1 position-absolute rounded-circle" style="width: 540px; height: 540px; top: -12%; right: -8%; background: radial-gradient(circle, rgba(0, 122, 255, 0.45) 0%, rgba(88, 86, 214, 0.22) 50%, transparent 70%); filter: blur(60px); animation: floatOrb1 13s ease-in-out infinite alternate;"></div>
-            <div class="ios-fluid-orb orb-apple-2 position-absolute rounded-circle" style="width: 480px; height: 480px; bottom: -12%; left: -6%; background: radial-gradient(circle, rgba(175, 82, 222, 0.40) 0%, rgba(255, 45, 85, 0.16) 50%, transparent 70%); filter: blur(65px); animation: floatOrb2 15s ease-in-out infinite alternate;"></div>
-            <div class="ios-fluid-orb orb-apple-3 position-absolute rounded-circle" style="width: 380px; height: 380px; top: 40%; left: 25%; background: radial-gradient(circle, rgba(56, 189, 248, 0.35) 0%, transparent 65%); filter: blur(55px); animation: floatOrb3 18s ease-in-out infinite alternate;"></div>
+            <div class="ios-fluid-orb orb-apple-1 position-absolute rounded-circle" style="width: 540px; height: 540px; top: -12%; right: -8%; background: radial-gradient(circle, rgba(0, 122, 255, 0.35) 0%, rgba(88, 86, 214, 0.18) 50%, transparent 70%); animation: floatOrb1 20s ease-in-out infinite alternate;"></div>
+            <div class="ios-fluid-orb orb-apple-2 position-absolute rounded-circle" style="width: 480px; height: 480px; bottom: -12%; left: -6%; background: radial-gradient(circle, rgba(175, 82, 222, 0.30) 0%, rgba(255, 45, 85, 0.12) 50%, transparent 70%); animation: floatOrb2 24s ease-in-out infinite alternate;"></div>
+            <div class="ios-fluid-orb orb-apple-3 position-absolute rounded-circle" style="width: 380px; height: 380px; top: 40%; left: 25%; background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, transparent 65%);"></div>
             <div class="ios-mesh-shimmer position-absolute w-100 h-100 top-0 start-0" style="background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);"></div>
         {% elif active_style == 'glass_aurora' %}
-            <div class="aurora-orb orb-1 position-absolute rounded-circle" style="width: 450px; height: 450px; top: -10%; right: -5%; background: radial-gradient(circle, rgba(99, 102, 241, 0.35) 0%, rgba(99, 102, 241, 0) 70%); filter: blur(60px); animation: floatOrb1 14s ease-in-out infinite alternate;"></div>
-            <div class="aurora-orb orb-2 position-absolute rounded-circle" style="width: 400px; height: 400px; bottom: -10%; left: -5%; background: radial-gradient(circle, rgba(14, 165, 233, 0.3) 0%, rgba(14, 165, 233, 0) 70%); filter: blur(65px); animation: floatOrb2 16s ease-in-out infinite alternate;"></div>
-            <div class="aurora-orb orb-3 position-absolute rounded-circle" style="width: 320px; height: 320px; top: 40%; left: 20%; background: radial-gradient(circle, rgba(236, 72, 153, 0.2) 0%, rgba(236, 72, 153, 0) 70%); filter: blur(55px); animation: floatOrb3 18s ease-in-out infinite alternate;"></div>
+            <div class="aurora-orb orb-1 position-absolute rounded-circle" style="width: 450px; height: 450px; top: -10%; right: -5%; background: radial-gradient(circle, rgba(99, 102, 241, 0.30) 0%, rgba(99, 102, 241, 0) 70%); animation: floatOrb1 20s ease-in-out infinite alternate;"></div>
+            <div class="aurora-orb orb-2 position-absolute rounded-circle" style="width: 400px; height: 400px; bottom: -10%; left: -5%; background: radial-gradient(circle, rgba(14, 165, 233, 0.25) 0%, rgba(14, 165, 233, 0) 70%); animation: floatOrb2 24s ease-in-out infinite alternate;"></div>
+            <div class="aurora-orb orb-3 position-absolute rounded-circle" style="width: 320px; height: 320px; top: 40%; left: 20%; background: radial-gradient(circle, rgba(236, 72, 153, 0.18) 0%, rgba(236, 72, 153, 0) 70%);"></div>
         {% elif active_style == 'cyber_neon' %}
             <div class="cyber-grid position-absolute w-100 h-100 top-0 start-0" style="background-image: linear-gradient(rgba(0, 242, 254, 0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.07) 1px, transparent 1px); background-size: 35px 35px; opacity: 0.85;"></div>
-            <div class="position-absolute top-0 start-50 translate-middle-x" style="width: 600px; height: 300px; background: radial-gradient(circle, rgba(0, 242, 254, 0.22) 0%, rgba(0,0,0,0) 75%); filter: blur(50px);"></div>
+            <div class="position-absolute top-0 start-50 translate-middle-x" style="width: 600px; height: 300px; background: radial-gradient(circle, rgba(0, 242, 254, 0.22) 0%, rgba(0,0,0,0) 75%);"></div>
         {% elif active_style == 'gradient_vibrant' %}
             <div class="position-absolute w-100 h-100 top-0 start-0" style="background: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 40%);"></div>
         {% elif active_style == 'ruby_waves' %}
-            <div class="position-absolute w-100 h-100 top-0 start-0" style="background: radial-gradient(circle at 30% 10%, rgba(225, 29, 72, 0.25) 0%, transparent 40%), radial-gradient(circle at 80% 80%, rgba(251, 146, 60, 0.2) 0%, transparent 50%); filter: blur(40px);"></div>
+            <div class="position-absolute w-100 h-100 top-0 start-0" style="background: radial-gradient(circle at 30% 10%, rgba(225, 29, 72, 0.25) 0%, transparent 40%), radial-gradient(circle at 80% 80%, rgba(251, 146, 60, 0.2) 0%, transparent 50%);"></div>
         {% elif active_style == 'executive_dark' %}
-            <div class="position-absolute top-0 start-50 translate-middle-x" style="width: 500px; height: 350px; background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, rgba(0,0,0,0) 70%); filter: blur(60px);"></div>
+            <div class="position-absolute top-0 start-50 translate-middle-x" style="width: 500px; height: 350px; background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, rgba(0,0,0,0) 70%);"></div>
         {% endif %}
     </div>
     {% endif %}

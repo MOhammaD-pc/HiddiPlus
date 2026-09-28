@@ -1868,11 +1868,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             <i class="fas fa-wind me-1 text-primary"></i> انیمیشن حرکت هاله‌های نوری:
                         </label>
                         <select name="palette_animation" class="form-select form-select-sm">
-                            <option value="float" {% if palette_settings.palette_animation == 'float' %}selected{% endif %}>شناور و تنفس متحرک ملایم (پیش‌فرض)</option>
-                            <option value="static" {% if palette_settings.palette_animation == 'static' %}selected{% endif %}>هاله نوری ثابت و بدون حرکت</option>
-                            <option value="off" {% if palette_settings.palette_animation == 'off' %}selected{% endif %}>غیرفعال کامل انیمیشن</option>
+                            <option value="static" {% if palette_settings.palette_animation == 'static' %}selected{% endif %}>هاله نوری ثابت و سبک (پیش‌فرض پیشنهادی - مصرف ۰٪ کارت گرافیک)</option>
+                            <option value="float" {% if palette_settings.palette_animation == 'float' %}selected{% endif %}>شناور و متحرک گوشه‌ها (نیازمند توان پردازش بیشتر)</option>
+                            <option value="off" {% if palette_settings.palette_animation == 'off' %}selected{% endif %}>غیرفعال کامل انیمیشن و هاله‌ها</option>
                         </select>
-                        <div class="form-text small">تنظیم حرکت شناور ارگانیک نورها در پس‌زمینه.</div>
+                        <div class="form-text small">حالت ثابت جلوه نوری را با مصرف ۰٪ سخت‌افزار حفظ می‌کند.</div>
                     </div>
 
                     <div class="col-md-4">

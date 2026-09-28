@@ -511,7 +511,7 @@ def get_active_palette_config(db_instance, context: str = "system", reseller_id:
             portal_setting = global_portal_setting
 
     intensity = db_instance.get_setting("palette_intensity", "normal") # high, normal, subtle, off
-    animation = db_instance.get_setting("palette_animation", "float") # float, static, off
+    animation = db_instance.get_setting("palette_animation", "static") # static (پیش‌فرض بهینه ۰٪ گرافیک), float, off
     
     palette_data = get_palette(palette_id)
 
@@ -530,10 +530,38 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
     """
     data = palette_config.get("data") or PALETTES["vps_aurora"]
     intensity = palette_config.get("intensity", "normal")
-    animation = palette_config.get("animation", "float")
+    animation = palette_config.get("animation", "static")
     pid = data.get("id", "vps_aurora")
 
-    # ضرایب بلور و شدت نور بر اساس intensity
+    # تولید CSS بهینه برای انیمیشن
+    if animation == "off":
+        anim_css = """
+    .aura-mesh-container {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+    .aura-blob {
+        display: none !important;
+        animation: none !important;
+    }
+    """
+    elif animation == "static":
+        anim_css = """
+    .aura-blob {
+        animation: none !important;
+    }
+    """
+    else: # float
+        anim_css = """
+    .aura-blob-3,
+    .aura-blob-4,
+    .aura-blob-5 {
+        animation: none !important;
+    }
+    """
+
+    # حذف کامل بلور پردازشی سنگین هاله‌ها (گرادینت مدور ذاتاً محو و نرم است)
     if intensity == "off" or pid == "classic_clean":
         blur_val = "0px"
         light_opacity = "0"
@@ -545,25 +573,25 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
         opacity: 0 !important;
         visibility: hidden !important;
     }
-    """
+    """ + anim_css
     elif intensity == "subtle":
-        blur_val = "100px"
-        light_opacity = "0.25"
-        dark_opacity = "0.6"
-        glass_blur = "18px" if pid in ("liquid_glass", "ios_glass") else "12px"
-        minimal_mesh_css = ""
+        blur_val = "0px"
+        light_opacity = "0.22"
+        dark_opacity = "0.5"
+        glass_blur = "12px"
+        minimal_mesh_css = anim_css
     elif intensity == "high":
-        blur_val = "70px"
-        light_opacity = "0.50"
-        dark_opacity = "1.3"
-        glass_blur = "36px" if pid in ("liquid_glass", "ios_glass") else "24px"
-        minimal_mesh_css = ""
+        blur_val = "0px"
+        light_opacity = "0.40"
+        dark_opacity = "0.9"
+        glass_blur = "16px"
+        minimal_mesh_css = anim_css
     else: # normal
-        blur_val = "85px"
-        light_opacity = "0.35"
-        dark_opacity = "1.0"
-        glass_blur = "28px" if pid in ("liquid_glass", "ios_glass") else "18px"
-        minimal_mesh_css = ""
+        blur_val = "0px"
+        light_opacity = "0.30"
+        dark_opacity = "0.75"
+        glass_blur = "14px"
+        minimal_mesh_css = anim_css
 
     l = data["light"]
     d = data["dark"]
@@ -593,7 +621,7 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
         --aura-blob-4: {l.get('blob4_color', l.get('blob1_color', 'rgba(59, 130, 246, 0.25)'))};
         --aura-blob-5: {l.get('blob5_color', l.get('blob2_color', 'rgba(236, 72, 153, 0.22)'))};
         --aura-opacity: {light_opacity};
-        --aura-blend: {l['mesh_blend']};
+        --aura-blend: normal;
     }}
 
     [data-bs-theme="dark"] {{
@@ -613,7 +641,22 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
         --aura-blob-4: {d.get('blob4_color', d.get('blob1_color', 'rgba(59, 130, 246, 0.30)'))};
         --aura-blob-5: {d.get('blob5_color', d.get('blob2_color', 'rgba(236, 72, 153, 0.28)'))};
         --aura-opacity: {dark_opacity};
-        --aura-blend: {d['mesh_blend']};
+        --aura-blend: normal;
+    }}
+    /* بهینه‌سازی رفرش‌ریت و عملکرد اسکرول در دستگاه‌های لمسی و موبایل */
+    @media (max-width: 991.98px) {{
+        :root {{
+            --aura-blur: 0px !important;
+            --glass-blur: 0px !important;
+            --aura-blend: normal !important;
+        }}
+        [data-bs-theme="dark"] {{
+            --aura-blend: normal !important;
+            --palette-card-bg: rgba(17, 24, 39, 0.94);
+        }}
+        [data-bs-theme="light"] {{
+            --palette-card-bg: #ffffff;
+        }}
     }}
     {minimal_mesh_css}
     """

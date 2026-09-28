@@ -511,7 +511,7 @@ def get_active_palette_config(db_instance, context: str = "system", reseller_id:
             portal_setting = global_portal_setting
 
     intensity = db_instance.get_setting("palette_intensity", "normal") # high, normal, subtle, off
-    animation = db_instance.get_setting("palette_animation", "float") # float, static, off
+    animation = db_instance.get_setting("palette_animation", "static") # static (پیش‌فرض بهینه ۰٪ گرافیک), float, off
     
     palette_data = get_palette(palette_id)
 
@@ -530,8 +530,36 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
     """
     data = palette_config.get("data") or PALETTES["vps_aurora"]
     intensity = palette_config.get("intensity", "normal")
-    animation = palette_config.get("animation", "float")
+    animation = palette_config.get("animation", "static")
     pid = data.get("id", "vps_aurora")
+
+    # تولید CSS بهینه برای انیمیشن
+    if animation == "off":
+        anim_css = """
+    .aura-mesh-container {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+    .aura-blob {
+        display: none !important;
+        animation: none !important;
+    }
+    """
+    elif animation == "static":
+        anim_css = """
+    .aura-blob {
+        animation: none !important;
+    }
+    """
+    else: # float
+        anim_css = """
+    .aura-blob-3,
+    .aura-blob-4,
+    .aura-blob-5 {
+        animation: none !important;
+    }
+    """
 
     # حذف کامل بلور پردازشی سنگین هاله‌ها (گرادینت مدور ذاتاً محو و نرم است)
     if intensity == "off" or pid == "classic_clean":
@@ -545,25 +573,25 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
         opacity: 0 !important;
         visibility: hidden !important;
     }
-    """
+    """ + anim_css
     elif intensity == "subtle":
         blur_val = "0px"
         light_opacity = "0.22"
         dark_opacity = "0.5"
         glass_blur = "12px"
-        minimal_mesh_css = ""
+        minimal_mesh_css = anim_css
     elif intensity == "high":
         blur_val = "0px"
         light_opacity = "0.40"
         dark_opacity = "0.9"
         glass_blur = "16px"
-        minimal_mesh_css = ""
+        minimal_mesh_css = anim_css
     else: # normal
         blur_val = "0px"
         light_opacity = "0.30"
         dark_opacity = "0.75"
         glass_blur = "14px"
-        minimal_mesh_css = ""
+        minimal_mesh_css = anim_css
 
     l = data["light"]
     d = data["dark"]

@@ -250,7 +250,6 @@
             width: 540px;
             height: 540px;
             background: radial-gradient(circle, var(--aura-blob-1, rgba(0,210,255,0.35)) 0%, rgba(255,255,255,0) 70%);
-            animation: auraAnim1 22s ease-in-out infinite alternate;
         }
 
         .aura-blob-2 {
@@ -259,7 +258,6 @@
             width: 660px;
             height: 660px;
             background: radial-gradient(circle, var(--aura-blob-2, rgba(217,70,239,0.3)) 0%, rgba(255,255,255,0) 70%);
-            animation: auraAnim2 26s ease-in-out infinite alternate;
         }
 
         .aura-blob-3 {
@@ -268,7 +266,6 @@
             width: 500px;
             height: 500px;
             background: radial-gradient(circle, var(--aura-blob-3, rgba(59,130,246,0.25)) 0%, rgba(255,255,255,0) 70%);
-            animation: auraAnim3 30s ease-in-out infinite alternate;
         }
 
         .aura-blob-4 {
@@ -277,7 +274,6 @@
             width: 560px;
             height: 560px;
             background: radial-gradient(circle, var(--aura-blob-4, rgba(59,130,246,0.25)) 0%, rgba(255,255,255,0) 70%);
-            animation: auraAnim4 28s ease-in-out infinite alternate;
         }
 
         .aura-blob-5 {
@@ -286,7 +282,6 @@
             width: 580px;
             height: 580px;
             background: radial-gradient(circle, var(--aura-blob-5, rgba(236,72,153,0.22)) 0%, rgba(255,255,255,0) 70%);
-            animation: auraAnim5 32s ease-in-out infinite alternate;
         }
 
         @keyframes auraAnim1 {
@@ -301,35 +296,23 @@
             100% { transform: translate3d(-40px, 30px, 0) scale(0.92); }
         }
 
-        @keyframes auraAnim3 {
-            0% { transform: translate3d(0, 0, 0) scale(1); }
-            50% { transform: translate3d(-35px, -45px, 0) scale(1.15); }
-            100% { transform: translate3d(45px, 35px, 0) scale(0.9); }
-        }
-
-        @keyframes auraAnim4 {
-            0% { transform: translate3d(0, 0, 0) scale(1); }
-            50% { transform: translate3d(-60px, -40px, 0) scale(1.1); }
-            100% { transform: translate3d(40px, 50px, 0) scale(0.95); }
-        }
-
-        @keyframes auraAnim5 {
-            0% { transform: translate3d(0, 0, 0) scale(1); }
-            50% { transform: translate3d(50px, 60px, 0) scale(1.12); }
-            100% { transform: translate3d(-50px, -30px, 0) scale(0.92); }
-        }
-
+        /* کنترل هوشمند وضعیت انیمیشن: حالت ثابت پیش‌فرض جهت حفظ مصرف ۰٪ کارت گرافیک دسکتاپ */
         {% if not palette_css or (palette_config and (palette_config.animation == 'off' or palette_config.intensity == 'off' or palette_config.palette_id == 'classic_clean')) %}
         .aura-mesh-container { display: none !important; opacity: 0 !important; visibility: hidden !important; }
-        {% elif palette_config and palette_config.animation == 'static' %}
+        .aura-blob { display: none !important; animation: none !important; }
+        {% elif palette_config and palette_config.animation == 'float' %}
+        .aura-blob-1 { animation: auraAnim1 24s ease-in-out infinite alternate; }
+        .aura-blob-2 { animation: auraAnim2 28s ease-in-out infinite alternate; }
+        .aura-blob-3, .aura-blob-4, .aura-blob-5 { animation: none !important; }
+        {% else %}
         .aura-blob { animation: none !important; }
         {% endif %}
 
         /* ─── کارت‌های شیشه‌ای مات مدرن (Frosted Glassmorphism Cards) ─── */
         .card {
             background-color: var(--card-bg) !important;
-            backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%);
-            -webkit-backdrop-filter: blur(var(--glass-blur, 18px)) saturate(180%);
+            backdrop-filter: blur(var(--glass-blur, 14px)) saturate(180%);
+            -webkit-backdrop-filter: blur(var(--glass-blur, 14px)) saturate(180%);
             border: 1px solid var(--card-border) !important;
             box-shadow: var(--palette-card-shadow, 0 10px 25px -5px rgba(0,0,0,0.05)) !important;
             border-radius: 18px;
@@ -338,8 +321,8 @@
         }
 
         .sidebar {
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            backdrop-filter: blur(var(--glass-blur, 14px)) saturate(160%);
+            -webkit-backdrop-filter: blur(var(--glass-blur, 14px)) saturate(160%);
             border-left: 1px solid var(--sidebar-border);
             z-index: 1020;
             transform: translate3d(0, 0, 0);
@@ -2964,7 +2947,7 @@
                 {% endif %}
 
                 <!-- دسته‌بندی ۴: شبکه -->
-                {% set is_network_group_active = request.endpoint in ['admin_domains', 'admin_domains_view', 'admin_terminal', 'admin_logs', 'admin_node_monitor'] %}
+                {% set is_network_group_active = request.endpoint in ['admin_xray_core', 'admin_domains', 'admin_domains_view', 'admin_terminal', 'admin_logs', 'admin_node_monitor'] %}
                 <button class="sidebar-dropdown-toggle {% if is_network_group_active %}has-active{% endif %}" 
                         type="button" 
                         data-bs-toggle="collapse" 
@@ -2980,6 +2963,9 @@
                 <div class="collapse submenu-collapse {% if is_network_group_active %}show{% endif %}" id="adminNetworkCollapse">
                     <div class="submenu-inner">
                         {% if session.get('admin_role') == 'super_admin' or has_permission('settings_manage') %}
+                        <a class="submenu-item {% if request.endpoint == 'admin_xray_core' %}active{% endif %}" href="{{ url_for('admin_xray_core') }}">
+                            <i class="fas fa-shield-halved text-info"></i> هسته اختصاصی Xray و پروتکل‌ها
+                        </a>
                         <a class="submenu-item {% if request.endpoint in ['admin_domains', 'admin_domains_view'] %}active{% endif %}" href="{{ url_for('admin_domains') }}">
                             <i class="fas fa-globe text-primary"></i> دامنه‌ها
                         </a>
