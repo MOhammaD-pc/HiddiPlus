@@ -52,8 +52,7 @@ class NotificationScheduler:
             return
         self.running = True
         self.task = asyncio.create_task(self._run_loop())
-        self.queue_task = asyncio.create_task(self._run_queue_check_loop())
-        logger.info("Notification scheduler and queue check worker started")
+        logger.info("Notification scheduler started")
     
     async def stop(self):
         """توقف برنامه‌ریز"""

@@ -2631,6 +2631,9 @@ def process_subscription_queue() -> dict:
             if uuid:
                 try:
                     u_info = hidify_sync_request("GET", f"/admin/user/{uuid}/", reseller_id=reseller_id)
+                    if isinstance(u_info, dict) and u_info.get("network_error"):
+                        logger.warning(f"Hiddify panel unreachable during queue check for {uuid}. Postponing remaining queue checks.")
+                        break
                     if isinstance(u_info, dict) and "error" not in u_info:
                         curr_used = float(u_info.get("current_usage_GB") or 0)
                         h_limit = float(u_info.get("usage_limit_GB") or 0)

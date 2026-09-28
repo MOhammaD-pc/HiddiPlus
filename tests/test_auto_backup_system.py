@@ -246,6 +246,23 @@ class TestAutoBackupSystem(unittest.TestCase):
         slot_day1_18 = (2026, 9, 23, 18)
         self.assertTrue(scheduler._should_run_fixed_hours("00,06,12,18", dt_day2_1205, slot_day1_18, last_run_recent))
 
+    def test_scheduler_interval_clock_alignment(self):
+        """تست همگام‌سازی زمان‌بندی دوره‌ای با ساعت‌های دقیق شبانه‌روز (ساعت‌های زوج برای بازه ۲ ساعته)"""
+        from utils import TEHRAN_TZ
+        scheduler = AutoBackupScheduler()
+
+        dt_even_hour = datetime(2026, 9, 28, 14, 0, tzinfo=TEHRAN_TZ)
+        dt_odd_hour = datetime(2026, 9, 28, 15, 0, tzinfo=TEHRAN_TZ)
+
+        # ساعت زوج (14:00) با بازه ۲ ساعته باید تایید شود
+        self.assertTrue(scheduler._should_run_interval(None, 2, dt_even_hour, last_slot=(2026, 9, 28, 12)))
+
+        # ساعت فرد (15:00) نباید اجرا شود
+        self.assertFalse(scheduler._should_run_interval(None, 2, dt_odd_hour, last_slot=(2026, 9, 28, 14)))
+
+        # تکرار در همان اسلات نباید اجرا شود
+        self.assertFalse(scheduler._should_run_interval(dt_even_hour, 2, dt_even_hour, last_slot=(2026, 9, 28, 14)))
+
     def test_scheduler_state_restoration_from_db(self):
         """تست بازخوانی موفقیت‌آمیز سابقه آخرین بکاپ از دیتابیس در زمان راه‌اندازی زمان‌بند"""
         from utils import get_now_iso

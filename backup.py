@@ -17,6 +17,7 @@ import json
 import zipfile
 import sqlite3
 import httpx
+import gc
 from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
@@ -441,6 +442,16 @@ def send_telegram_backup_file(target_chat: str, file_path: str, filename: str, c
     except Exception as e:
         logger.error(f"HTTP error sending backup to Telegram: {e}", exc_info=True)
         return {"success": False, "error": str(e)}
+    finally:
+        try:
+            del files
+        except Exception:
+            pass
+        try:
+            del data
+        except Exception:
+            pass
+        gc.collect()
 
 
 def test_telegram_connection(target_chat: str) -> dict:
@@ -724,22 +735,50 @@ class AutoBackupScheduler:
                 pass
         logger.info("Universal Auto Backup Scheduler stopped")
 
-    def _should_run_interval(self, last_run: datetime, interval_hours: int, now: datetime = None) -> bool:
-        """بررسی فرارسیدن موعد اجرای دوره‌ای بر مبنای ساعت تهران"""
-        if not last_run:
-            return True
+    def _should_run_interval(self, last_run: datetime, interval_hours: int, now: datetime = None, last_slot = None) -> bool:
+        """
+        بررسی فرارسیدن موعد اجرای دوره‌ای بر مبنای ساعت تهران و همگام با ساعت‌های دقیق شبانه‌روز.
+        در صورت ارسال last_slot (حلقه اصلی زمان‌بند)، اجرا دقیقا همگام با ساعت‌های رند شبانه‌روز انجام می‌شود:
+        مثلاً بازه ۲ ساعته -> ساعت‌های زوج 00, 02, 04, 06, 08, 10, 12, ... سر ساعت دقیق (دقیقه 00).
+        """
         if now is None:
             now = get_now()
-        if last_run.tzinfo is None:
-            last_run = last_run.replace(tzinfo=TEHRAN_TZ)
         if now.tzinfo is None:
             now = now.replace(tzinfo=TEHRAN_TZ)
+
+        if last_slot is not None:
+            interval = max(1, int(interval_hours or 6))
+            current_hour = now.hour
+
+            # ۱. بررسی تطابق با ضریب ساعت بازه (مثلاً ساعت‌های زوج برای ۲ ساعته)
+            if current_hour % interval != 0:
+                return False
+
+            # ۲. بررسی اینکه در همان ساعت قبلاً اجرا نشده باشد
+            current_slot = (now.year, now.month, now.day, current_hour)
+            if last_slot == current_slot:
+                return False
+
+            # ۳. حداقل ۳۰ دقیقه فاصله با آخرین اجرای موفق
+            if last_run:
+                if last_run.tzinfo is None:
+                    last_run = last_run.replace(tzinfo=TEHRAN_TZ)
+                if (now - last_run).total_seconds() < 1800:
+                    return False
+
+            return True
+
+        # در صورت تست‌های واحد مستقیم یا فراخوانی بدون last_slot (محاسبه تفاضل زمانی ساده)
+        if not last_run:
+            return True
+        if last_run.tzinfo is None:
+            last_run = last_run.replace(tzinfo=TEHRAN_TZ)
         return (now - last_run) >= timedelta(hours=interval_hours)
 
     def _should_run_fixed_hours(self, fixed_hours_str: str, current_hour_or_now=None, last_slot=None, last_run=None) -> bool:
         """
         بررسی فرارسیدن موعد ساعت مشخص شبانه‌روز به وقت تهران.
-        پشتیبانی دوگانه: عدد ساعت جهت سازگاری با تست‌های واحد، یا آبجکت datetime و بررسی اسلات و پنجره اجرا.
+        پشتیبانی دوگانه: عدد ساعت جهت سازگاری با تست‌های واحد، یا آبجکت datetime و بررسی اسلات شبانه‌روز.
         """
         if not fixed_hours_str:
             return False
@@ -764,20 +803,20 @@ class AutoBackupScheduler:
         if last_run:
             if last_run.tzinfo is None:
                 last_run = last_run.replace(tzinfo=TEHRAN_TZ)
-            # اگر در کمتر از ۳۰ دقیقه گذشته بکاپ گرفته شده باشد (مثلاً ریستارت کانتینر در همان ساعت)، دوباره اجرا نشود
+            # اگر در کمتر از ۳۰ دقیقه گذشته بکاپ گرفته شده باشد دوباره اجرا نشود
             if (now - last_run).total_seconds() < 1800:
                 return False
 
         return True
 
     async def _main_scheduler_loop(self):
-        """حلقه اصلی بررسی هر ۶۰ ثانیه به وقت تهران"""
+        """حلقه اصلی بررسی هر ۲۵ ثانیه به وقت تهران"""
         logger.info("Backup scheduler loop active")
         # بارگذاری آخرین سابقه اجرا از دیتابیس
         self._load_last_run_times_from_db()
 
         # مکث اولیه کوتاه بعد از استارت سیستم
-        await asyncio.sleep(45)
+        await asyncio.sleep(10)
 
         while self.is_running:
             try:
@@ -801,11 +840,11 @@ class AutoBackupScheduler:
                         if self._should_run_fixed_hours(fixed_hours_str, now, self.last_main_slot, self.last_main_run_time):
                             run_main = True
                     else:
-                        if self._should_run_interval(self.last_main_run_time, interval_hours, now):
+                        if self._should_run_interval(self.last_main_run_time, interval_hours, now, last_slot=self.last_main_slot):
                             run_main = True
 
                     if run_main:
-                        logger.info("Executing scheduled Main Panel backup...")
+                        logger.info("Executing scheduled Main Panel backup on exact hour...")
                         # ثبت اسلات قبل از اجرا جهت جلوگیری از اجرای موازی در تسک‌های طولانی
                         self.last_main_slot = current_slot
                         self.last_main_run_time = now
@@ -819,11 +858,11 @@ class AutoBackupScheduler:
                         if self._should_run_fixed_hours(fixed_hours_str, now, self.last_hiddify_slot, self.last_hiddify_run_time):
                             run_hid = True
                     else:
-                        if self._should_run_interval(self.last_hiddify_run_time, interval_hours, now):
+                        if self._should_run_interval(self.last_hiddify_run_time, interval_hours, now, last_slot=self.last_hiddify_slot):
                             run_hid = True
 
                     if run_hid:
-                        logger.info("Executing scheduled Hiddify backup...")
+                        logger.info("Executing scheduled Hiddify backup on exact hour...")
                         self.last_hiddify_slot = current_slot
                         self.last_hiddify_run_time = now
                         await trigger_hiddify_panel_backup_async(trigger_type="auto")
@@ -836,8 +875,8 @@ class AutoBackupScheduler:
             except Exception as e:
                 logger.error(f"Error in backup scheduler loop: {e}", exc_info=True)
 
-            # هر ۶۰ ثانیه بررسی تکرار می‌شود
-            await asyncio.sleep(60)
+            # بررسی هر ۲۵ ثانیه جهت انطباق بلادرنگ و دقیق با دقیقه 00 ساعت
+            await asyncio.sleep(25)
 
 
 # سازگاری با کدهای پیشین که مستقیماً trigger_hiddify_backup را ایمپورت می‌کردند

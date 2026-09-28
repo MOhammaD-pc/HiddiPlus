@@ -43,18 +43,29 @@ if data_dir_env:
     if not (os.name == "nt" and data_dir_env.startswith("/")):
         POSSIBLE_PATHS.append(Path(data_dir_env))
 
-# ۲. اگر دیتابیس در پوشه دیتای پروژه از قبل وجود دارد (ویندوز یا سرور لینوکس VPS)
-if Path("data/bot_database.db").exists():
-    POSSIBLE_PATHS.append(Path("data"))
-
-# ۳. اگر دیتابیس در مسیر پیش‌فرض Railway (/data/bot_database.db) وجود دارد
+# ۲. در لینوکس / ریلوی: اگر دیتابیس در مسیر ولوم (/data/bot_database.db) از قبل وجود دارد
 if os.name != "nt" and Path("/data/bot_database.db").exists():
     POSSIBLE_PATHS.append(Path("/data"))
 
-# ۴. پوشه پیش‌فرض دیتای پروژه
+# ۳. در لینوکس / ریلوی: بررسی وجود و دسترسی نوشتن به دایرکتوری پایدار ولوم (/data)
+# این بررسی مانع از این می‌شود که ریلوی دیتابیس را در فایل سیستم موقت کانتینر بسازد و پس از ریستارت پاک شود
+if os.name != "nt" and Path("/data").exists():
+    try:
+        test_vol = Path("/data/.write_test")
+        test_vol.write_text("test")
+        test_vol.unlink()
+        POSSIBLE_PATHS.append(Path("/data"))
+    except Exception:
+        pass
+
+# ۴. اگر دیتابیس در پوشه دیتای پروژه از قبل وجود دارد (ویندوز یا سرور لینوکس VPS)
+if Path("data/bot_database.db").exists():
+    POSSIBLE_PATHS.append(Path("data"))
+
+# ۵. پوشه پیش‌فرض دیتای پروژه
 POSSIBLE_PATHS.append(Path("data"))
 
-# ۵. سایر مسیرهای پایدار لینوکس و هوم دایرکتوری به عنوان فال‌بک
+# ۶. سایر مسیرهای پایدار لینوکس و هوم دایرکتوری به عنوان فال‌بک
 if os.name != "nt":
     POSSIBLE_PATHS.append(Path("/data"))
 
@@ -133,8 +144,8 @@ class Database:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=60000")
         conn.execute("PRAGMA synchronous=NORMAL")
-        conn.execute("PRAGMA cache_size=-64000")
-        conn.execute("PRAGMA temp_store=MEMORY")
+        conn.execute("PRAGMA cache_size=-8000")
+        conn.execute("PRAGMA temp_store=FILE")
         return conn
 
     def init_db(self):
