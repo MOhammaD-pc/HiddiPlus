@@ -749,6 +749,191 @@ function testLiveVmessOutput() {
 }
 </script>
 
+<!-- ═══ بخش اختصاصی: مدیریت هسته مستقل Xray-core و پروکسی‌های اختصاصی (VLESS Reality & CDN) ═══ -->
+<div class="card shadow-sm mb-4 border-0 settings-section-card" data-category="infra" id="card-xray-core">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center settings-card-header" style="cursor: pointer;" onclick="toggleSettingsCard(this)">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-chevron-down settings-toggle-chevron"></i>
+            <h5 class="mb-0 text-primary fw-bold">
+                <i class="fas fa-shield-virus text-primary me-2"></i> هسته اختصاصی Xray-core و سابسکریپشن ترکیبی
+            </h5>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            {% if xray_config and xray_config.is_running %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+                    <i class="fas fa-circle-check me-1"></i> هسته فعال و در حال سرویس‌دهی
+                </span>
+            {% elif xray_config and xray_config.is_installed %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2">
+                    <i class="fas fa-pause-circle me-1"></i> هسته نصب‌شده (سرویس متوقف)
+                </span>
+            {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2">
+                    <i class="fas fa-info-circle me-1"></i> بدون باینری محلی (آماده نصب روی VPS)
+                </span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body p-4 settings-card-body">
+        <p class="text-muted small mb-4">
+            با فعال‌سازی این بخش، <strong>TGBot به طور مستقیم و بومی به عنوان هسته پروکسی مستقل عمل می‌کند</strong>. شما می‌توانید کانفیگ‌های اختصاصی <strong>VLESS Reality (مستقیم ضد فیلتر)</strong> و <strong>VLESS WebSocket (پشت کلودفلر/CDN)</strong> را تولید کرده و حتی در سابسکریپشن ترکیبی با نودهای هیدیفای به مشتری ارائه دهید.
+        </p>
+
+        <!-- باکس راهنمای نصب با یک کلیک روی سرور اوبونتو -->
+        <div class="alert alert-info bg-info-subtle border-info-subtle rounded-3 p-3 mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                <div class="fw-bold text-dark d-flex align-items-center gap-2">
+                    <i class="fas fa-terminal text-info fs-5"></i>
+                    <span>نصب یا به‌روزرسانی سریع هسته Xray روی سرور اوبونتو (One-Click Bash):</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-info bg-white" onclick="copyXrayInstallCommand(this)">
+                    <i class="fas fa-copy me-1"></i> کپی دستور ترمینال
+                </button>
+            </div>
+            <code class="d-block p-2 bg-dark text-white rounded font-monospace small" id="xrayInstallCode" style="direction: ltr; text-align: left;">sudo bash scripts/install_xray_core.sh</code>
+            <div class="text-muted small mt-1">
+                این اسکریپت باینری رسمی Xray-core را نصب کرده، سرویس Systemd را فعال و پورت‌های 443 و 8443 را در فایروال باز می‌کند.
+            </div>
+        </div>
+
+        <form id="xraySettingsForm" onsubmit="saveXraySettings(event)">
+            <!-- سوییچ‌های کلی فعال‌سازی -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="card bg-light border-0 p-3 rounded-3 h-100">
+                        <div class="form-check form-switch fs-6 mb-2">
+                            <input class="form-check-input" type="checkbox" id="xrayCoreEnabled" name="xray_core_enabled" value="1" {% if xray_config and xray_config.is_enabled %}checked{% endif %}>
+                            <label class="form-check-label fw-bold text-dark" for="xrayCoreEnabled">
+                                <i class="fas fa-power-off text-primary me-1"></i> فعال‌سازی هسته داخلی Xray در سابسکریپشن
+                            </label>
+                        </div>
+                        <div class="text-muted small">
+                            در صورت فعال بودن، لینک‌های VLESS اختصاصی سرور در لینک‌های <code>/sub/&lt;uuid&gt;</code> مشتریان قرار می‌گیرد.
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-light border-0 p-3 rounded-3 h-100">
+                        <div class="form-check form-switch fs-6 mb-2">
+                            <input class="form-check-input" type="checkbox" id="xrayIncludeExternalNode" name="xray_include_external_node" value="1" {% if xray_config and xray_config.include_external_node %}checked{% endif %}>
+                            <label class="form-check-label fw-bold text-dark" for="xrayIncludeExternalNode">
+                                <i class="fas fa-network-wired text-success me-1"></i> سابسکریپشن ترکیبی (ادغام با هیدیفای / نودهای خارجی)
+                            </label>
+                        </div>
+                        <div class="text-muted small">
+                            کانفیگ‌های هیدیفای همراه با کانفیگ‌های اختصاصی سرور تجمیع شده و در صورت قطعی هیدیفای، کانفیگ‌های داخلی به عنوان نجات‌دهنده عمل می‌کنند.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <!-- بخش ۱: پروتکل VLESS + Reality -->
+                <div class="col-lg-6">
+                    <div class="card border rounded-3 p-3 h-100 shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <div class="fw-bold text-primary">
+                                <i class="fas fa-bolt text-warning me-1"></i> پروتکل VLESS Reality Direct
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="xrayRealityEnabled" name="xray_reality_enabled" value="1" {% if not xray_config or xray_config.reality_enabled %}checked{% endif %}>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-sm-6">
+                                <label class="form-label small fw-bold">پورت اتصال Reality:</label>
+                                <input type="number" class="form-control form-control-sm font-monospace" name="reality_port" value="{{ xray_config.reality_port if xray_config else 443 }}" placeholder="443">
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label small fw-bold">دامنه مخفی‌سازی (SNI):</label>
+                                <input type="text" class="form-control form-control-sm font-monospace" name="reality_sni" id="realitySniInput" value="{{ xray_config.reality_sni if xray_config else 'www.yahoo.com' }}" placeholder="www.yahoo.com">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold m-0">کلید عمومی Reality (Public Key):</label>
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none small text-primary" onclick="generateNewRealityKeys()">
+                                    <i class="fas fa-key me-1"></i> تولید کلیدهای جدید X25519
+                                </button>
+                            </div>
+                            <input type="text" class="form-control form-control-sm font-monospace text-muted" name="reality_pub_key" id="realityPubKeyInput" value="{{ xray_config.reality_pub_key if xray_config else '' }}" placeholder="کلید عمومی X25519" readonly>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-sm-8">
+                                <label class="form-label small fw-bold">کلید خصوصی (Private Key):</label>
+                                <input type="password" class="form-control form-control-sm font-monospace text-muted" name="reality_priv_key" id="realityPrivKeyInput" value="{{ xray_config.reality_priv_key if xray_config else '' }}" placeholder="کلید خصوصی">
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="form-label small fw-bold">شناسه کوتاه (Short ID):</label>
+                                <input type="text" class="form-control form-control-sm font-monospace text-muted" name="reality_short_id" id="realityShortIdInput" value="{{ xray_config.reality_short_id if xray_config else '' }}" placeholder="8 کاراکتر هگز">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- بخش ۲: پروتکل VLESS + WebSocket / Cloudflare CDN -->
+                <div class="col-lg-6">
+                    <div class="card border rounded-3 p-3 h-100 shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <div class="fw-bold text-info">
+                                <i class="fas fa-cloud text-info me-1"></i> پروتکل VLESS WebSocket / CDN
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="xrayWsEnabled" name="xray_ws_enabled" value="1" {% if not xray_config or xray_config.ws_enabled %}checked{% endif %}>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-sm-6">
+                                <label class="form-label small fw-bold">پورت WebSocket:</label>
+                                <input type="number" class="form-control form-control-sm font-monospace" name="ws_port" value="{{ xray_config.ws_port if xray_config else 8443 }}" placeholder="8443">
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label small fw-bold">مسیر ترافیک (WS Path):</label>
+                                <input type="text" class="form-control form-control-sm font-monospace" name="ws_path" value="{{ xray_config.ws_path if xray_config else '/tgbot-ws' }}" placeholder="/tgbot-ws">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">دامنه CDN یا کلودفلر (اختیاری):</label>
+                            <input type="text" class="form-control form-control-sm font-monospace" name="cdn_domain" value="{{ xray_config.cdn_domain if xray_config else '' }}" placeholder="cdn.yourdomain.com">
+                            <div class="form-text small text-muted">اگر دامنه‌ای پشت CDN کلودفلر دارید اینجا وارد فرمایید.</div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">دامنه یا آی‌پی مستقیم سرور (Direct Host):</label>
+                            <input type="text" class="form-control form-control-sm font-monospace" name="direct_domain" value="{{ xray_config.direct_domain if xray_config else '' }}" placeholder="sub.yourdomain.com یا آی‌پی سرور">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- نوار دکمه‌های عملیاتی -->
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2 border-top">
+                <div class="d-flex align-items-center gap-2">
+                    <button type="submit" class="btn btn-primary px-4" id="saveXrayBtn">
+                        <i class="fas fa-save me-1"></i> ذخیره تنظیمات هسته Xray
+                    </button>
+                    <a href="/admin/xray/download_config" class="btn btn-outline-secondary">
+                        <i class="fas fa-download me-1"></i> دانلود config.json
+                    </a>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-success" onclick="syncXrayTrafficNow()">
+                        <i class="fas fa-chart-line me-1"></i> استعلام و ثبت مصرف
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" onclick="restartXrayServiceNow()">
+                        <i class="fas fa-rotate me-1"></i> ری‌استارت سرویس Xray
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- ═══ بخش ۱: ظاهر و استایل ═══ -->
 <!-- کارت ۱: هویت بصری و برندینگ -->
 <div class="card shadow-sm mb-4 border-0 settings-section-card" data-category="appearance" id="card-branding">
@@ -4728,7 +4913,105 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     updateTehranLiveClock();
-    setInterval(updateTehranLiveClock, 1000);
+    // ─── توابع مدیریت هسته Xray-core ───
+    window.copyXrayInstallCommand = function(btn) {
+        const code = document.getElementById('xrayInstallCode').innerText;
+        navigator.clipboard.writeText(code).then(() => {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check text-success me-1"></i> کپی شد!';
+            setTimeout(() => { btn.innerHTML = orig; }, 2000);
+        }).catch(err => {
+            alert('کپی نشد: ' + err);
+        });
+    };
+
+    window.generateNewRealityKeys = function() {
+        if (!confirm('آیا از تولید جفت‌کلید جدید Reality اطمینان دارید؟ در صورت ذخیره، کلیدهای قبلی جایگزین خواهند شد.')) return;
+        fetch('/admin/api/xray/generate_keys', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('realityPubKeyInput').value = data.public_key;
+                document.getElementById('realityPrivKeyInput').value = data.private_key;
+                document.getElementById('realityShortIdInput').value = data.short_id;
+                alert('کلیدهای جدید با موفقیت تولید شدند. لطفاً دکمه ذخیره تنظیمات هسته Xray را بزنید تا اعمال گردند.');
+            } else {
+                alert('خطا در تولید کلید: ' + (data.message || 'ناشناخته'));
+            }
+        })
+        .catch(err => alert('خطا در ارتباط با سرور: ' + err));
+    };
+
+    window.saveXraySettings = function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('saveXrayBtn');
+        const origText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> در حال ذخیره...';
+
+        const form = document.getElementById('xraySettingsForm');
+        const formData = new FormData(form);
+        const payload = {};
+        formData.forEach((val, key) => { payload[key] = val; });
+        payload['xray_core_enabled'] = document.getElementById('xrayCoreEnabled').checked ? '1' : '0';
+        payload['xray_include_external_node'] = document.getElementById('xrayIncludeExternalNode').checked ? '1' : '0';
+        payload['xray_reality_enabled'] = document.getElementById('xrayRealityEnabled').checked ? '1' : '0';
+        payload['xray_ws_enabled'] = document.getElementById('xrayWsEnabled').checked ? '1' : '0';
+
+        fetch('/admin/api/xray/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+            if (data.success) {
+                alert(data.message || 'تنظیمات هسته با موفقیت ذخیره شد.');
+            } else {
+                alert('خطا در ذخیره: ' + (data.message || ''));
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = origText;
+            alert('خطای شبکه: ' + err);
+        });
+    };
+
+    window.restartXrayServiceNow = function() {
+        if (!confirm('آیا از ری‌استارت سرویس هسته Xray اطمینان دارید؟')) return;
+        fetch('/admin/api/xray/restart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            alert(data.message || (data.success ? 'انجام شد' : 'خطا'));
+        })
+        .catch(err => alert('خطا: ' + err));
+    };
+
+    window.syncXrayTrafficNow = function() {
+        fetch('/admin/api/xray/sync_traffic', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const d = data.data;
+                alert(`همگام‌سازی انجام شد.\nکاربران بررسی‌شده: ${d.total_users || 0}\nمصرف به‌روزرسانی شده: ${d.synced || 0}\nکاربران منقضی/مسدود شده: ${d.blocked || 0}`);
+            } else {
+                alert('خطا در استعلام مصرف.');
+            }
+        })
+        .catch(err => alert('خطا: ' + err));
+    };
 });
 </script>
 {% include "hiddify_sync_modal.html" %}

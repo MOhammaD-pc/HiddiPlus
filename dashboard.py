@@ -7,6 +7,7 @@ import os
 import csv
 import io
 import json
+import base64
 import time
 import hashlib
 import re
@@ -59,6 +60,7 @@ from palette_manager import (
     get_all_palettes, get_palette, get_active_palette_config, generate_palette_css
 )
 from services.renewal_guard import RenewalGuard
+from services.xray_service import xray_service
 
 logger = logging.getLogger(__name__)
 
@@ -1441,50 +1443,161 @@ def api_qr_image():
         return "خطای سرور", 500
 
 
+def _parse_subscription_configs(raw_content: str) -> List[str]:
+    """تفکیک و استخراج لیست کانفیگ‌ها از متن خام یا base64 دریافتی از سرور"""
+    if not raw_content or not raw_content.strip():
+        return []
+    clean = raw_content.strip()
+    lines = [line.strip() for line in clean.splitlines() if line.strip()]
+    scheme_prefixes = ("vless://", "vmess://", "trojan://", "ss://", "tuic://", "hysteria://", "hy2://")
+    if any(line.startswith(scheme_prefixes) for line in lines):
+        return [l for l in lines if l.startswith(scheme_prefixes)]
+
+    try:
+        missing_padding = len(clean) % 4
+        if missing_padding:
+            clean += "=" * (4 - missing_padding)
+        decoded = base64.b64decode(clean).decode("utf-8", errors="ignore").strip()
+        dec_lines = [line.strip() for line in decoded.splitlines() if line.strip()]
+        if any(line.startswith(scheme_prefixes) for line in dec_lines):
+            return [l for l in dec_lines if l.startswith(scheme_prefixes)]
+    except Exception:
+        pass
+
+    return lines
+
+
 @app.route("/sub/<sub_uuid>", defaults={"sub_path": ""}, strict_slashes=False, methods=["GET"])
 @app.route("/sub/<sub_uuid>/<path:sub_path>", strict_slashes=False, methods=["GET"])
 def smart_subscription_proxy(sub_uuid: str, sub_path: str = ""):
     """
     دریافت هوشمند اشتراک توسط کلاینت‌ها (Hiddify, Happ, Streisand, v2rayNG, Sing-box و...)
+    پشتیبانی ترکیبی از هسته داخلی Xray-core و نودهای خارجی هیدیفای به صورت منعطف و پایدار
     ثبت بلادرنگ مشخصات واقعی دستگاه، سیستم‌عامل، برنامه کلاینت و IP اینترنت کاربر
     """
     ua = request.headers.get("User-Agent", "")
     ua_lower = ua.lower()
     client_ip = request.headers.get("CF-Connecting-IP") or request.headers.get("X-Real-IP") or request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
-    
-    # ثبت مشخصات نشست در دیتابیس
+
+    # واکشی مشخصات اشتراک از دیتابیس
     sub = db.get_subscription_by_uuid(sub_uuid)
+    if not sub:
+        sub = db.get_subscription(sub_uuid)
+
     if sub:
         db.record_subscription_session(sub["id"], sub_uuid, client_ip, ua, is_active=1)
 
-    # واکشی مستقیم محتوای کانفیگ از سرور هیدیفای
+    accept_hdr = request.headers.get("Accept", "").lower()
+    client_indicators = ["v2ray", "hiddify", "happ", "sing-box", "clash", "streisand", "shadowrocket", "nekobox", "foxray", "surge", "stash", "loon", "quantumult", "curl", "wget"]
+    is_vpn_client = any(k in ua_lower for k in client_indicators) or sub_path.lower() in ("all.txt", "sub", "config", "json")
+    is_browser = ("text/html" in accept_hdr or "application/xhtml+xml" in accept_hdr) and not is_vpn_client and not sub_path
+
+    # اگر کاربر با مرورگر وارد شده و هاست هیدیفای ست نشده باشد، پرتال اختصاصی مشتری را نمایش می‌دهیم
     hiddify_url = get_hiddify_url()
     proxy_path = get_user_proxy()
-    target_url = f"{hiddify_url}/{proxy_path}/{sub_uuid}/"
-    if sub_path:
-        target_url = f"{hiddify_url}/{proxy_path}/{sub_uuid}/{sub_path}"
-    elif "happ" in ua_lower:
-        # کلاینت Happ نیاز به دریافت مستقیم سابسکریپشن بدون واسطه صفحه HTML دارد
+    if is_browser and not hiddify_url:
+        return _handle_customer_portal_view(sub_uuid)
+
+    account_name = (sub.get("account_name") if sub else "") or "TGBot"
+    is_sub_active = sub and (sub.get("status") or "").lower() == "active"
+
+    # جمع‌آوری و ترکیب کانفیگ‌ها
+    combined_configs: List[str] = []
+
+    # ۱. کانفیگ‌های هسته داخلی Xray-core
+    if is_sub_active and xray_service.is_enabled():
+        try:
+            local_configs = xray_service.get_client_inbounds(sub_uuid, account_name=account_name)
+            combined_configs.extend(local_configs)
+        except Exception as e:
+            logger.error(f"Error getting local inbounds for {sub_uuid}: {e}")
+
+    # ۲. کانفیگ‌های نود خارجی هیدیفای در صورت اتصال
+    include_external = db.is_setting_enabled("xray_include_external_node", default=True)
+    if is_sub_active and include_external and hiddify_url:
         target_url = f"{hiddify_url}/{proxy_path}/{sub_uuid}/all.txt"
-
-    try:
         req_headers = {k: v for k, v in request.headers if k.lower() not in ["host", "content-length"]}
-        if "happ" in ua_lower:
-            req_headers["User-Agent"] = "v2rayNG/1.8.12"
+        req_headers["User-Agent"] = "v2rayNG/1.8.12"
+        try:
+            with httpx.Client(verify=False, follow_redirects=True, timeout=5.0) as client:
+                resp = client.get(target_url, headers=req_headers)
+                if resp.status_code == 200 and resp.text:
+                    h_configs = _parse_subscription_configs(resp.text)
+                    combined_configs.extend(h_configs)
+        except Exception as e:
+            logger.warning(f"Could not fetch external configs from {target_url}: {e}")
 
-        with httpx.Client(verify=False, follow_redirects=True, timeout=10.0) as client:
-            resp = client.get(target_url, headers=req_headers)
-            # اگر سرور هیدیفای صفحه وب HTML برگرداند در حالی که کلاینت Happ است، سابسکریپشن خام را واکشی کنیم
-            if "happ" in ua_lower and resp.headers.get("content-type", "").startswith("text/html"):
-                fallback_url = f"{hiddify_url}/{proxy_path}/{sub_uuid}/all.txt"
-                resp = client.get(fallback_url, headers=req_headers)
+    # ۳. پاسخ با سابسکریپشن ترکیبی Base64 در صورت وجود کانفیگ
+    if combined_configs:
+        seen = set()
+        unique_configs = []
+        for c in combined_configs:
+            c_str = str(c).strip()
+            if c_str and c_str not in seen:
+                seen.add(c_str)
+                unique_configs.append(c_str)
 
-            excluded_headers = ["content-encoding", "content-length", "transfer-encoding", "connection"]
-            resp_headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in excluded_headers]
-            return Response(resp.content, status=resp.status_code, headers=resp_headers)
-    except Exception as e:
-        logger.error(f"Error proxying subscription for {sub_uuid}: {e}")
-        return Response("Error fetching subscription configs from server", status=502, mimetype="text/plain")
+        raw_joined = "\n".join(unique_configs)
+        encoded_body = base64.b64encode(raw_joined.encode("utf-8"))
+
+        resp_headers = {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Profile-Update-Interval": "12"
+        }
+        try:
+            b64_title = base64.b64encode(account_name.encode("utf-8")).decode("utf-8")
+            resp_headers["Profile-Title"] = f"base64:{b64_title}"
+        except Exception:
+            pass
+
+        if sub:
+            used_bytes = int(float(sub.get("data_used") or 0) * (1024 ** 3))
+            limit_bytes = int(float(sub.get("data_limit") or 0) * (1024 ** 3))
+            exp_ts = 0
+            exp_date = sub.get("expire_date")
+            if exp_date:
+                try:
+                    dt = datetime.fromisoformat(str(exp_date).replace("Z", ""))
+                    exp_ts = int(dt.timestamp())
+                except Exception:
+                    pass
+            resp_headers["Subscription-Userinfo"] = f"upload=0; download={used_bytes}; total={limit_bytes}; expire={exp_ts}"
+
+        return Response(encoded_body, status=200, headers=resp_headers)
+
+    # ۴. فال‌بک به هیدیفای در صورت درخواست فایل‌های خاص یا خاموش بودن هسته محلی
+    if hiddify_url:
+        target_url = f"{hiddify_url}/{proxy_path}/{sub_uuid}/"
+        if sub_path:
+            target_url = f"{hiddify_url}/{proxy_path}/{sub_uuid}/{sub_path}"
+        elif "happ" in ua_lower:
+            target_url = f"{hiddify_url}/{proxy_path}/{sub_uuid}/all.txt"
+
+        try:
+            req_headers = {k: v for k, v in request.headers if k.lower() not in ["host", "content-length"]}
+            if "happ" in ua_lower:
+                req_headers["User-Agent"] = "v2rayNG/1.8.12"
+
+            with httpx.Client(verify=False, follow_redirects=True, timeout=10.0) as client:
+                resp = client.get(target_url, headers=req_headers)
+                if "happ" in ua_lower and resp.headers.get("content-type", "").startswith("text/html"):
+                    fallback_url = f"{hiddify_url}/{proxy_path}/{sub_uuid}/all.txt"
+                    resp = client.get(fallback_url, headers=req_headers)
+
+                excluded_headers = ["content-encoding", "content-length", "transfer-encoding", "connection"]
+                resp_headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in excluded_headers]
+                return Response(resp.content, status=resp.status_code, headers=resp_headers)
+        except Exception as e:
+            logger.error(f"Error proxying subscription for {sub_uuid}: {e}")
+            if is_browser:
+                return _handle_customer_portal_view(sub_uuid)
+            return Response("Error fetching subscription configs from server", status=502, mimetype="text/plain")
+
+    if is_browser:
+        return _handle_customer_portal_view(sub_uuid)
+
+    return Response("Subscription not found or has no active configurations", status=404, mimetype="text/plain")
 
 
 # ─── هلپرهای ارتباط همگام با تلگرام و هیدیفای (Sync Helpers) ───
@@ -15005,8 +15118,178 @@ def settings():
         infrastructure_config=infrastructure_config,
         reminder_settings=db.get_reminder_settings(),
         tehran_now_formatted=get_now().strftime("%H:%M:%S"),
-        tehran_now_shamsi=get_now_shamsi()
+        tehran_now_shamsi=get_now_shamsi(),
+        xray_config=xray_service.get_service_status()
     )
+
+
+# ─── روت‌های مدیریت هسته اختصاصی Xray-core و پروکسی‌های داخلی ───
+
+@app.route("/admin/api/xray/status", methods=["GET"])
+@admin_required
+def admin_api_xray_status():
+    """دریافت وضعیت زنده و اطلاعات سرویس هسته Xray"""
+    status = xray_service.get_service_status()
+    return jsonify({"success": True, "status": status})
+
+
+@app.route("/admin/api/xray/settings", methods=["POST"])
+@super_admin_required
+def admin_api_xray_save_settings():
+    """ذخیره تنظیمات هسته اختصاصی Xray و به‌روزرسانی فایل کانفیگ"""
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+
+    xray_enabled = str(data.get("xray_core_enabled", "0")).lower() in ("1", "true")
+    reality_enabled = str(data.get("xray_reality_enabled", "1")).lower() in ("1", "true")
+    ws_enabled = str(data.get("xray_ws_enabled", "1")).lower() in ("1", "true")
+    include_ext = str(data.get("xray_include_external_node", "1")).lower() in ("1", "true")
+
+    db.set_setting("xray_core_enabled", "1" if xray_enabled else "0")
+    db.set_setting("xray_reality_enabled", "1" if reality_enabled else "0")
+    db.set_setting("xray_ws_enabled", "1" if ws_enabled else "0")
+    db.set_setting("xray_include_external_node", "1" if include_ext else "0")
+
+    if "reality_port" in data:
+        db.set_setting("xray_reality_port", int(data.get("reality_port") or 443))
+    if "reality_sni" in data:
+        db.set_setting("xray_reality_sni", str(data.get("reality_sni") or "www.yahoo.com").strip())
+    if "reality_pub_key" in data and data.get("reality_pub_key"):
+        db.set_setting("xray_reality_public_key", str(data.get("reality_pub_key")).strip())
+    if "reality_priv_key" in data and data.get("reality_priv_key"):
+        db.set_setting("xray_reality_private_key", str(data.get("reality_priv_key")).strip())
+    if "reality_short_id" in data and data.get("reality_short_id"):
+        db.set_setting("xray_reality_short_id", str(data.get("reality_short_id")).strip())
+
+    if "ws_port" in data:
+        db.set_setting("xray_ws_port", int(data.get("ws_port") or 8443))
+    if "ws_path" in data:
+        db.set_setting("xray_ws_path", str(data.get("ws_path") or "/tgbot-ws").strip())
+    if "cdn_domain" in data:
+        db.set_setting("xray_cdn_domain", str(data.get("cdn_domain") or "").strip())
+    if "direct_domain" in data:
+        db.set_setting("xray_direct_domain", str(data.get("direct_domain") or "").strip())
+    if "server_ip" in data:
+        db.set_setting("xray_server_ip", str(data.get("server_ip") or "").strip())
+
+    # به‌روزرسانی فایل config.json در لینوکس در صورت وجود
+    if os.name != "nt":
+        xray_service.write_config_file()
+        if xray_enabled:
+            xray_service.restart_service()
+
+    if request.is_json:
+        return jsonify({"success": True, "message": "تنظیمات هسته Xray با موفقیت ذخیره گردید."})
+    flash("تنظیمات هسته Xray با موفقیت به‌روزرسانی شد.", "success")
+    return redirect(url_for("settings", active_tab="infra"))
+
+
+@app.route("/admin/api/xray/generate_keys", methods=["POST"])
+@super_admin_required
+def admin_api_xray_generate_keys():
+    """تولید جفت‌کلید جدید X25519 برای پروتکل Reality"""
+    keys = xray_service.generate_x25519_keypair()
+    db.set_setting("xray_reality_private_key", keys["private_key"])
+    db.set_setting("xray_reality_public_key", keys["public_key"])
+    db.set_setting("xray_reality_short_id", keys["short_id"])
+    return jsonify({
+        "success": True,
+        "public_key": keys["public_key"],
+        "private_key": keys["private_key"],
+        "short_id": keys["short_id"],
+        "message": "کلیدهای جدید با موفقیت تولید و در تنظیمات ثبت شدند."
+    })
+
+
+@app.route("/admin/xray/download_config", methods=["GET"])
+@admin_required
+def admin_xray_download_config():
+    """دانلود فایل کامل config.json متناسب با آخرین وضعیت کاربران سیستم"""
+    cfg = xray_service.generate_full_xray_config()
+    cfg_str = json.dumps(cfg, indent=2, ensure_ascii=False)
+    return Response(
+        cfg_str,
+        mimetype="application/json",
+        headers={"Content-Disposition": "attachment; filename=config.json"}
+    )
+
+
+@app.route("/admin/api/xray/restart", methods=["POST"])
+@super_admin_required
+def admin_api_xray_restart():
+    """ری‌استارت کردن دستی سرویس هسته Xray"""
+    success, msg = xray_service.restart_service()
+    return jsonify({"success": success, "message": msg})
+
+
+@app.route("/admin/api/xray/sync_traffic", methods=["POST"])
+@admin_required
+def admin_api_xray_sync_traffic():
+    """استعلام و همگام‌سازی بلادرنگ ترافیک مصرفی کاربران از هسته Xray"""
+    res = xray_service.sync_traffic_with_database()
+    return jsonify({"success": True, "data": res})
+
+
+# ─── API کلاینت اختصاصی ویندوز / اندروید (Custom Native Client API) ───
+
+@app.route("/api/client/v1/config/<token>", methods=["GET"])
+def api_client_config(token: str):
+    """
+    API اختصاصی ارتباط با برنامه ویندوز و اندروید آینده TGBot
+    ارائه اطلاعات کاربری، لینک پرتال داخلی، و ساختار نودها جهت اتصال خودکار
+    """
+    sub = db.get_subscription_by_uuid(token)
+    if not sub:
+        sub = db.get_subscription(token)
+
+    if not sub:
+        return jsonify({"success": False, "message": "اشتراک یافت نشد"}), 404
+
+    account_name = sub.get("account_name") or "کاربر گرامی"
+    data_limit = float(sub.get("data_limit") or 0)
+    data_used = float(sub.get("data_used") or 0)
+    remaining = max(0.0, data_limit - data_used) if data_limit > 0 else 0.0
+
+    inbounds_list = []
+    if xray_service.is_enabled():
+        raw_uris = xray_service.get_client_inbounds(token, account_name=account_name)
+        for u in raw_uris:
+            tag = "پروکسی اختصاصی"
+            if "#" in u:
+                tag = u.split("#")[-1].strip()
+            inbounds_list.append({
+                "tag": tag,
+                "protocol": "vless",
+                "uri": u
+            })
+
+    base_domain = (
+        db.get_setting("custom_domain")
+        or db.get_setting("panel_domain")
+        or request.host
+    )
+    scheme = "https" if request.is_secure or "https" in request.headers.get("X-Forwarded-Proto", "") else "http"
+    portal_url = f"{scheme}://{base_domain}/portal/{token}"
+
+    return jsonify({
+        "success": True,
+        "user": {
+            "account_name": account_name,
+            "plan_name": sub.get("plan_name") or "اشتراک آزاد",
+            "status": sub.get("status") or "active",
+            "data_limit_gb": round(data_limit, 2),
+            "data_used_gb": round(data_used, 2),
+            "data_remaining_gb": round(remaining, 2),
+            "expire_date": sub.get("expire_date"),
+        },
+        "portal_url": portal_url,
+        "nodes": inbounds_list,
+        "app_branding": {
+            "name": db.get_setting("store_name", "TGBot VIP"),
+            "logo": db.get_setting("store_logo", "/avatars/Logo.webp"),
+            "support_url": db.get_setting("support_username", ""),
+            "channel_url": db.get_setting("mandatory_channels_main", "")
+        }
+    })
 
 
 @app.route("/admin/github/test_version", methods=["POST"])
