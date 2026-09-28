@@ -366,6 +366,167 @@ class XrayService:
         """
         return self.generate_matrix_subscription(uuid, account_name)
 
+    def parse_config_details(self, uri: str) -> Dict[str, Any]:
+        """
+        تجزیه و تحلیل لینک خام کانفیگ و استخراج متادیتا جهت نمایش زیبا در پرتال مشتری
+        """
+        clean_uri = str(uri or "").strip()
+        protocol = "VLESS"
+        badge_color = "primary"
+        icon = "fas fa-shield-alt"
+        transport = "Direct"
+        name = "کانفیگ اختصاصی"
+
+        if clean_uri.startswith("vless://"):
+            protocol = "VLESS"
+            if "security=reality" in clean_uri:
+                transport = "Reality Direct"
+                badge_color = "success"
+                icon = "fas fa-bolt"
+            elif "type=ws" in clean_uri:
+                transport = "CDN WebSocket"
+                badge_color = "info"
+                icon = "fas fa-cloud"
+            elif "type=grpc" in clean_uri:
+                transport = "gRPC Gun"
+                badge_color = "primary"
+                icon = "fas fa-paper-plane"
+            else:
+                transport = "TCP Direct"
+                badge_color = "secondary"
+        elif clean_uri.startswith("trojan://"):
+            protocol = "Trojan"
+            icon = "fas fa-user-shield"
+            if "type=ws" in clean_uri:
+                transport = "CDN WebSocket"
+                badge_color = "warning"
+            else:
+                transport = "Direct TLS"
+                badge_color = "warning"
+        elif clean_uri.startswith("ss://"):
+            protocol = "Shadowsocks"
+            transport = "2022 AEAD"
+            badge_color = "danger"
+            icon = "fas fa-key"
+        elif clean_uri.startswith("vmess://"):
+            protocol = "VMess"
+            transport = "CDN WebSocket"
+            badge_color = "secondary"
+            icon = "fas fa-rocket"
+
+        if "#" in clean_uri:
+            try:
+                import urllib.parse
+                raw_name = clean_uri.split("#", 1)[-1]
+                name = urllib.parse.unquote(raw_name)
+            except Exception:
+                name = clean_uri.split("#", 1)[-1]
+        elif clean_uri.startswith("vmess://"):
+            try:
+                b64_part = clean_uri.replace("vmess://", "")
+                missing_padding = len(b64_part) % 4
+                if missing_padding:
+                    b64_part += "=" * (4 - missing_padding)
+                decoded = base64.b64decode(b64_part).decode("utf-8", errors="ignore")
+                j = json.loads(decoded)
+                name = j.get("ps", "VMess Config")
+            except Exception:
+                name = "VMess Config"
+
+        return {
+            "uri": clean_uri,
+            "protocol": protocol,
+            "transport": transport,
+            "badge_color": badge_color,
+            "icon": icon,
+            "name": name
+        }
+
+    def get_unified_subscription_url(self, token: str, reseller_id: Optional[int] = None, request_host: Optional[str] = None) -> str:
+        """
+        تولید آدرس یکپارچه سابسکریپشن و پرتال مشتری (Unified Subscription Hub)
+        اولویت‌بندی انتخاب دامنه:
+        ۱. دامنه اختصاصی نماینده در صورت ثبت برای نماینده مربوطه
+        ۲. دامنه‌های با نقش Sub-Only یا Sub در مدیریت دامنه‌های Xray
+        ۳. دامنه‌های با نقش CDN در مدیریت دامنه‌های Xray
+        ۴. دامنه‌های با نقش Direct در مدیریت دامنه‌های Xray
+        ۵. دامنه عمومی سیستم (custom_domain یا panel_domain)
+        ۶. دامنه میزبان درخواست (request_host یا request.host_url در صورت اجرای درون وب)
+        ۷. آدرس پنل هیدیفای یا پیش‌فرض سیستم
+        """
+        clean_token = str(token or "").strip()
+        if not clean_token:
+            return ""
+
+        chosen_domain = ""
+
+        # ۱. دامنه اختصاصی نماینده
+        if reseller_id and int(reseller_id) > 0:
+            try:
+                r_info = self.db.get_reseller(int(reseller_id))
+                if r_info and r_info.get("custom_domain"):
+                    chosen_domain = str(r_info["custom_domain"]).strip()
+            except Exception as e:
+                logger.warning(f"Error checking reseller domain for sub url: {e}")
+
+        # ۲. دامنه‌های ثبت‌شده در xray_domains
+        if not chosen_domain:
+            try:
+                x_domains = self.db.get_xray_domains(active_only=True)
+                for d in x_domains:
+                    if d.get("role", "").lower() in ("sub_only", "sub", "subscription"):
+                        chosen_domain = str(d.get("domain", "")).strip()
+                        break
+                if not chosen_domain:
+                    for d in x_domains:
+                        if d.get("role", "").lower() == "cdn":
+                            chosen_domain = str(d.get("domain", "")).strip()
+                            break
+                if not chosen_domain:
+                    for d in x_domains:
+                        if d.get("role", "").lower() == "direct":
+                            chosen_domain = str(d.get("domain", "")).strip()
+                            break
+            except Exception as e:
+                logger.warning(f"Error checking xray_domains for sub url: {e}")
+
+        # ۳. تنظیمات عمومی پنل
+        if not chosen_domain:
+            try:
+                chosen_domain = (self.db.get_setting("custom_domain") or self.db.get_setting("panel_domain") or "").strip()
+            except Exception:
+                pass
+
+        # ۴. هاست ارسال‌شده یا Context جاری فلاسک
+        if not chosen_domain and request_host:
+            chosen_domain = str(request_host).strip()
+        elif not chosen_domain:
+            try:
+                from flask import has_request_context, request as flask_req
+                if has_request_context():
+                    chosen_domain = flask_req.host_url.rstrip("/")
+            except Exception:
+                pass
+
+        # ۵. بررسی آدرس پنل هیدیفای
+        if not chosen_domain:
+            try:
+                h_url = self.db.get_setting("hiddify_url") or os.getenv("HIDIFY_PANEL_URL")
+                if h_url:
+                    chosen_domain = str(h_url).strip()
+            except Exception:
+                pass
+
+        # ۶. پیش‌فرض سرور
+        if not chosen_domain:
+            chosen_domain = os.getenv("PANEL_DOMAIN", "http://localhost:8000").rstrip("/")
+
+        clean_dom = chosen_domain.strip().rstrip("/")
+        if not clean_dom.startswith("http://") and not clean_dom.startswith("https://"):
+            clean_dom = f"https://{clean_dom}"
+
+        return f"{clean_dom}/sub/{clean_token}"
+
     # ─── تولید ساختار کانفیگ رسمی هسته Xray (xray config.json) ───
 
     def generate_full_xray_config(self) -> Dict[str, Any]:
@@ -858,3 +1019,5 @@ class XrayService:
 
 # نمونه یکتای ماژول
 xray_service = XrayService()
+get_unified_subscription_url = xray_service.get_unified_subscription_url
+parse_config_details = xray_service.parse_config_details

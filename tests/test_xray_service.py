@@ -332,6 +332,103 @@ class TestXrayService(unittest.TestCase):
         self.assertEqual(len(block_rules), 1)
         self.assertIn("25", block_rules[0]["port"])
 
+    def test_unified_subscription_url_generation(self):
+        """بررسی اولویت‌بندی هوشمند تولید لینک سابسکریپشن بر اساس نقش‌های دامنه‌ها"""
+        # ۱. تست با دامنه عمومی سیستم
+        self.db.set_setting("custom_domain", "portal.mainsite.com")
+        url = self.service.get_unified_subscription_url("test-token-1")
+        self.assertIn("portal.mainsite.com/sub/test-token-1", url)
+
+        # ۲. تست با ثبت دامنه cdn
+        add_cdn = self.db.add_xray_domain(domain="cdn.subnode.com", role="cdn", port=443)
+        cdn_id = add_cdn.get("id")
+        url_cdn = self.service.get_unified_subscription_url("test-token-2")
+        self.assertIn("cdn.subnode.com/sub/test-token-2", url_cdn)
+
+        # ۳. تست با ثبت دامنه sub_only (اولویت بالاتر از cdn)
+        add_sub = self.db.add_xray_domain(domain="sub.onlydomain.com", role="sub_only", port=443)
+        sub_id = add_sub.get("id")
+        url_sub = self.service.get_unified_subscription_url("test-token-3")
+        self.assertIn("sub.onlydomain.com/sub/test-token-3", url_sub)
+
+        # پاکسازی دامنه‌ها
+        if sub_id:
+            self.db.delete_xray_domain(sub_id)
+        if cdn_id:
+            self.db.delete_xray_domain(cdn_id)
+
+    def test_parse_config_details(self):
+        """بررسی تجزیه دقیق متادیتا و متغیرهای بصری کانفیگ‌های تولیدشده"""
+        vless_reality = "vless://user1@direct.server.com:443?security=reality&sni=yahoo.com#VPN ⚡ Reality Direct"
+        p_vr = self.service.parse_config_details(vless_reality)
+        self.assertEqual(p_vr["protocol"], "VLESS")
+        self.assertEqual(p_vr["transport"], "Reality Direct")
+        self.assertEqual(p_vr["badge_color"], "success")
+        self.assertEqual(p_vr["name"], "VPN ⚡ Reality Direct")
+
+        vless_ws = "vless://user1@cdn.server.com:443?security=tls&type=ws&path=/tgbot-ws#VPN 🌐 Cloud CDN VLESS-WS"
+        p_ws = self.service.parse_config_details(vless_ws)
+        self.assertEqual(p_ws["protocol"], "VLESS")
+        self.assertEqual(p_ws["transport"], "CDN WebSocket")
+        self.assertEqual(p_ws["badge_color"], "info")
+
+        trojan_ws = "trojan://user1@cdn.server.com:443?security=tls&type=ws&path=/tgbot-ws#VPN 🛡️ Trojan-WS"
+        p_tr = self.service.parse_config_details(trojan_ws)
+        self.assertEqual(p_tr["protocol"], "Trojan")
+        self.assertEqual(p_tr["badge_color"], "warning")
+
+        ss_aead = "ss://YWVzLTI1Ni1nY206cGFzc3dvcmQ=@ss.server.com:1080#VPN ⚡ Shadowsocks 2022"
+        p_ss = self.service.parse_config_details(ss_aead)
+        self.assertEqual(p_ss["protocol"], "Shadowsocks")
+        self.assertEqual(p_ss["transport"], "2022 AEAD")
+        self.assertEqual(p_ss["badge_color"], "danger")
+
+    def test_smart_subscription_browser_portal_delivery(self):
+        """تست جامع تفکیک هوشمند مرورگر وب (پرتال بنتو) از کلاینت‌های VPN (سابسکریپشن Base64)"""
+        conn = self.db.get_connection()
+        conn.execute("""
+            INSERT OR REPLACE INTO subscriptions 
+            (id, hidify_uuid, telegram_id, plan_id, plan_name, account_name, data_limit, data_used, duration, status, is_deleted)
+            VALUES (88889, 'uuid-portal-delivery-test', 0, 'plan_vip', 'بسته اختصاصی', 'DeliveryUser', 80.0, 10.0, 30, 'active', 0)
+        """)
+        conn.commit()
+        conn.close()
+
+        try:
+            self.db.set_setting("xray_core_enabled", "1")
+            self.db.set_setting("xray_matrix_direct_reality_tcp", "1")
+
+            with self.client as client:
+                # الف) درخواست مرورگر وب: باید پرتال بنتو با استاتوس 200 و فرمت HTML رندر شود
+                res_browser = client.get(
+                    "/sub/uuid-portal-delivery-test",
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+                    }
+                )
+                self.assertEqual(res_browser.status_code, 200)
+                html_body = res_browser.data.decode("utf-8")
+                self.assertIn("subConfigModal", html_body)
+                self.assertIn("DeliveryUser", html_body)
+                self.assertIn("tab-xray-pane", html_body)
+
+                # ب) درخواست کلاینت VPN (مثلاً Streisand / Happ / v2rayNG): باید Base64 کانفیگ‌ها برگردد
+                res_vpn = client.get(
+                    "/sub/uuid-portal-delivery-test",
+                    headers={"User-Agent": "Streisand/1.5.0"}
+                )
+                self.assertEqual(res_vpn.status_code, 200)
+                self.assertIn("Subscription-Userinfo", res_vpn.headers)
+                decoded_configs = base64.b64decode(res_vpn.data).decode("utf-8")
+                self.assertIn("vless://", decoded_configs)
+                self.assertIn("DeliveryUser", decoded_configs)
+        finally:
+            conn = self.db.get_connection()
+            conn.execute("DELETE FROM subscriptions WHERE id=88889")
+            conn.commit()
+            conn.close()
+
 
 if __name__ == "__main__":
     unittest.main()

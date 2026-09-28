@@ -1492,10 +1492,10 @@ def smart_subscription_proxy(sub_uuid: str, sub_path: str = ""):
     is_vpn_client = any(k in ua_lower for k in client_indicators) or sub_path.lower() in ("all.txt", "sub", "config", "json")
     is_browser = ("text/html" in accept_hdr or "application/xhtml+xml" in accept_hdr) and not is_vpn_client and not sub_path
 
-    # اگر کاربر با مرورگر وارد شده و هاست هیدیفای ست نشده باشد، پرتال اختصاصی مشتری را نمایش می‌دهیم
+    # اگر کاربر با مرورگر وارد شده باشد، پرتال اختصاصی مشتری را نمایش می‌دهیم
     hiddify_url = get_hiddify_url()
     proxy_path = get_user_proxy()
-    if is_browser and not hiddify_url:
+    if is_browser:
         return _handle_customer_portal_view(sub_uuid)
 
     account_name = (sub.get("account_name") if sub else "") or "TGBot"
@@ -23627,6 +23627,7 @@ def _handle_customer_portal_view(token: str = None, telegram_id: int = None, res
             days_left = 0
             sub_url = ""
             single_url = ""
+            xray_configs = []
             pending_queue = None
             pending_queues = []
             sub_history = []
@@ -23748,11 +23749,24 @@ def _handle_customer_portal_view(token: str = None, telegram_id: int = None, res
         # لینک‌های اشتراک و کانفیگ تکی
         user_uuid = sub.get("hidify_uuid") or str(sub_id)
         acc_name = sub.get("account_name") or ""
-        panel_url = get_hiddify_url()
-        user_proxy = get_user_proxy()
-        sub_url = f"{panel_url}/{user_proxy}/{user_uuid}/" if (panel_url and user_uuid) else ""
+        sub_url = xray_service.get_unified_subscription_url(user_uuid, reseller_id=reseller_id)
+        if not sub_url:
+            panel_url = get_hiddify_url()
+            user_proxy = get_user_proxy()
+            sub_url = f"{panel_url}/{user_proxy}/{user_uuid}/" if (panel_url and user_uuid) else ""
         single_link_template = db.get_setting("single_link_template")
         single_url = format_single_link(single_link_template, uuid=user_uuid, name=acc_name) if (single_link_template and user_uuid) else ""
+
+        # آماده‌سازی کانفیگ‌های تفکیک‌شده ماتریس اختصاصی پروتکل‌های Xray
+        xray_configs = []
+        is_sub_active = sub and (sub.get("status") or "").lower() == "active"
+        if user_uuid and is_sub_active and xray_service.is_enabled():
+            try:
+                raw_inbounds = xray_service.get_client_inbounds(user_uuid, account_name=acc_name)
+                for uri in raw_inbounds:
+                    xray_configs.append(xray_service.parse_config_details(uri))
+            except Exception as e_xray:
+                logger.warning(f"Error preparing xray_configs for portal: {e_xray}")
 
         pending_queues = db.get_pending_queue_items(sub_id)
         pending_queue = pending_queues[0] if pending_queues else None
@@ -24195,6 +24209,7 @@ def _handle_customer_portal_view(token: str = None, telegram_id: int = None, res
         invoice=invoice,
         sub_url=sub_url,
         single_url=single_url,
+        xray_configs=xray_configs,
         troubleshoot_url=troubleshoot_url,
         portal_enable_renewal=portal_enable_renewal,
         portal_show_troubleshoot=portal_show_troubleshoot,

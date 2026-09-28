@@ -71,6 +71,7 @@ from telegram.ext import (
     TypeHandler,
     filters
 )
+from services.xray_service import get_unified_subscription_url
 
 logger = logging.getLogger("multibot")
 logger.setLevel(logging.INFO)
@@ -1457,7 +1458,7 @@ class ResellerBotInstance:
                         await query.edit_message_text(cust_msg, reply_markup=InlineKeyboardMarkup(kb_btns), parse_mode="HTML")
                     else:
                         uuid_val = target_sub.get("hidify_uuid") if target_sub else None
-                        sub_url = f"{HIDIFY_PANEL_URL}/{HIDIFY_PROXY_PATH}/{uuid_val}/" if (uuid_val and HIDIFY_PANEL_URL) else ""
+                        sub_url = (get_unified_subscription_url(uuid_val, reseller_id=r_id) if uuid_val else "") or (f"{HIDIFY_PANEL_URL}/{HIDIFY_PROXY_PATH}/{uuid_val}/" if (uuid_val and HIDIFY_PANEL_URL) else "")
                         cust_msg = (
                             f"🎉 <b>اشتراک {brand} با موفقیت تمدید و فعال شد:</b>\n\n"
                             f"📦 بسته: <b>{pname}</b>\n"
@@ -1522,7 +1523,7 @@ class ResellerBotInstance:
             )
 
             uuid_val = created.get("uuid") if created else None
-            sub_url = f"{HIDIFY_PANEL_URL}/{HIDIFY_PROXY_PATH}/{uuid_val}/" if uuid_val else ""
+            sub_url = (get_unified_subscription_url(uuid_val, reseller_id=r_id) if uuid_val else "") or (f"{HIDIFY_PANEL_URL}/{HIDIFY_PROXY_PATH}/{uuid_val}/" if uuid_val else "")
 
             sub_save_res = db.save_subscription(
                 telegram_id=user.id,
@@ -1994,11 +1995,7 @@ class ResellerBotInstance:
                         uuid_val = target_sub.get("hidify_uuid") or str(target_sub["id"])
                         h_url = HIDIFY_PANEL_URL or db.get_setting("hiddify_url") or ""
                         u_proxy = HIDIFY_PROXY_PATH or db.get_setting("user_proxy_path") or "user"
-                        if h_url and uuid_val:
-                            sub_url = f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{uuid_val}/"
-                        elif uuid_val:
-                            sub_url = f"https://vpn.service/sub/{account_name}"
-
+                        sub_url = (get_unified_subscription_url(uuid_val, reseller_id=r_id) if uuid_val else "") or (f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{uuid_val}/" if (h_url and uuid_val) else f"https://vpn.service/sub/{account_name}")
                         if instant_act and target_sub.get("hidify_uuid"):
                             try:
                                 r_client = get_reseller_hidify_client(r_id)
@@ -2044,10 +2041,7 @@ class ResellerBotInstance:
                         uuid_val = h_res.get("uuid") if h_res else None
                         h_url = HIDIFY_PANEL_URL or db.get_setting("hiddify_url") or ""
                         u_proxy = HIDIFY_PROXY_PATH or db.get_setting("user_proxy_path") or "user"
-                        if uuid_val and h_url:
-                            sub_url = f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{uuid_val}/"
-                        else:
-                            sub_url = f"https://vpn.service/sub/{account_name}"
+                        sub_url = (get_unified_subscription_url(uuid_val, reseller_id=r_id) if uuid_val else "") or (f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{uuid_val}/" if (uuid_val and h_url) else f"https://vpn.service/sub/{account_name}")
 
                         sub_res = db.save_subscription(
                             telegram_id=target_uid,
@@ -2407,10 +2401,7 @@ class ResellerBotInstance:
                     if target_sub:
                         sub_db_id = target_sub["id"]
                         uuid_created = target_sub.get("hidify_uuid") or str(target_sub["id"])
-                        if h_url and uuid_created:
-                            sub_url = f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{uuid_created}/"
-                        elif uuid_created:
-                            sub_url = f"https://vpn.service/sub/{account_name}"
+                        sub_url = (get_unified_subscription_url(uuid_created, reseller_id=r_id) if uuid_created else "") or (f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{uuid_created}/" if (h_url and uuid_created) else f"https://vpn.service/sub/{account_name}")
 
                         if instant_act and target_sub.get("hidify_uuid"):
                             try:
@@ -2456,10 +2447,7 @@ class ResellerBotInstance:
 
                         uuid_val = h_res.get("uuid") if h_res else None
                         uuid_created = uuid_val
-                        if uuid_val and h_url:
-                            sub_url = f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{uuid_val}/"
-                        else:
-                            sub_url = f"https://vpn.service/sub/{account_name}"
+                        sub_url = (get_unified_subscription_url(uuid_val, reseller_id=r_id) if uuid_val else "") or (f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{uuid_val}/" if (uuid_val and h_url) else f"https://vpn.service/sub/{account_name}")
 
                         plan_id_val = str(selected_plan.get("id") or 1) if selected_plan else "1"
                         sub_res = db.save_subscription(
@@ -3040,7 +3028,7 @@ class ResellerBotInstance:
 
                 rem_days_str = f" (⏰ <b>{remaining_days} روز مانده</b>)" if remaining_days is not None else ""
 
-                sub_url = f"{HIDIFY_PANEL_URL}/{HIDIFY_PROXY_PATH}/{uuid_val}/" if uuid_val else "در دسترس نیست"
+                sub_url = (get_unified_subscription_url(uuid_val, reseller_id=reseller_id) if uuid_val else "") or (f"{HIDIFY_PANEL_URL}/{HIDIFY_PROXY_PATH}/{uuid_val}/" if uuid_val else "در دسترس نیست")
 
                 sub_card = (
                     f"🔹 <b>اشتراک #{i}: {pname}</b> ({status_badge})\n"
@@ -3145,7 +3133,7 @@ class ResellerBotInstance:
                 uuid_val = target_sub["hidify_uuid"]
                 h_url = HIDIFY_PANEL_URL or db.get_setting("hiddify_url") or ""
                 u_proxy = HIDIFY_PROXY_PATH or db.get_setting("user_proxy_path") or "user"
-                sub_url = f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{uuid_val}/" if h_url else f"https://vpn.service/sub/{uuid_val}"
+                sub_url = (get_unified_subscription_url(uuid_val, reseller_id=reseller_id) if uuid_val else "") or (f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{uuid_val}/" if h_url else f"https://vpn.service/sub/{uuid_val}")
                 qr_bytes = generate_qr_code_bytes(sub_url)
 
                 caption = (
@@ -3503,7 +3491,7 @@ class ResellerBotInstance:
                 db.mark_queue_item_activated(queue_id)
 
                 # ۵. ارسال پیام موفقیت به مشتری
-                sub_url = f"{HIDIFY_PANEL_URL}/{HIDIFY_PROXY_PATH}/{uuid}/" if uuid and HIDIFY_PANEL_URL else ""
+                sub_url = (get_unified_subscription_url(uuid, reseller_id=reseller_id) if uuid else "") or (f"{HIDIFY_PANEL_URL}/{HIDIFY_PROXY_PATH}/{uuid}/" if uuid and HIDIFY_PANEL_URL else "")
                 succ_msg = (
                     f"🎉 <b>بسته تمدیدی با موفقیت به صورت آنی فعال شد!</b>\n\n"
                     f"👤 نام اکانت: <code>{html.escape(str(sub.get('account_name')))}</code>\n"
@@ -4747,7 +4735,7 @@ class ResellerBotInstance:
 
                     proxy_path = (USER_PROXY_PATH or HIDIFY_PROXY_PATH or db.get_setting("user_proxy_path") or "user").strip("/")
                     h_url = HIDIFY_PANEL_URL or db.get_setting("hiddify_url") or ""
-                    sub_url = f"{h_url.rstrip('/')}/{proxy_path}/{uuid_val}/" if h_url else f"https://vpn.service/sub/{uuid_val}"
+                    sub_url = (get_unified_subscription_url(uuid_val, reseller_id=reseller_id) if uuid_val else "") or (f"{h_url.rstrip('/')}/{proxy_path}/{uuid_val}/" if h_url else f"https://vpn.service/sub/{uuid_val}")
 
                     context.user_data.pop("res_create_plan_id", None)
                     context.user_data.pop("res_create_account_name", None)

@@ -59,6 +59,7 @@ from telegram.ext import (
     TypeHandler,
     filters,
 )
+from services.xray_service import get_unified_subscription_url
 
 # ─── بارگذاری متغیرهای محیطی ───
 load_dotenv()
@@ -2336,9 +2337,11 @@ async def handle_payment_method(update: Update, context: ContextTypes.DEFAULT_TY
                         except Exception:
                             pass
 
-                        base_url = (HIDIFY_PANEL_URL or "").rstrip("/")
-                        proxy_path = (USER_PROXY_PATH or HIDIFY_PROXY_PATH or "").strip("/")
-                        subscription_url = f"{base_url}/{proxy_path}/{user_uuid}/"
+                        subscription_url = get_unified_subscription_url(user_uuid)
+                        if not subscription_url:
+                            base_url = (HIDIFY_PANEL_URL or "").rstrip("/")
+                            proxy_path = (USER_PROXY_PATH or HIDIFY_PROXY_PATH or "").strip("/")
+                            subscription_url = f"{base_url}/{proxy_path}/{user_uuid}/"
                         details = (
                             f"✅ مبلغ <b>{price_formatted} تومان</b> از کیف پول شما کسر و اشتراک منقضی مجدداً فعال شد!\n\n"
                             f"📋 بسته: <b>{plan.get('name')}</b>\n"
@@ -2424,9 +2427,11 @@ async def handle_payment_method(update: Update, context: ContextTypes.DEFAULT_TY
             except Exception:
                 pass
 
-            base_url = (HIDIFY_PANEL_URL or "").rstrip("/")
-            proxy_path = (USER_PROXY_PATH or HIDIFY_PROXY_PATH or "").strip("/")
-            subscription_url = f"{base_url}/{proxy_path}/{user_uuid}/"
+            subscription_url = get_unified_subscription_url(user_uuid)
+            if not subscription_url:
+                base_url = (HIDIFY_PANEL_URL or "").rstrip("/")
+                proxy_path = (USER_PROXY_PATH or HIDIFY_PROXY_PATH or "").strip("/")
+                subscription_url = f"{base_url}/{proxy_path}/{user_uuid}/"
             details = (
                 f"✅ مبلغ <b>{price_formatted} تومان</b> از کیف پول شما کسر و اشتراک فعال شد!\n\n"
                 f"📋 بسته: <b>{plan.get('name')}</b>\n"
@@ -3721,7 +3726,9 @@ async def get_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
             panel_url = HIDIFY_PANEL_URL
 
 
-        subscription_url = f"{panel_url.rstrip('/')}/{proxy.strip('/')}/{uuid}/"
+        subscription_url = get_unified_subscription_url(uuid)
+        if not subscription_url:
+            subscription_url = f"{panel_url.rstrip('/')}/{proxy.strip('/')}/{uuid}/"
         status_icon = "🟢 فعال" if status == "active" else "🔴 منقضی"
 
         details = f"📋 بسته: **{plan_name}**\n📝 اکانت: `{account_name}`\n📊 وضعیت: {status_icon}"
@@ -3850,7 +3857,7 @@ async def handle_import_sub_text(update: Update, context: ContextTypes.DEFAULT_T
     conn.close()
 
     # ۴. ارسال کارت اشتراک به مشتری
-    sub_url = f"{HIDIFY_PANEL_URL.rstrip('/')}/{USER_PROXY_PATH.strip('/')}/{extracted_uuid}/"
+    sub_url = (get_unified_subscription_url(extracted_uuid) if extracted_uuid else "") or f"{HIDIFY_PANEL_URL.rstrip('/')}/{USER_PROXY_PATH.strip('/')}/{extracted_uuid}/"
     details = (
         f"✅ **اشتراک با موفقیت به حساب شما متصل شد!**\n\n"
         f"📝 نام اکانت: `{account_name}`\n"
@@ -4389,7 +4396,9 @@ async def verify_payment_callback(update: Update, context: ContextTypes.DEFAULT_
 
     # نمایش پیام موفقیت + لینک اتصال خودکار
     price_formatted = f"{plan['price']:,}".replace(",", "،")
-    subscription_url = f"{HIDIFY_PANEL_URL}/{USER_PROXY_PATH}/{user_uuid}/"
+    subscription_url = get_unified_subscription_url(user_uuid)
+    if not subscription_url:
+        subscription_url = f"{HIDIFY_PANEL_URL}/{USER_PROXY_PATH}/{user_uuid}/"
     data_text = str(plan['data_limit']) if plan['data_limit'] > 0 else 'نامحدود'
     success_text = (
         f"✅ پرداخت موفق! اشتراک فعال شد!\n\n"
@@ -5460,10 +5469,12 @@ async def admin_order_pay_action_callback(update: Update, context: ContextTypes.
                 if user_uuid:
                     h_url = db.get_setting("hiddify_url") or HIDIFY_PANEL_URL or ""
                     u_proxy = db.get_setting("user_proxy_path") or USER_PROXY_PATH or HIDIFY_PROXY_PATH or "user"
-                    if h_url:
-                        sub_url = f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{user_uuid}/"
-                    else:
-                        sub_url = f"https://vpn.service/sub/{account_name}"
+                    sub_url = get_unified_subscription_url(user_uuid)
+                    if not sub_url:
+                        if h_url:
+                            sub_url = f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{user_uuid}/"
+                        else:
+                            sub_url = f"https://vpn.service/sub/{account_name}"
         else:
             try:
                 res_create = await hidify.create_user(
@@ -5476,10 +5487,12 @@ async def admin_order_pay_action_callback(update: Update, context: ContextTypes.
                 user_uuid = res_create.get("uuid", "")
                 h_url = db.get_setting("hiddify_url") or HIDIFY_PANEL_URL or ""
                 u_proxy = db.get_setting("user_proxy_path") or USER_PROXY_PATH or HIDIFY_PROXY_PATH or "user"
-                if user_uuid and h_url:
-                    sub_url = f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{user_uuid}/"
-                elif user_uuid:
-                    sub_url = f"https://vpn.service/sub/{account_name}"
+                sub_url = get_unified_subscription_url(user_uuid) if user_uuid else ""
+                if not sub_url:
+                    if user_uuid and h_url:
+                        sub_url = f"{h_url.rstrip('/')}/{u_proxy.strip('/')}/{user_uuid}/"
+                    elif user_uuid:
+                        sub_url = f"https://vpn.service/sub/{account_name}"
                 if user_uuid:
                     db.save_subscription(
                         telegram_id=user_id,
@@ -6141,7 +6154,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e_h:
                 logger.error(f"Error creating user in hidify for admin: {e_h}")
 
-            sub_url = f"{HIDIFY_PANEL_URL}/{HIDIFY_PROXY_PATH}/{uuid_val}/" if uuid_val else f"https://vpn.service/sub/{clean_name}"
+            sub_url = (get_unified_subscription_url(uuid_val) if uuid_val else "") or (f"{HIDIFY_PANEL_URL}/{HIDIFY_PROXY_PATH}/{uuid_val}/" if uuid_val else f"https://vpn.service/sub/{clean_name}")
             sub_id = db.save_subscription(
                 telegram_id=0,
                 hidify_uuid=uuid_val,
@@ -6765,9 +6778,11 @@ async def admin_approve_payment(update: Update, context: ContextTypes.DEFAULT_TY
 
     # ۶. پیام به کاربر + ارسال کارت اشتراک و QR Code
     data_text = f"{plan_data_limit:g}" if plan_data_limit > 0 else 'نامحدود'
-    base_url = (HIDIFY_PANEL_URL or "").rstrip("/")
-    proxy_path = (USER_PROXY_PATH or HIDIFY_PROXY_PATH or "").strip("/")
-    subscription_url = f"{base_url}/{proxy_path}/{user_uuid}/"
+    subscription_url = get_unified_subscription_url(user_uuid)
+    if not subscription_url:
+        base_url = (HIDIFY_PANEL_URL or "").rstrip("/")
+        proxy_path = (USER_PROXY_PATH or HIDIFY_PROXY_PATH or "").strip("/")
+        subscription_url = f"{base_url}/{proxy_path}/{user_uuid}/"
 
     details = (
         f"✅ پرداخت شما تایید شد و اشتراک با موفقیت فعال گردید!\n\n"
@@ -7074,9 +7089,11 @@ async def admin_approve_renew(update: Update, context: ContextTypes.DEFAULT_TYPE
         except Exception as e_tg:
             logger.error(f"Error notifying user of queued renewal: {e_tg}")
     else:
-        base_url = (HIDIFY_PANEL_URL or "").rstrip("/")
-        proxy_path = (USER_PROXY_PATH or HIDIFY_PROXY_PATH or "").strip("/")
-        subscription_url = f"{base_url}/{proxy_path}/{user_uuid}/"
+        subscription_url = get_unified_subscription_url(user_uuid)
+        if not subscription_url:
+            base_url = (HIDIFY_PANEL_URL or "").rstrip("/")
+            proxy_path = (USER_PROXY_PATH or HIDIFY_PROXY_PATH or "").strip("/")
+            subscription_url = f"{base_url}/{proxy_path}/{user_uuid}/"
         details = (
             f"✅ اشتراک شما با موفقیت تمدید شد!\n\n"
             f"📋 بسته: **{plan.get('name', 'نامشخص')}**\n"
@@ -8317,7 +8334,7 @@ async def admin_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                     logger.error(f"Error logging bot tx/history: {e_rec}")
 
                 proxy_path = (USER_PROXY_PATH or HIDIFY_PROXY_PATH or "user").strip("/")
-                sub_url = f"{HIDIFY_PANEL_URL.rstrip('/')}/{proxy_path}/{uuid_val}/"
+                sub_url = (get_unified_subscription_url(uuid_val) if uuid_val else "") or f"{HIDIFY_PANEL_URL.rstrip('/')}/{proxy_path}/{uuid_val}/"
 
                 context.user_data.pop("res_create_plan_id", None)
                 context.user_data.pop("res_create_account_name", None)

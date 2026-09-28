@@ -2894,7 +2894,7 @@
 
             <!-- دکمه‌های فشرده کنار نام مشتری -->
             <div class="d-flex flex-wrap gap-1 align-items-center">
-                {% if actual_sub_url or single_url %}
+                {% if actual_sub_url or single_url or (xray_configs and xray_configs|length > 0) %}
                 <button type="button" class="btn btn-sm btn-outline-light py-1 px-3 fw-bold d-inline-flex align-items-center gap-1" style="font-size: 0.82rem;" data-bs-toggle="modal" data-bs-target="#subConfigModal" title="دریافت بارکد QR و کپی لینک اشتراک و کانفیگ">
                     <i class="fas fa-qrcode text-info me-1"></i>
                     <span>QR / کپی لینک</span>
@@ -4045,7 +4045,7 @@
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <span class="fw-bold small text-white text-nowrap"><i class="fas fa-plug text-primary me-1"></i> ابزارهای اتصال:</span>
                     <div class="d-flex flex-wrap gap-1 align-items-center justify-content-start" style="direction: ltr;">
-                        {% if actual_sub_url or single_url %}
+                        {% if actual_sub_url or single_url or (xray_configs and xray_configs|length > 0) %}
                         <button type="button" class="btn btn-sm btn-outline-light py-1 px-3 fw-bold d-inline-flex align-items-center gap-1" style="font-size: 0.82rem;" data-bs-toggle="modal" data-bs-target="#subConfigModal" title="دریافت بارکد QR و کپی لینک اشتراک و کانفیگ">
                             <i class="fas fa-qrcode text-info me-1"></i>
                             <span>QR / کپی لینک</span>
@@ -4259,7 +4259,7 @@
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <span class="fw-bold small text-white text-nowrap"><i class="fas fa-plug text-primary me-1"></i> ابزارهای اتصال:</span>
                     <div class="d-flex flex-wrap gap-1 align-items-center justify-content-start" style="direction: ltr;">
-                        {% if actual_sub_url or single_url %}
+                        {% if actual_sub_url or single_url or (xray_configs and xray_configs|length > 0) %}
                         <button type="button" class="btn btn-sm btn-outline-light py-1 px-3 fw-bold d-inline-flex align-items-center gap-1" style="font-size: 0.82rem;" data-bs-toggle="modal" data-bs-target="#subConfigModal" title="دریافت بارکد QR و کپی لینک اشتراک و کانفیگ">
                             <i class="fas fa-qrcode text-info me-1"></i>
                             <span>QR / کپی لینک</span>
@@ -4496,7 +4496,7 @@
 
                     <!-- چپ: دکمه‌های کپی لینک، ابزارها و نرم‌افزارها -->
                     <div class="d-flex flex-wrap gap-1 align-items-center justify-content-start" style="direction: ltr;">
-                        {% if actual_sub_url or single_url %}
+                        {% if actual_sub_url or single_url or (xray_configs and xray_configs|length > 0) %}
                         <button type="button" class="btn btn-sm btn-outline-light py-1 px-2.5 fw-bold d-inline-flex align-items-center gap-1" style="font-size: 0.78rem;" data-bs-toggle="modal" data-bs-target="#subConfigModal" title="دریافت بارکد QR و کپی لینک اشتراک و کانفیگ">
                             <i class="fas fa-qrcode text-info me-1"></i>
                             <span>کپی لینک / QR</span>
@@ -4555,7 +4555,7 @@
     <!-- ══════════════════════════════════════════════════════════════ -->
     <!-- ⚡ مودال هوشمند و دو زبانه دریافت کانفیگ و اشتراک (Sub & Single Config Modal) -->
     <!-- ══════════════════════════════════════════════════════════════ -->
-    {% if actual_sub_url or single_url %}
+    {% if actual_sub_url or single_url or (xray_configs and xray_configs|length > 0) %}
     <div class="modal fade" id="subConfigModal" tabindex="-1" aria-labelledby="subConfigModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
             <div class="modal-content glass-card border-0 text-white p-2 p-md-3 shadow-lg">
@@ -4566,13 +4566,13 @@
                         </div>
                         <div>
                             <h5 class="modal-title fw-bold mb-0" id="subConfigModalLabel">QR / کپی لینک اشتراک و کانفیگ ⚡</h5>
-                            <small class="text-secondary">بارکد اتصال سریع، لینک سابسکریپشن هوشمند و کانفیگ مستقیم تکی</small>
+                            <small class="text-secondary">بارکد اتصال سریع، لینک سابسکریپشن هوشمند و کانفیگ‌های اختصاصی سرور</small>
                         </div>
                     </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <!-- تب‌های انتخاب سابسکریپشن یا کانفیگ تکی -->
+                <!-- تب‌های انتخاب سابسکریپشن، کانفیگ‌های اختصاصی یا کانفیگ تکی -->
                 <div class="px-3 pt-3">
                     <ul class="nav nav-pills sub-config-tabs gap-2 justify-content-center p-1 rounded-4 bg-black bg-opacity-30 border border-secondary border-opacity-25" role="tablist">
                         {% if actual_sub_url %}
@@ -4582,9 +4582,16 @@
                             </button>
                         </li>
                         {% endif %}
+                        {% if xray_configs and xray_configs|length > 0 %}
+                        <li class="nav-item flex-grow-1 text-center" role="presentation">
+                            <button class="nav-link {% if not actual_sub_url %}active{% endif %} w-100 py-2 px-3 fw-bold rounded-3" id="tab-xray-btn" data-bs-toggle="pill" data-bs-target="#tab-xray-pane" type="button" role="tab" aria-selected="{% if not actual_sub_url %}true{% else %}false{% endif %}">
+                                <i class="fas fa-network-wired me-1 text-info"></i> کانفیگ‌های اختصاصی ({{ xray_configs|length }})
+                            </button>
+                        </li>
+                        {% endif %}
                         {% if single_url %}
                         <li class="nav-item flex-grow-1 text-center" role="presentation">
-                            <button class="nav-link {% if not actual_sub_url %}active{% endif %} w-100 py-2 px-3 fw-bold rounded-3" id="tab-single-btn" data-bs-toggle="pill" data-bs-target="#tab-single-pane" type="button" role="tab" aria-selected="{% if not actual_sub_url %}true{% else %}false{% endif %}">
+                            <button class="nav-link {% if not actual_sub_url and not (xray_configs and xray_configs|length > 0) %}active{% endif %} w-100 py-2 px-3 fw-bold rounded-3" id="tab-single-btn" data-bs-toggle="pill" data-bs-target="#tab-single-pane" type="button" role="tab" aria-selected="{% if not actual_sub_url and not (xray_configs and xray_configs|length > 0) %}true{% else %}false{% endif %}">
                                 <i class="fas fa-bolt me-1 text-warning"></i> کانفیگ مستقیم (تکی)
                             </button>
                         </li>
@@ -4641,9 +4648,56 @@
                     </div>
                     {% endif %}
 
-                    <!-- تب ۲: کانفیگ مستقیم تکی -->
+                    <!-- تب ۲: کانفیگ‌های اختصاصی سرور (Xray Core Protocols Matrix) -->
+                    {% if xray_configs and xray_configs|length > 0 %}
+                    <div class="tab-pane fade {% if not actual_sub_url %}show active{% endif %}" id="tab-xray-pane" role="tabpanel" aria-labelledby="tab-xray-btn">
+                        <p class="small text-secondary mb-3">کانفیگ‌های اختصاصی با پروتکل‌های ضد فیلترینگ و سرورهای مختلف. برای کپی یا دریافت بارکد روی هر کدام کلیک کنید:</p>
+                        <div class="d-flex flex-column gap-2 text-start" style="max-height: 380px; overflow-y: auto; padding-right: 4px;">
+                            {% for cfg in xray_configs %}
+                            <div class="p-2.5 rounded-3 border border-secondary border-opacity-25 bg-black bg-opacity-25 d-flex flex-column gap-2">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-1.5">
+                                        <span class="badge bg-{{ cfg.badge_color }} bg-opacity-25 text-{{ cfg.badge_color }} border border-{{ cfg.badge_color }} border-opacity-50 py-1 px-2 fw-bold" style="font-size: 0.75rem;">
+                                            <i class="{{ cfg.icon }} me-1"></i>{{ cfg.protocol }}
+                                        </span>
+                                        <span class="badge bg-secondary bg-opacity-25 text-white py-1 px-2" style="font-size: 0.72rem;">
+                                            {{ cfg.transport }}
+                                        </span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-light py-1 px-2.5 fw-bold d-inline-flex align-items-center gap-1" style="font-size: 0.78rem;" onclick="copyText('{{ cfg.uri }}', 'کانفیگ {{ cfg.name }}')">
+                                            <i class="fas fa-copy text-primary"></i> کپی کانفیگ
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-info py-1 px-2 d-inline-flex align-items-center gap-1" style="font-size: 0.78rem;" onclick="showXrayConfigQr('{{ cfg.uri|urlencode }}', '{{ cfg.name }}')">
+                                            <i class="fas fa-qrcode"></i> بارکد
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="text-white-50 small font-monospace text-truncate px-1" style="direction: ltr; font-size: 0.8rem;">
+                                    <i class="fas fa-tag me-1 text-info opacity-75"></i>{{ cfg.name }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- بخش نمایش بارکد پویای کانفیگ اختصاصی انتخاب‌شده -->
+                        <div id="xrayConfigQrContainer" class="d-none mt-3 p-3 rounded-4 bg-black bg-opacity-40 border border-info border-opacity-25 text-center">
+                            <div class="fw-bold small text-info mb-2" id="xrayConfigQrTitle">بارکد کانفیگ</div>
+                            <div class="p-2 bg-white rounded-3 d-inline-block shadow mb-2">
+                                <img id="xrayConfigQrImg" src="" alt="QR Config" style="width: 180px; height: 180px; display: block;">
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-0.5 px-3 rounded-pill" style="font-size: 0.75rem;" onclick="document.getElementById('xrayConfigQrContainer').classList.add('d-none')">
+                                    <i class="fas fa-times me-1"></i> بستن بارکد
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- تب ۳: کانفیگ مستقیم تکی -->
                     {% if single_url %}
-                    <div class="tab-pane fade {% if not actual_sub_url %}show active{% endif %}" id="tab-single-pane" role="tabpanel" aria-labelledby="tab-single-btn">
+                    <div class="tab-pane fade {% if not actual_sub_url and not (xray_configs and xray_configs|length > 0) %}show active{% endif %}" id="tab-single-pane" role="tabpanel" aria-labelledby="tab-single-btn">
                         <p class="small text-secondary mb-3">کانفیگ مستقیم برای اتصال سریع بدون سابسکریپشن:</p>
                         <div class="p-3 bg-white rounded-4 d-inline-block shadow mb-2" style="box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;">
                             <img id="singleQrImg" crossorigin="anonymous" src="/api/qr-image?text={{ single_url|urlencode }}" onerror="this.onerror=null; this.src='https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=15&data={{ single_url|urlencode }}';" alt="QR کانفیگ تکی" class="img-fluid" style="width: 220px; height: 220px; display: block;">
@@ -6407,6 +6461,17 @@ function copyText(text, label) {
     }).catch(() => {
         prompt('کپی کنید:', text);
     });
+}
+
+function showXrayConfigQr(encodedUri, title) {
+    const container = document.getElementById('xrayConfigQrContainer');
+    const img = document.getElementById('xrayConfigQrImg');
+    const titleEl = document.getElementById('xrayConfigQrTitle');
+    if (!container || !img) return;
+    if (titleEl) titleEl.textContent = 'بارکد: ' + (title || 'کانفیگ اختصاصی');
+    img.src = '/api/qr-image?text=' + encodedUri;
+    container.classList.remove('d-none');
+    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ─── تولید و رندر هوشمند بارکد با پس‌زمینه سفید خالص و حاشیه متقارن ───
