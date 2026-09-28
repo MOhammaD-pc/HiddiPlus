@@ -15229,6 +15229,109 @@ def admin_api_xray_sync_traffic():
     return jsonify({"success": True, "data": res})
 
 
+# ─── API های مدیریت چنددامنه‌ای و ماتریس پروتکل‌ها (Multi-Domain & Matrix API) ───
+
+@app.route("/admin/api/xray/domains", methods=["GET"])
+@admin_required
+def admin_api_xray_domains_list():
+    """دریافت لیست دامنه‌های پیکربندی‌شده با نقش‌هایشان"""
+    domains = db.get_xray_domains()
+    return jsonify({"success": True, "domains": domains})
+
+
+@app.route("/admin/api/xray/domains", methods=["POST"])
+@super_admin_required
+def admin_api_xray_domain_add():
+    """افزودن دامنه جدید با نقش CDN، مستقیم، ساب‌اونلی یا رله"""
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    domain = str(data.get("domain", "")).strip()
+    role = str(data.get("role", "cdn")).strip().lower()
+    alias = str(data.get("alias", "")).strip()
+    sni = str(data.get("sni", "")).strip()
+    clean_ips = str(data.get("clean_ips", "")).strip()
+    ws_path = str(data.get("ws_path", "/tgbot-ws")).strip()
+    grpc_service_name = str(data.get("grpc_service_name", "tgbot-grpc")).strip()
+    port = int(data.get("port") or (443 if role == "direct" else 8443))
+
+    if not domain:
+        return jsonify({"success": False, "message": "نام دامنه الزامی است"}), 400
+
+    res = db.add_xray_domain(
+        domain=domain,
+        role=role,
+        alias=alias,
+        sni=sni,
+        clean_ips=clean_ips,
+        ws_path=ws_path,
+        grpc_service_name=grpc_service_name,
+        port=port
+    )
+    return jsonify(res)
+
+
+@app.route("/admin/api/xray/domains/<int:domain_id>", methods=["PUT", "POST"])
+@super_admin_required
+def admin_api_xray_domain_update(domain_id: int):
+    """ویرایش تنظیمات یک دامنه"""
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    res = db.update_xray_domain(domain_id, **data)
+    return jsonify(res)
+
+
+@app.route("/admin/api/xray/domains/<int:domain_id>", methods=["DELETE"])
+@super_admin_required
+def admin_api_xray_domain_delete(domain_id: int):
+    """حذف یک دامنه از لیست دامنه‌ها"""
+    success = db.delete_xray_domain(domain_id)
+    return jsonify({"success": success, "message": "دامنه با موفقیت حذف شد" if success else "خطا در حذف دامنه"})
+
+
+@app.route("/admin/api/xray/domains/<int:domain_id>/toggle", methods=["POST"])
+@super_admin_required
+def admin_api_xray_domain_toggle(domain_id: int):
+    """تغییر وضعیت فعال/غیرفعال دامنه"""
+    res = db.toggle_xray_domain(domain_id)
+    return jsonify(res)
+
+
+@app.route("/admin/api/xray/matrix_settings", methods=["POST"])
+@super_admin_required
+def admin_api_xray_save_matrix_settings():
+    """ذخیره وضعیت سوئیچ‌های ماتریس پروتکل‌ها (مشابه هیدیفای)"""
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+
+    keys = [
+        "xray_matrix_direct_reality_tcp",
+        "xray_matrix_direct_reality_grpc",
+        "xray_matrix_direct_trojan",
+        "xray_matrix_cdn_vless_ws",
+        "xray_matrix_cdn_trojan_ws",
+        "xray_matrix_cdn_vless_grpc",
+        "xray_matrix_cdn_vmess_ws",
+        "xray_include_external_node"
+    ]
+    for k in keys:
+        if k in data:
+            val = "1" if str(data[k]).lower() in ("1", "true", "on") else "0"
+            db.set_setting(k, val)
+
+    return jsonify({"success": True, "message": "ماتریس پروتکل‌ها با موفقیت به‌روزرسانی شد."})
+
+
+@app.route("/admin/api/xray/preview_sub/<token>", methods=["GET"])
+@admin_required
+def admin_api_xray_preview_sub(token: str):
+    """پیش‌نمایش زنده از تمامی کانفیگ‌های تولیدشده برای یک کاربر در ماتریس فعلی"""
+    sub = db.get_subscription_by_uuid(token) or db.get_subscription(token)
+    account_name = (sub.get("account_name") if sub else "") or "TestUser"
+    configs = xray_service.generate_matrix_subscription(token, account_name=account_name)
+    return jsonify({
+        "success": True,
+        "count": len(configs),
+        "configs": configs
+    })
+
+
 # ─── API کلاینت اختصاصی ویندوز / اندروید (Custom Native Client API) ───
 
 @app.route("/api/client/v1/config/<token>", methods=["GET"])

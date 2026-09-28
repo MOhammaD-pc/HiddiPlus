@@ -159,66 +159,202 @@ class XrayService:
 
     # ─── تولید لینک‌های کانفیگ اختصاصی مشتری (Config URIs) ───
 
-    def get_client_inbounds(self, uuid: str, account_name: str = "TGBot") -> List[str]:
+    # ─── تولید لینک‌های کانفیگ اختصاصی مشتری (Config URIs) با ماتریس هوشمند ───
+
+    def generate_matrix_subscription(self, uuid: str, account_name: str = "TGBot") -> List[str]:
         """
-        تولید لینک‌های استاندارد VLESS Reality و WebSocket برای قرارگیری در سابسکریپشن
+        تولید ماتریس کامل و پویای کانفیگ‌ها بر اساس:
+        - دامنه‌های فعال و نقش‌های آنها (Direct, CDN, Clean IP)
+        - ماتریس سوئیچ‌های پروتکل‌ها (VLESS Reality, VLESS-WS, Trojan-WS, VLESS-gRPC, VMess)
         """
         if not uuid:
             return []
 
         clean_uuid = str(uuid).strip()
         label_base = account_name or "VPN"
-
-        # ۱. مشخصات هاست و دامنه
-        domain = (
-            self.db.get_setting("xray_direct_domain")
-            or self.db.get_setting("custom_domain")
-            or os.getenv("PANEL_DOMAIN")
-            or ""
-        ).strip()
-        # حذف پروتکل اگر اشتباها وارد شده باشد
-        domain = domain.replace("https://", "").replace("http://", "").rstrip("/")
-
-        # اگر دامنه‌ای وارد نشده بود، تلاش برای استخراج IP عمومی سرور
-        if not domain:
-            domain = self.db.get_setting("xray_server_ip") or "127.0.0.1"
+        configs = []
 
         credentials = self.ensure_reality_credentials()
         pub_key = credentials.get("public_key", "")
         short_id = credentials.get("short_id", "")
 
-        configs = []
+        # ماتریس سوئیچ‌ها
+        # حالت Direct:
+        sw_direct_reality_tcp = self.db.is_setting_enabled("xray_matrix_direct_reality_tcp", default=self.db.is_setting_enabled("xray_reality_enabled", default=True))
+        sw_direct_reality_grpc = self.db.is_setting_enabled("xray_matrix_direct_reality_grpc", default=False)
+        sw_direct_trojan = self.db.is_setting_enabled("xray_matrix_direct_trojan", default=False)
 
-        # ۱. کانفیگ VLESS + Reality (مستقیم با پینگ عالی و ضد فیلتر)
-        reality_enabled = self.db.is_setting_enabled("xray_reality_enabled", default=True)
-        if reality_enabled and pub_key:
-            reality_port = int(self.db.get_setting("xray_reality_port", 443) or 443)
-            sni = str(self.db.get_setting("xray_reality_sni", "www.yahoo.com") or "www.yahoo.com").strip()
-            reality_uri = (
-                f"vless://{clean_uuid}@{domain}:{reality_port}"
-                f"?security=reality&encryption=none&pbk={pub_key}&headerType=none"
-                f"&fp=chrome&spx=%2F&type=tcp&sni={sni}&sid={short_id}"
-                f"#{label_base} ⚡ Reality Direct"
-            )
-            configs.append(reality_uri)
+        # حالت CDN:
+        sw_cdn_vless_ws = self.db.is_setting_enabled("xray_matrix_cdn_vless_ws", default=self.db.is_setting_enabled("xray_ws_enabled", default=True))
+        sw_cdn_trojan_ws = self.db.is_setting_enabled("xray_matrix_cdn_trojan_ws", default=False)
+        sw_cdn_vless_grpc = self.db.is_setting_enabled("xray_matrix_cdn_vless_grpc", default=False)
+        sw_cdn_vmess_ws = self.db.is_setting_enabled("xray_matrix_cdn_vmess_ws", default=False)
 
-        # ۲. کانفیگ VLESS + WebSocket / CDN (مناسب برای شرایط اختلال شدید اینترنت)
-        ws_enabled = self.db.is_setting_enabled("xray_ws_enabled", default=True)
-        cdn_domain = str(self.db.get_setting("xray_cdn_domain") or domain).strip()
-        if ws_enabled and cdn_domain:
-            ws_port = int(self.db.get_setting("xray_ws_port", 8443) or 8443)
-            ws_path = str(self.db.get_setting("xray_ws_path", "/tgbot-ws") or "/tgbot-ws").strip()
+        # دریافت دامنه‌های ثبت‌شده در دیتابیس
+        registered_domains = []
+        try:
+            registered_domains = self.db.get_xray_domains(active_only=True)
+        except Exception as e:
+            logger.warning(f"Could not load xray_domains: {e}")
+
+        # اگر هیچ دامنه‌ای در جدول ثبت نشده باشد، از دامنه‌های پیش‌فرض تنظیمات استفاده می‌کنیم
+        if not registered_domains:
+            def_direct = (
+                self.db.get_setting("xray_direct_domain")
+                or self.db.get_setting("custom_domain")
+                or os.getenv("PANEL_DOMAIN")
+                or self.db.get_setting("xray_server_ip")
+                or "127.0.0.1"
+            ).strip().replace("https://", "").replace("http://", "").rstrip("/")
+
+            def_cdn = (self.db.get_setting("xray_cdn_domain") or "").strip().replace("https://", "").replace("http://", "").rstrip("/")
+            if not def_cdn and sw_cdn_vless_ws:
+                def_cdn = (self.db.get_setting("custom_domain") or def_direct).strip().replace("https://", "").replace("http://", "").rstrip("/")
+
+            if def_direct and (sw_direct_reality_tcp or sw_direct_reality_grpc or sw_direct_trojan):
+                registered_domains.append({
+                    "domain": def_direct,
+                    "role": "direct",
+                    "alias": "",
+                    "sni": self.db.get_setting("xray_reality_sni", "www.yahoo.com"),
+                    "clean_ips": "",
+                    "ws_path": "/tgbot-ws",
+                    "grpc_service_name": "tgbot-grpc",
+                    "port": int(self.db.get_setting("xray_reality_port", 443) or 443)
+                })
+            if def_cdn and (sw_cdn_vless_ws or sw_cdn_trojan_ws or sw_cdn_vless_grpc or sw_cdn_vmess_ws):
+                registered_domains.append({
+                    "domain": def_cdn,
+                    "role": "cdn",
+                    "alias": "",
+                    "sni": def_cdn,
+                    "clean_ips": "",
+                    "ws_path": self.db.get_setting("xray_ws_path", "/tgbot-ws"),
+                    "grpc_service_name": "tgbot-grpc",
+                    "port": int(self.db.get_setting("xray_ws_port", 8443) or 8443)
+                })
+
+        # پردازش دامنه‌ها بر اساس نقش
+        for item in registered_domains:
+            role = item.get("role", "cdn").lower()
+            dom = item.get("domain", "").strip()
+            if not dom:
+                continue
+            alias = item.get("alias", "").strip()
+            tag_alias = f" [{alias}]" if alias else ""
+            sni = (item.get("sni", "") or dom).strip()
+            port = int(item.get("port") or (443 if role == "direct" else 8443))
+            ws_path = item.get("ws_path") or "/tgbot-ws"
             if not ws_path.startswith("/"):
                 ws_path = "/" + ws_path
-            ws_uri = (
-                f"vless://{clean_uuid}@{cdn_domain}:{ws_port}"
-                f"?security=tls&encryption=none&type=ws&path={ws_path}"
-                f"&host={cdn_domain}&sni={cdn_domain}"
-                f"#{label_base} 🌐 Cloud CDN"
-            )
-            configs.append(ws_uri)
+            grpc_srv = item.get("grpc_service_name") or "tgbot-grpc"
+            clean_ips_str = item.get("clean_ips", "") or ""
+
+            # ۱. نقش مستقیم (Direct)
+            if role == "direct":
+                # VLESS Reality TCP Vision
+                if sw_direct_reality_tcp and pub_key:
+                    reality_sni = str(self.db.get_setting("xray_reality_sni", "www.yahoo.com") or "www.yahoo.com").strip()
+                    uri = (
+                        f"vless://{clean_uuid}@{dom}:{port}"
+                        f"?security=reality&encryption=none&pbk={pub_key}&headerType=none"
+                        f"&fp=chrome&spx=%2F&type=tcp&flow=xtls-rprx-vision&sni={reality_sni}&sid={short_id}"
+                        f"#{label_base} ⚡{tag_alias} Reality Direct"
+                    )
+                    configs.append(uri)
+
+                # VLESS Reality gRPC
+                if sw_direct_reality_grpc and pub_key:
+                    reality_sni = str(self.db.get_setting("xray_reality_sni", "www.yahoo.com") or "www.yahoo.com").strip()
+                    uri = (
+                        f"vless://{clean_uuid}@{dom}:{port}"
+                        f"?security=reality&encryption=none&pbk={pub_key}&headerType=none"
+                        f"&fp=chrome&type=grpc&serviceName={grpc_srv}&sni={reality_sni}&sid={short_id}"
+                        f"#{label_base} ⚡{tag_alias} Reality gRPC"
+                    )
+                    configs.append(uri)
+
+                # Trojan Direct
+                if sw_direct_trojan:
+                    uri = (
+                        f"trojan://{clean_uuid}@{dom}:{port}"
+                        f"?security=tls&headerType=none&type=tcp&sni={sni}"
+                        f"#{label_base} 🛡️{tag_alias} Trojan Direct"
+                    )
+                    configs.append(uri)
+
+            # ۲. نقش CDN
+            elif role == "cdn":
+                clean_targets = []
+                if clean_ips_str:
+                    raw_ips = [ip.strip() for ip in clean_ips_str.replace("\n", ",").replace(";", ",").split(",") if ip.strip()]
+                    clean_targets.extend(raw_ips)
+
+                if not clean_targets:
+                    clean_targets = [dom]
+
+                for idx, target_host in enumerate(clean_targets):
+                    isp_tag = f" #{idx+1}" if len(clean_targets) > 1 else ""
+
+                    # VLESS WebSocket
+                    if sw_cdn_vless_ws:
+                        cdn_title = "Cloud CDN" if not alias else "VLESS-WS"
+                        uri = (
+                            f"vless://{clean_uuid}@{target_host}:{port}"
+                            f"?security=tls&encryption=none&type=ws&path={ws_path}"
+                            f"&host={dom}&sni={dom}"
+                            f"#{label_base} 🌐{tag_alias}{isp_tag} {cdn_title}"
+                        )
+                        configs.append(uri)
+
+                    # Trojan WebSocket
+                    if sw_cdn_trojan_ws:
+                        uri = (
+                            f"trojan://{clean_uuid}@{target_host}:{port}"
+                            f"?security=tls&type=ws&path={ws_path}"
+                            f"&host={dom}&sni={dom}"
+                            f"#{label_base} 🛡️{tag_alias}{isp_tag} Trojan-WS"
+                        )
+                        configs.append(uri)
+
+                    # VLESS gRPC
+                    if sw_cdn_vless_grpc:
+                        uri = (
+                            f"vless://{clean_uuid}@{target_host}:{port}"
+                            f"?security=tls&encryption=none&type=grpc&serviceName={grpc_srv}&mode=gun"
+                            f"&sni={dom}"
+                            f"#{label_base} ⚡{tag_alias}{isp_tag} VLESS-gRPC"
+                        )
+                        configs.append(uri)
+
+                    # VMess WebSocket
+                    if sw_cdn_vmess_ws:
+                        vmess_dict = {
+                            "v": "2",
+                            "ps": f"{label_base} 🚀{tag_alias}{isp_tag} VMess-WS",
+                            "add": target_host,
+                            "port": port,
+                            "id": clean_uuid,
+                            "aid": "0",
+                            "scy": "auto",
+                            "net": "ws",
+                            "type": "none",
+                            "host": dom,
+                            "path": ws_path,
+                            "tls": "tls",
+                            "sni": dom
+                        }
+                        raw_json = json.dumps(vmess_dict, ensure_ascii=False)
+                        b64_vmess = base64.b64encode(raw_json.encode("utf-8")).decode("utf-8")
+                        configs.append(f"vmess://{b64_vmess}")
 
         return configs
+
+    def get_client_inbounds(self, uuid: str, account_name: str = "TGBot") -> List[str]:
+        """
+        تولید لینک‌های استاندارد کلاینت با بهره‌گیری از ماتریس هوشمند پروتکل‌ها و چنددامنه‌ای
+        """
+        return self.generate_matrix_subscription(uuid, account_name)
 
     # ─── تولید ساختار کانفیگ رسمی هسته Xray (xray config.json) ───
 
@@ -535,13 +671,27 @@ class XrayService:
 
         credentials = self.ensure_reality_credentials()
 
+        domains = []
+        try:
+            domains = self.db.get_xray_domains()
+        except Exception:
+            pass
+
         return {
             "is_installed": installed,
             "binary_path": self._binary_path or "یافت نشد",
             "is_enabled": enabled,
             "is_running": running,
-            "reality_enabled": self.db.is_setting_enabled("xray_reality_enabled", default=True),
-            "ws_enabled": self.db.is_setting_enabled("xray_ws_enabled", default=True),
+            "domains": domains,
+            "domains_count": len(domains),
+            # ماتریس سوئیچ‌ها
+            "matrix_direct_reality_tcp": self.db.is_setting_enabled("xray_matrix_direct_reality_tcp", default=self.db.is_setting_enabled("xray_reality_enabled", default=True)),
+            "matrix_direct_reality_grpc": self.db.is_setting_enabled("xray_matrix_direct_reality_grpc", default=False),
+            "matrix_direct_trojan": self.db.is_setting_enabled("xray_matrix_direct_trojan", default=False),
+            "matrix_cdn_vless_ws": self.db.is_setting_enabled("xray_matrix_cdn_vless_ws", default=self.db.is_setting_enabled("xray_ws_enabled", default=True)),
+            "matrix_cdn_trojan_ws": self.db.is_setting_enabled("xray_matrix_cdn_trojan_ws", default=False),
+            "matrix_cdn_vless_grpc": self.db.is_setting_enabled("xray_matrix_cdn_vless_grpc", default=False),
+            "matrix_cdn_vmess_ws": self.db.is_setting_enabled("xray_matrix_cdn_vmess_ws", default=False),
             "include_external_node": self.db.is_setting_enabled("xray_include_external_node", default=True),
             "reality_port": int(self.db.get_setting("xray_reality_port", 443) or 443),
             "reality_sni": str(self.db.get_setting("xray_reality_sni", "www.yahoo.com") or "www.yahoo.com").strip(),

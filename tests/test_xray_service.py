@@ -161,6 +161,127 @@ class TestXrayService(unittest.TestCase):
             conn.commit()
             conn.close()
 
+    def test_xray_domains_crud(self):
+        """بررسی عملیات پایگاه داده برای افزودن، خواندن، ویرایش، تغییر وضعیت و حذف دامنه‌ها"""
+        # ۱. افزودن دامنه
+        add_res = self.db.add_xray_domain(
+            domain="cdn1.testdomain.com",
+            role="cdn",
+            alias="کلودفلر ۱",
+            sni="cdn1.testdomain.com",
+            clean_ips="104.16.1.1, 104.16.2.2",
+            port=443
+        )
+        self.assertTrue(add_res["success"])
+        domain_id = add_res["id"]
+
+        # ۲. خواندن
+        domain = self.db.get_xray_domain(domain_id)
+        self.assertIsNotNone(domain)
+        self.assertEqual(domain["domain"], "cdn1.testdomain.com")
+        self.assertEqual(domain["role"], "cdn")
+        self.assertEqual(domain["alias"], "کلودفلر ۱")
+        self.assertEqual(domain["clean_ips"], "104.16.1.1, 104.16.2.2")
+        self.assertEqual(domain["is_active"], 1)
+
+        # ۳. ویرایش
+        upd_res = self.db.update_xray_domain(domain_id, alias="کلودفلر ویرایش‌شده", port=8443)
+        self.assertTrue(upd_res["success"])
+        updated = self.db.get_xray_domain(domain_id)
+        self.assertEqual(updated["alias"], "کلودفلر ویرایش‌شده")
+        self.assertEqual(updated["port"], 8443)
+
+        # ۴. تغییر وضعیت
+        tog_res = self.db.toggle_xray_domain(domain_id)
+        self.assertTrue(tog_res["success"])
+        self.assertEqual(tog_res["is_active"], 0)
+
+        # ۵. حذف
+        del_res = self.db.delete_xray_domain(domain_id)
+        self.assertTrue(del_res)
+        self.assertIsNone(self.db.get_xray_domain(domain_id))
+
+    def test_multi_domain_subscription_matrix(self):
+        """بررسی ساخت ماتریس ترکیبی کانفیگ‌ها با چندین دامنه CDN و Direct (مشابه هیدیفای)"""
+        # پاکسازی موقت دامنه‌های قبلی
+        conn = self.db.get_connection()
+        conn.execute("DELETE FROM xray_domains")
+        conn.commit()
+        conn.close()
+
+        # افزودن ۱ دامنه مستقیم و ۲ دامنه CDN
+        d1 = self.db.add_xray_domain(domain="direct.test.com", role="direct", alias="سرور مستقیم", port=443)
+        d2 = self.db.add_xray_domain(domain="cdn1.test.com", role="cdn", alias="کلودفلر ۱", port=8443)
+        d3 = self.db.add_xray_domain(domain="cdn2.test.com", role="cdn", alias="کلودفلر ۲", port=8443)
+
+        try:
+            self.db.set_setting("xray_matrix_direct_reality_tcp", "1")
+            self.db.set_setting("xray_matrix_cdn_vless_ws", "1")
+            self.db.set_setting("xray_matrix_cdn_trojan_ws", "1")
+            self.db.set_setting("xray_matrix_cdn_vless_grpc", "0")
+            self.db.set_setting("xray_matrix_cdn_vmess_ws", "0")
+
+            test_uuid = "11223344-5566-7788-99aa-bbccddeeff00"
+            configs = self.service.generate_matrix_subscription(test_uuid, account_name="MultiUser")
+
+            # باید ۱ کانفیگ برای دامنه مستقیم + ۲ کانفیگ برای هر دامنه CDN (جمعاً ۵ کانفیگ) تولید شود
+            self.assertGreaterEqual(len(configs), 5)
+
+            # بررسی دامنه مستقیم
+            direct_configs = [c for c in configs if "direct.test.com" in c and "security=reality" in c]
+            self.assertGreaterEqual(len(direct_configs), 1)
+
+            # بررسی دامنه CDN 1
+            cdn1_configs = [c for c in configs if "cdn1.test.com" in c]
+            self.assertGreaterEqual(len(cdn1_configs), 2)  # VLESS-WS + Trojan-WS
+
+            # بررسی دامنه CDN 2
+            cdn2_configs = [c for c in configs if "cdn2.test.com" in c]
+            self.assertGreaterEqual(len(cdn2_configs), 2)
+
+        finally:
+            conn = self.db.get_connection()
+            conn.execute("DELETE FROM xray_domains WHERE id IN (?, ?, ?)", (d1["id"], d2["id"], d3["id"]))
+            conn.commit()
+            conn.close()
+
+    def test_clean_ips_in_subscription_matrix(self):
+        """بررسی اتصال به آی‌پی‌های تمیز کلودفلر همراه با هدر SNI دامنه"""
+        conn = self.db.get_connection()
+        conn.execute("DELETE FROM xray_domains")
+        conn.commit()
+        conn.close()
+
+        d = self.db.add_xray_domain(
+            domain="cdn.clean-test.com",
+            role="cdn",
+            alias="ایرانسل کلودفلر",
+            clean_ips="162.159.192.1, 104.16.24.5",
+            port=443
+        )
+
+        try:
+            self.db.set_setting("xray_matrix_cdn_vless_ws", "1")
+            self.db.set_setting("xray_matrix_cdn_trojan_ws", "0")
+            self.db.set_setting("xray_matrix_cdn_vless_grpc", "0")
+
+            test_uuid = "22334455-6677-8899-aabb-ccddeeff0011"
+            configs = self.service.generate_matrix_subscription(test_uuid, account_name="CleanIpUser")
+
+            # باید ۲ کانفیگ با هاست‌های مربوط به آی‌پی‌های تمیز تولید شود
+            ip1_configs = [c for c in configs if "@162.159.192.1:443" in c and "sni=cdn.clean-test.com" in c]
+            ip2_configs = [c for c in configs if "@104.16.24.5:443" in c and "sni=cdn.clean-test.com" in c]
+
+            self.assertEqual(len(ip1_configs), 1)
+            self.assertEqual(len(ip2_configs), 1)
+
+        finally:
+            conn = self.db.get_connection()
+            conn.execute("DELETE FROM xray_domains WHERE id = ?", (d["id"],))
+            conn.commit()
+            conn.close()
+
 
 if __name__ == "__main__":
     unittest.main()
+

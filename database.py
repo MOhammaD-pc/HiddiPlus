@@ -2181,6 +2181,27 @@ class Database:
         except Exception as e:
             logger.warning(f"Error initializing ai_content_queue table: {e}")
 
+        # جدول مدیریت دامنه‌ها و نقش‌های سابسکریپشن (CDN, Direct, Sub-only, Relay)
+        try:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS xray_domains (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    domain TEXT NOT NULL,
+                    role TEXT NOT NULL DEFAULT 'cdn',
+                    alias TEXT DEFAULT '',
+                    sni TEXT DEFAULT '',
+                    clean_ips TEXT DEFAULT '',
+                    ws_path TEXT DEFAULT '/tgbot-ws',
+                    grpc_service_name TEXT DEFAULT 'tgbot-grpc',
+                    port INTEGER DEFAULT 443,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TEXT,
+                    updated_at TEXT
+                )
+            ''')
+        except Exception as e:
+            logger.warning(f"Error initializing xray_domains table: {e}")
+
 
         # اصلاح دسته‌بندی تیکت‌های مشتریان نماینده به target_role='reseller'
         try:
@@ -7196,6 +7217,148 @@ class Database:
         new_channels = [ch for ch in channels if str(ch.get("channel_id")).strip() != channel_id]
         self.save_mandatory_channels(bot_type, new_channels)
         return True
+
+    # ==================== Xray Multi-Domain Management Methods ====================
+    def get_xray_domains(self, active_only: bool = False) -> List[Dict[str, Any]]:
+        """دریافت لیست دامنه‌های تعریف‌شده با نقش‌های CDN, Direct, Sub-only و..."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            sql = "SELECT * FROM xray_domains"
+            if active_only:
+                sql += " WHERE is_active = 1"
+            sql += " ORDER BY id ASC"
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+        except Exception as e:
+            logger.error(f"Error fetching xray_domains: {e}")
+            return []
+        finally:
+            conn.close()
+
+    def get_xray_domain(self, domain_id: int) -> Optional[Dict[str, Any]]:
+        """دریافت یک دامنه بر اساس شناسه"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT * FROM xray_domains WHERE id = ?", (domain_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error fetching xray_domain {domain_id}: {e}")
+            return None
+        finally:
+            conn.close()
+
+    def add_xray_domain(
+        self,
+        domain: str,
+        role: str = "cdn",
+        alias: str = "",
+        sni: str = "",
+        clean_ips: str = "",
+        ws_path: str = "/tgbot-ws",
+        grpc_service_name: str = "tgbot-grpc",
+        port: int = 443,
+        is_active: int = 1
+    ) -> Dict[str, Any]:
+        """افزودن دامنه جدید با نقش مشخص (cdn, direct, sub_only, relay)"""
+        clean_domain = str(domain or "").strip().lower().replace("https://", "").replace("http://", "").rstrip("/")
+        if not clean_domain:
+            return {"success": False, "message": "نام دامنه معتبر نیست"}
+
+        clean_role = str(role or "cdn").strip().lower()
+        if clean_role not in ("cdn", "direct", "sub_only", "relay"):
+            clean_role = "cdn"
+
+        now = get_now_iso()
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO xray_domains 
+                (domain, role, alias, sni, clean_ips, ws_path, grpc_service_name, port, is_active, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                clean_domain, clean_role, (alias or "").strip(), (sni or clean_domain).strip(),
+                (clean_ips or "").strip(), (ws_path or "/tgbot-ws").strip(), (grpc_service_name or "tgbot-grpc").strip(),
+                int(port or 443), int(is_active), now, now
+            ))
+            conn.commit()
+            d_id = cursor.lastrowid
+            return {"success": True, "id": d_id, "message": "دامنه با موفقیت افزوده شد"}
+        except Exception as e:
+            logger.error(f"Error adding xray_domain: {e}")
+            return {"success": False, "message": str(e)}
+        finally:
+            conn.close()
+
+    def update_xray_domain(self, domain_id: int, **kwargs) -> Dict[str, Any]:
+        """ویرایش مشخصات دامنه"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        now = get_now_iso()
+        allowed_fields = {"domain", "role", "alias", "sni", "clean_ips", "ws_path", "grpc_service_name", "port", "is_active"}
+        updates = []
+        params = []
+        for k, v in kwargs.items():
+            if k in allowed_fields:
+                if k == "domain":
+                    v = str(v).strip().lower().replace("https://", "").replace("http://", "").rstrip("/")
+                updates.append(f"{k} = ?")
+                params.append(v)
+
+        if not updates:
+            conn.close()
+            return {"success": False, "message": "فیلدی برای تغییر مشخص نشده است"}
+
+        updates.append("updated_at = ?")
+        params.append(now)
+        params.append(domain_id)
+
+        try:
+            cursor.execute(f"UPDATE xray_domains SET {', '.join(updates)} WHERE id = ?", params)
+            conn.commit()
+            return {"success": True, "message": "دامنه با موفقیت به‌روزرسانی شد"}
+        except Exception as e:
+            logger.error(f"Error updating xray_domain: {e}")
+            return {"success": False, "message": str(e)}
+        finally:
+            conn.close()
+
+    def delete_xray_domain(self, domain_id: int) -> bool:
+        """حذف دامنه"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("DELETE FROM xray_domains WHERE id = ?", (domain_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error deleting xray_domain: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def toggle_xray_domain(self, domain_id: int) -> Dict[str, Any]:
+        """فعال یا غیرفعال‌سازی دامنه"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT is_active FROM xray_domains WHERE id = ?", (domain_id,))
+            row = cursor.fetchone()
+            if not row:
+                return {"success": False, "message": "دامنه یافت نشد"}
+            new_status = 0 if row["is_active"] == 1 else 1
+            cursor.execute("UPDATE xray_domains SET is_active = ?, updated_at = ? WHERE id = ?", (new_status, get_now_iso(), domain_id))
+            conn.commit()
+            return {"success": True, "is_active": new_status}
+        except Exception as e:
+            logger.error(f"Error toggling xray_domain: {e}")
+            return {"success": False, "message": str(e)}
+        finally:
+            conn.close()
 
     # ==================== AI Marketing & Content Queue Methods ====================
     def get_ai_marketing_settings(self, bot_type: str = "admin", owner_id: int = 0) -> dict:
