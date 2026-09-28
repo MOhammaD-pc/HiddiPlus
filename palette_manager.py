@@ -533,7 +533,7 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
     animation = palette_config.get("animation", "float")
     pid = data.get("id", "vps_aurora")
 
-    # ضرایب بلور و شدت نور بر اساس intensity
+    # حذف کامل بلور پردازشی سنگین هاله‌ها (گرادینت مدور ذاتاً محو و نرم است)
     if intensity == "off" or pid == "classic_clean":
         blur_val = "0px"
         light_opacity = "0"
@@ -547,22 +547,22 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
     }
     """
     elif intensity == "subtle":
-        blur_val = "100px"
-        light_opacity = "0.25"
-        dark_opacity = "0.6"
-        glass_blur = "18px" if pid in ("liquid_glass", "ios_glass") else "12px"
+        blur_val = "0px"
+        light_opacity = "0.22"
+        dark_opacity = "0.5"
+        glass_blur = "12px"
         minimal_mesh_css = ""
     elif intensity == "high":
-        blur_val = "70px"
-        light_opacity = "0.50"
-        dark_opacity = "1.3"
-        glass_blur = "36px" if pid in ("liquid_glass", "ios_glass") else "24px"
+        blur_val = "0px"
+        light_opacity = "0.40"
+        dark_opacity = "0.9"
+        glass_blur = "16px"
         minimal_mesh_css = ""
     else: # normal
-        blur_val = "85px"
-        light_opacity = "0.35"
-        dark_opacity = "1.0"
-        glass_blur = "28px" if pid in ("liquid_glass", "ios_glass") else "18px"
+        blur_val = "0px"
+        light_opacity = "0.30"
+        dark_opacity = "0.75"
+        glass_blur = "14px"
         minimal_mesh_css = ""
 
     l = data["light"]
@@ -593,7 +593,7 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
         --aura-blob-4: {l.get('blob4_color', l.get('blob1_color', 'rgba(59, 130, 246, 0.25)'))};
         --aura-blob-5: {l.get('blob5_color', l.get('blob2_color', 'rgba(236, 72, 153, 0.22)'))};
         --aura-opacity: {light_opacity};
-        --aura-blend: {l['mesh_blend']};
+        --aura-blend: normal;
     }}
 
     [data-bs-theme="dark"] {{
@@ -613,12 +613,12 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
         --aura-blob-4: {d.get('blob4_color', d.get('blob1_color', 'rgba(59, 130, 246, 0.30)'))};
         --aura-blob-5: {d.get('blob5_color', d.get('blob2_color', 'rgba(236, 72, 153, 0.28)'))};
         --aura-opacity: {dark_opacity};
-        --aura-blend: {d['mesh_blend']};
+        --aura-blend: normal;
     }}
     /* بهینه‌سازی رفرش‌ریت و عملکرد اسکرول در دستگاه‌های لمسی و موبایل */
     @media (max-width: 991.98px) {{
         :root {{
-            --aura-blur: 20px !important;
+            --aura-blur: 0px !important;
             --glass-blur: 0px !important;
             --aura-blend: normal !important;
         }}

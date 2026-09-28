@@ -89,9 +89,7 @@
 
         html {
             background-color: var(--body-bg);
-            min-height: 100vh;
-            overflow-x: hidden;
-            overflow-x: clip;
+            min-height: 100%;
             -webkit-text-size-adjust: 100%;
         }
 
@@ -101,7 +99,6 @@
             color: var(--text-main);
             min-height: 100vh;
             overflow-x: hidden;
-            overflow-x: clip;
             -webkit-overflow-scrolling: touch;
         }
 
@@ -124,11 +121,11 @@
         .aura-blob {
             position: absolute;
             border-radius: 50%;
-            filter: blur(var(--aura-blur, 85px));
-            -webkit-filter: blur(var(--aura-blur, 85px));
-            will-change: transform;
-            mix-blend-mode: var(--aura-blend, normal);
             pointer-events: none;
+            filter: none !important;
+            -webkit-filter: none !important;
+            mix-blend-mode: normal !important;
+            will-change: auto;
         }
 
         .aura-blob-1 {
@@ -211,60 +208,6 @@
         {% elif palette_config and (palette_config.animation == 'off' or palette_config.intensity == 'off') %}
         .aura-mesh-container { display: none !important; }
         {% endif %}
-
-        /* ─── بهینه‌سازی رفرش‌ریت و اسکرول روان ۶۰/۱۲۰ هرتز در موبایل (Android 15 / iOS) ─── */
-        @media (max-width: 991.98px) {
-            .aura-mesh-container {
-                position: fixed;
-                transform: translateZ(0);
-                contain: strict;
-            }
-            .aura-blob {
-                animation: none !important;
-                will-change: auto !important;
-                filter: blur(25px) !important;
-                -webkit-filter: blur(25px) !important;
-                mix-blend-mode: normal !important;
-                opacity: 0.65;
-            }
-            .aura-blob-3,
-            .aura-blob-4,
-            .aura-blob-5 {
-                display: none !important;
-            }
-            .glass-card,
-            .bento-card,
-            .bento3-subcard,
-            .portal-tab-nav,
-            .btn,
-            .badge,
-            .customer-club-btn,
-            .floating-chat-btn,
-            .traffic-analytics-icon-badge + span + .badge,
-            .bento-card .badge.bg-info,
-            .modal-content .card {
-                backdrop-filter: none !important;
-                -webkit-backdrop-filter: none !important;
-                transform: none !important;
-            }
-            [data-bs-theme="dark"] .glass-card,
-            [data-bs-theme="dark"] .bento-card,
-            [data-bs-theme="dark"] .bento3-subcard,
-            [data-bs-theme="dark"] .portal-tab-nav {
-                background-color: rgba(17, 24, 39, 0.94) !important;
-                border-color: rgba(255, 255, 255, 0.10) !important;
-            }
-            [data-bs-theme="light"] .glass-card,
-            [data-bs-theme="light"] .bento-card,
-            [data-bs-theme="light"] .bento3-subcard,
-            [data-bs-theme="light"] .portal-tab-nav {
-                background-color: #ffffff !important;
-                border-color: #cbd5e1 !important;
-            }
-            [data-bs-theme="dark"] .floating-chat-btn {
-                background: #0284c7 !important;
-            }
-        }
 
         .portal-container {
             max-width: 680px;
@@ -2472,6 +2415,58 @@
         }
         {% endif %}
 
+        /* ═══════════════════════════════════════════════════════════════════════════
+           بهینه‌سازی نهایی و قطعی موبایل (Android 15 Chrome / Samsung Internet / iOS)
+           حذف ۱۰۰٪ افکت‌های بلور پردازشی، توقف انیمیشن‌ها و اسکرول فوق‌العاده روان ۱۲۰ هرتز
+           ═══════════════════════════════════════════════════════════════════════════ */
+        @media (max-width: 991.98px) {
+            .aura-mesh-container {
+                position: fixed !important;
+                transform: translateZ(0) !important;
+                contain: strict !important;
+            }
+            .aura-blob {
+                animation: none !important;
+                filter: none !important;
+                -webkit-filter: none !important;
+                mix-blend-mode: normal !important;
+                will-change: auto !important;
+                opacity: 0.55 !important;
+            }
+            .aura-blob-3,
+            .aura-blob-4,
+            .aura-blob-5 {
+                display: none !important;
+            }
+            /* غیرفعال‌سازی قطعی backdrop-filter در تمام المان‌های موبایل جهت روان‌سازی کامل اسکرول */
+            *, *::before, *::after {
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+            .glass-card,
+            .bento-card,
+            .bento3-subcard,
+            .portal-tab-nav {
+                transform: none !important;
+            }
+            [data-bs-theme="dark"] .glass-card,
+            [data-bs-theme="dark"] .bento-card,
+            [data-bs-theme="dark"] .bento3-subcard,
+            [data-bs-theme="dark"] .portal-tab-nav {
+                background-color: rgba(17, 24, 39, 0.94) !important;
+                border-color: rgba(255, 255, 255, 0.10) !important;
+            }
+            [data-bs-theme="light"] .glass-card,
+            [data-bs-theme="light"] .bento-card,
+            [data-bs-theme="light"] .bento3-subcard,
+            [data-bs-theme="light"] .portal-tab-nav {
+                background-color: #ffffff !important;
+                border-color: #cbd5e1 !important;
+            }
+            [data-bs-theme="dark"] .floating-chat-btn {
+                background: #0284c7 !important;
+            }
+        }
     </style>
 </head>
 <body class="py-4 portal-layout-{{ portal_layout or 'classic' }}">

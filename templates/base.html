@@ -108,9 +108,7 @@
 
         html {
             background-color: var(--body-bg);
-            min-height: 100vh;
-            overflow-x: hidden;
-            overflow-x: clip;
+            min-height: 100%;
             -webkit-text-size-adjust: 100%;
         }
 
@@ -124,7 +122,6 @@
             width: 100%;
             max-width: 100%;
             overflow-x: hidden;
-            overflow-x: clip;
             -webkit-overflow-scrolling: touch;
             font-size: 0.875rem; /* فونت پایه بهینه و شارپ ۱۴ پیکسل */
         }
@@ -240,11 +237,11 @@
         .aura-blob {
             position: absolute;
             border-radius: 50%;
-            filter: blur(var(--aura-blur, 85px));
-            -webkit-filter: blur(var(--aura-blur, 85px));
-            will-change: transform;
-            mix-blend-mode: var(--aura-blend, normal);
             pointer-events: none;
+            filter: none !important;
+            -webkit-filter: none !important;
+            mix-blend-mode: normal !important;
+            will-change: auto;
         }
 
         .aura-blob-1 {
@@ -337,6 +334,7 @@
             box-shadow: var(--palette-card-shadow, 0 10px 25px -5px rgba(0,0,0,0.05)) !important;
             border-radius: 18px;
             transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            transform: translate3d(0, 0, 0);
         }
 
         .sidebar {
@@ -344,48 +342,7 @@
             -webkit-backdrop-filter: blur(24px) saturate(180%);
             border-left: 1px solid var(--sidebar-border);
             z-index: 1020;
-        }
-
-        /* ─── بهینه‌سازی رفرش‌ریت و اسکرول روان ۶۰/۱۲۰ هرتز در موبایل (Android 15 / iOS) ─── */
-        @media (max-width: 991.98px) {
-            .aura-mesh-container {
-                position: fixed;
-                transform: translateZ(0);
-                contain: strict;
-            }
-            .aura-blob {
-                animation: none !important;
-                will-change: auto !important;
-                filter: blur(25px) !important;
-                -webkit-filter: blur(25px) !important;
-                mix-blend-mode: normal !important;
-                opacity: 0.65;
-            }
-            .aura-blob-3,
-            .aura-blob-4,
-            .aura-blob-5 {
-                display: none !important;
-            }
-            .card,
-            .sidebar,
-            .btn,
-            .badge,
-            .form-control,
-            .form-select,
-            .liquid-select-trigger,
-            .modal-content .card {
-                backdrop-filter: none !important;
-                -webkit-backdrop-filter: none !important;
-                transform: none !important;
-            }
-            [data-bs-theme="dark"] .card {
-                background-color: rgba(17, 24, 39, 0.94) !important;
-                border-color: rgba(255, 255, 255, 0.10) !important;
-            }
-            [data-bs-theme="light"] .card {
-                background-color: #ffffff !important;
-                border-color: #cbd5e1 !important;
-            }
+            transform: translate3d(0, 0, 0);
         }
 
         /* ─── منوهای کشویی شیشه‌ای مات مدرن (Liquid Glass Dropdown Menu) ─── */
@@ -2583,6 +2540,48 @@
 }
 
 {% endif %}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   بهینه‌سازی نهایی و قطعی موبایل (Android 15 Chrome / Samsung Internet / iOS)
+   حذف ۱۰۰٪ افکت‌های بلور پردازشی، توقف انیمیشن‌ها و اسکرول فوق‌العاده روان ۱۲۰ هرتز
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+    .aura-mesh-container {
+        position: fixed !important;
+        transform: translateZ(0) !important;
+        contain: strict !important;
+    }
+    .aura-blob {
+        animation: none !important;
+        filter: none !important;
+        -webkit-filter: none !important;
+        mix-blend-mode: normal !important;
+        will-change: auto !important;
+        opacity: 0.55 !important;
+    }
+    .aura-blob-3,
+    .aura-blob-4,
+    .aura-blob-5 {
+        display: none !important;
+    }
+    /* غیرفعال‌سازی قطعی backdrop-filter در تمام المان‌های موبایل جهت روان‌سازی کامل اسکرول */
+    *, *::before, *::after {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    .card,
+    .sidebar {
+        transform: none !important;
+    }
+    [data-bs-theme="dark"] .card {
+        background-color: rgba(17, 24, 39, 0.94) !important;
+        border-color: rgba(255, 255, 255, 0.10) !important;
+    }
+    [data-bs-theme="light"] .card {
+        background-color: #ffffff !important;
+        border-color: #cbd5e1 !important;
+    }
+}
 </style>
     {% block styles %}{% endblock %}
     {% block extra_head %}{% endblock %}
