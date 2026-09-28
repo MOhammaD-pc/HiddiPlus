@@ -15125,6 +15125,28 @@ def settings():
 
 # ─── روت‌های مدیریت هسته اختصاصی Xray-core و پروکسی‌های داخلی ───
 
+@app.route("/admin/xray", methods=["GET"])
+@app.route("/admin/xray-core", methods=["GET"])
+@admin_required
+def admin_xray_core():
+    """صفحه اختصاصی مدیریت هسته بومی Xray، پروتکل‌ها، دامنه‌ها و ماتریس سابسکریپشن"""
+    status = xray_service.get_service_status()
+    active_inbounds = 0
+    if status.get("matrix_direct_reality_tcp"): active_inbounds += 1
+    if status.get("matrix_cdn_vless_ws"): active_inbounds += 1
+    if status.get("matrix_cdn_vless_grpc"): active_inbounds += 1
+    if status.get("matrix_cdn_trojan_ws") or status.get("matrix_direct_trojan"): active_inbounds += 1
+    if status.get("matrix_cdn_vmess_ws"): active_inbounds += 1
+    if status.get("matrix_direct_shadowsocks"): active_inbounds += 1
+
+    return render_template(
+        "xray_core.html",
+        xray_config=status,
+        active_inbounds_count=active_inbounds,
+        admin_role=session.get("admin_role")
+    )
+
+
 @app.route("/admin/api/xray/status", methods=["GET"])
 @admin_required
 def admin_api_xray_status():
@@ -15304,6 +15326,7 @@ def admin_api_xray_save_matrix_settings():
         "xray_matrix_direct_reality_tcp",
         "xray_matrix_direct_reality_grpc",
         "xray_matrix_direct_trojan",
+        "xray_matrix_direct_shadowsocks",
         "xray_matrix_cdn_vless_ws",
         "xray_matrix_cdn_trojan_ws",
         "xray_matrix_cdn_vless_grpc",
@@ -15315,7 +15338,31 @@ def admin_api_xray_save_matrix_settings():
             val = "1" if str(data[k]).lower() in ("1", "true", "on") else "0"
             db.set_setting(k, val)
 
-    return jsonify({"success": True, "message": "ماتریس پروتکل‌ها با موفقیت به‌روزرسانی شد."})
+    return jsonify({"status": "success", "success": True, "message": "ماتریس پروتکل‌ها با موفقیت به‌روزرسانی شد."})
+
+
+@app.route("/admin/api/xray/warp_settings", methods=["POST"])
+@super_admin_required
+def admin_api_xray_save_warp_settings():
+    """ذخیره تنظیمات تانل Cloudflare WARP و روتینگ ضداسپم"""
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+
+    if "warp_enabled" in data:
+        val = "1" if str(data["warp_enabled"]).lower() in ("1", "true", "on") else "0"
+        db.set_setting("xray_warp_enabled", val)
+
+    if "warp_domains" in data:
+        db.set_setting("xray_warp_domains", str(data["warp_domains"]).strip())
+
+    if "block_smtp" in data:
+        val = "1" if str(data["block_smtp"]).lower() in ("1", "true", "on") else "0"
+        db.set_setting("xray_block_smtp", val)
+
+    if "block_iran" in data:
+        val = "1" if str(data["block_iran"]).lower() in ("1", "true", "on") else "0"
+        db.set_setting("xray_block_iran", val)
+
+    return jsonify({"status": "success", "success": True, "message": "تنظیمات روتینگ و تانل WARP با موفقیت ذخیره شد."})
 
 
 @app.route("/admin/api/xray/preview_sub/<token>", methods=["GET"])
@@ -15326,6 +15373,7 @@ def admin_api_xray_preview_sub(token: str):
     account_name = (sub.get("account_name") if sub else "") or "TestUser"
     configs = xray_service.generate_matrix_subscription(token, account_name=account_name)
     return jsonify({
+        "status": "success",
         "success": True,
         "count": len(configs),
         "configs": configs

@@ -281,7 +281,59 @@ class TestXrayService(unittest.TestCase):
             conn.commit()
             conn.close()
 
+    def test_admin_xray_core_page(self):
+        """بررسی دسترسی و رندر صفحه مستقل هسته Xray در منوی شبکه"""
+        with self.client.session_transaction() as sess:
+            sess["logged_in"] = True
+            sess["role"] = "admin"
+            sess["admin_role"] = "super_admin"
+
+        resp = self.client.get("/admin/xray")
+        self.assertEqual(resp.status_code, 200)
+        content = resp.data.decode("utf-8")
+        self.assertIn("هسته اختصاصی Xray و مدیریت پروتکل‌ها", content)
+        self.assertIn("پروتکل‌ها و اینباندها", content)
+        self.assertIn("دامنه‌ها و کلین آی‌پی اپراتورها", content)
+
+    def test_shadowsocks_in_matrix(self):
+        """بررسی تولید کانفیگ سبک Shadowsocks 2022 در صورت فعال‌سازی در ماتریس"""
+        self.db.set_setting("xray_matrix_direct_shadowsocks", "1")
+        self.db.set_setting("xray_direct_domain", "ss.server.com")
+        self.db.set_setting("xray_ss_port", "1080")
+
+        test_uuid = "33445566-7788-9900-aabb-ccddeeff0022"
+        configs = self.service.generate_matrix_subscription(test_uuid, account_name="SSUser")
+
+        ss_configs = [c for c in configs if c.startswith("ss://")]
+        self.assertGreaterEqual(len(ss_configs), 1)
+        self.assertIn("@ss.server.com:1080", ss_configs[0])
+        self.assertIn("Shadowsocks 2022", ss_configs[0])
+
+    def test_warp_and_routing_config(self):
+        """بررسی تولید ساختار WARP و روتینگ ضداسپم در config.json هسته"""
+        self.db.set_setting("xray_warp_enabled", "1")
+        self.db.set_setting("xray_block_smtp", "1")
+        self.db.set_setting("xray_warp_domains", "openai.com, chatgpt.com")
+
+        cfg = self.service.generate_full_xray_config()
+
+        # بررسی وجود اوت‌باند warp
+        outbound_tags = [o.get("tag") for o in cfg["outbounds"]]
+        self.assertIn("warp", outbound_tags)
+
+        # بررسی وجود رول روتینگ برای وارپ
+        rules = cfg["routing"]["rules"]
+        warp_rules = [r for r in rules if r.get("outboundTag") == "warp"]
+        self.assertEqual(len(warp_rules), 1)
+        self.assertIn("domain:openai.com", warp_rules[0]["domain"])
+
+        # بررسی رول بلاک اسپم SMTP
+        block_rules = [r for r in rules if r.get("outboundTag") == "block" and "port" in r]
+        self.assertEqual(len(block_rules), 1)
+        self.assertIn("25", block_rules[0]["port"])
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

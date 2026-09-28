@@ -1,0 +1,1057 @@
+{% extends "base.html" %}
+
+{% block title %}هسته اختصاصی Xray و مدیریت پروتکل‌ها - پنل مدیریت{% endblock %}
+
+{% block content %}
+<style>
+    .xray-glass-card {
+        background: var(--bs-card-bg, #ffffff);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 1rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    [data-bs-theme="dark"] .xray-glass-card {
+        background: rgba(30, 41, 59, 0.7);
+        border-color: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+    .xray-glass-card:hover {
+        border-color: rgba(99, 102, 241, 0.4);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    }
+    .xray-nav-pill.active {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+    }
+    .protocol-icon-box {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+</style>
+
+<div class="container-fluid px-0">
+    <!-- هدر صفحه و دکمه‌های اقدام سریع -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <div class="rounded-3 p-2 text-white bg-primary shadow-sm">
+                    <i class="fas fa-shield-halved fs-5"></i>
+                </div>
+                <h4 class="mb-0 fw-bold text-dark">هسته اختصاصی Xray و مدیریت پروتکل‌ها</h4>
+                {% if xray_config and xray_config.is_running %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5 rounded-pill">
+                        <i class="fas fa-circle-check me-1"></i> هسته آنلاین (سرویس‌دهی فعال)
+                    </span>
+                {% elif xray_config and xray_config.is_installed %}
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-1.5 rounded-pill">
+                        <i class="fas fa-pause-circle me-1"></i> هسته آماده (متوقف)
+                    </span>
+                {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-1.5 rounded-pill">
+                        <i class="fas fa-info-circle me-1"></i> آماده نصب روی اوبونتو
+                    </span>
+                {% endif %}
+            </div>
+            <div class="text-muted small">
+                مدیریت جامع اینباندها (Reality, WebSocket, Trojan, VMess, Shadowsocks, gRPC)، دامنه‌های CDN و مستقیم، کلین آی‌پی اپراتورها و تانل WARP
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="restartXrayService(this)">
+                <i class="fas fa-rotate me-1 text-primary"></i> راه‌اندازی مجدد هسته
+            </button>
+            <button type="button" class="btn btn-outline-info btn-sm rounded-pill px-3" onclick="copyInstallScript(this)">
+                <i class="fas fa-terminal me-1 text-info"></i> اسکریپت نصب روی سرور
+            </button>
+            <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm" onclick="openLivePreviewModal()">
+                <i class="fas fa-eye me-1"></i> پیش‌نمایش زنده خروجی کلاینت
+            </button>
+        </div>
+    </div>
+
+    <!-- کارت‌های آمار و شاخص‌های زنده (KPIs) -->
+    <div class="row g-3 mb-4">
+        <!-- کارت ۱: وضعیت هسته -->
+        <div class="col-6 col-lg-3">
+            <div class="xray-glass-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center text-muted small mb-2">
+                    <span>وضعیت هسته Xray</span>
+                    <i class="fas fa-microchip text-primary"></i>
+                </div>
+                <div class="h5 fw-bold mb-1 {% if xray_config and xray_config.is_running %}text-success{% else %}text-muted{% endif %}">
+                    {% if xray_config and xray_config.is_running %}آنلاین و پایدار{% else %}غیرفعال / آفلاین{% endif %}
+                </div>
+                <div class="text-muted small d-flex justify-content-between">
+                    <span>باینری: {{ xray_config.binary_path if xray_config else 'نامشخص' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- کارت ۲: تعداد اینباندهای فعال -->
+        <div class="col-6 col-lg-3">
+            <div class="xray-glass-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center text-muted small mb-2">
+                    <span>پروتکل‌های فعال</span>
+                    <i class="fas fa-plug text-info"></i>
+                </div>
+                <div class="h5 fw-bold mb-1 text-dark">
+                    <span id="activeInboundsCount">{{ active_inbounds_count|default(4) }}</span> پروتکل استاندارد
+                </div>
+                <div class="text-muted small">
+                    Reality, VLESS-WS, Trojan, gRPC...
+                </div>
+            </div>
+        </div>
+
+        <!-- کارت ۳: دامنه‌های متصل -->
+        <div class="col-6 col-lg-3">
+            <div class="xray-glass-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center text-muted small mb-2">
+                    <span>دامنه‌ها و کلین آی‌پی</span>
+                    <i class="fas fa-globe text-warning"></i>
+                </div>
+                <div class="h5 fw-bold mb-1 text-dark">
+                    <span>{{ xray_config.domains_count|default(0) }}</span> دامنه پیکربندی‌شده
+                </div>
+                <div class="text-muted small">
+                    تفکیک‌شده با نقش‌های CDN و مستقیم
+                </div>
+            </div>
+        </div>
+
+        <!-- کارت ۴: تانل WARP و روتینگ -->
+        <div class="col-6 col-lg-3">
+            <div class="xray-glass-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center text-muted small mb-2">
+                    <span>تانل WARP و روتینگ</span>
+                    <i class="fas fa-cloud text-success"></i>
+                </div>
+                <div class="h5 fw-bold mb-1 text-success">
+                    {% if xray_config and xray_config.warp_enabled %}فعال (تحریم‌شکن){% else %}مستقیم (دایرکت){% endif %}
+                </div>
+                <div class="text-muted small">
+                    عبور ایمن چت‌جی‌پی‌تی و یوتیوب
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ناوبری تب‌های موضوعی -->
+    <ul class="nav nav-pills gap-2 mb-4 p-2 bg-light rounded-pill border" id="xrayTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link xray-nav-pill active rounded-pill px-4 py-2 small fw-bold" id="inbounds-tab" data-bs-toggle="tab" data-bs-target="#inbounds-pane" type="button" role="tab">
+                <i class="fas fa-sliders me-1.5"></i> ۱. پروتکل‌ها و اینباندها (Inbounds)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link xray-nav-pill rounded-pill px-4 py-2 small fw-bold text-secondary" id="domains-tab" data-bs-toggle="tab" data-bs-target="#domains-pane" type="button" role="tab">
+                <i class="fas fa-globe me-1.5"></i> ۲. دامنه‌ها و کلین آی‌پی اپراتورها (Domains)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link xray-nav-pill rounded-pill px-4 py-2 small fw-bold text-secondary" id="matrix-tab" data-bs-toggle="tab" data-bs-target="#matrix-pane" type="button" role="tab">
+                <i class="fas fa-table-cells me-1.5"></i> ۳. ماتریس سابسکریپشن (Sub Matrix)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link xray-nav-pill rounded-pill px-4 py-2 small fw-bold text-secondary" id="warp-tab" data-bs-toggle="tab" data-bs-target="#warp-pane" type="button" role="tab">
+                <i class="fas fa-route me-1.5"></i> ۴. تانل WARP و روتینگ ضداسپم (Routing)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link xray-nav-pill rounded-pill px-4 py-2 small fw-bold text-secondary" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview-pane" type="button" role="tab">
+                <i class="fas fa-qrcode me-1.5"></i> ۵. خروجی و تست کلاینت (Live Output)
+            </button>
+        </li>
+    </ul>
+
+    <!-- محتوای تب‌ها -->
+    <div class="tab-content" id="xrayTabContent">
+
+        <!-- ═════════ تب ۱: پروتکل‌ها و اینباندها ═════════ -->
+        <div class="tab-pane fade show active" id="inbounds-pane" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1 text-dark"><i class="fas fa-network-wired text-primary me-2"></i> اینباندهای پیکربندی‌شده هسته</h5>
+                    <p class="text-muted small mb-0">وضعیت، پورت و تنظیمات امنیتی هر پروتکل را در هسته Xray مشخص کنید.</p>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <!-- ۱. VLESS Reality TCP Vision -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="xray-glass-card p-4 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="protocol-icon-box bg-primary-subtle text-primary">
+                                        <i class="fas fa-bolt"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-0 text-dark">VLESS Reality (TCP Vision)</h6>
+                                        <span class="badge bg-success-subtle text-success small">مستقیم / ضد فیلترینگ قوی</span>
+                                    </div>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input" type="checkbox" id="sw_inb_reality" {% if xray_config and xray_config.matrix_direct_reality_tcp %}checked{% endif %} onchange="updateInboundToggle('direct_reality_tcp', this.checked)">
+                                </div>
+                            </div>
+                            <p class="text-muted small mb-3">
+                                شبیه‌سازی کامل TLS با استفاده از هندشیک X25519 و SNI سایت‌های مجاز (بدون نیاز به خرید دامنه).
+                            </p>
+                            <div class="bg-light p-2.5 rounded-3 font-monospace small mb-3">
+                                <div class="d-flex justify-content-between text-muted"><span>Port:</span> <strong class="text-dark">{{ xray_config.reality_port|default(443) }}</strong></div>
+                                <div class="d-flex justify-content-between text-muted"><span>Flow:</span> <span class="text-primary font-bold">xtls-rprx-vision</span></div>
+                                <div class="d-flex justify-content-between text-muted"><span>SNI Dest:</span> <span>{{ xray_config.reality_sni|default('www.yahoo.com') }}</span></div>
+                            </div>
+                        </div>
+                        <div class="border-top pt-2.5 d-flex justify-content-between align-items-center">
+                            <span class="text-success small"><i class="fas fa-circle fs-xs me-1"></i> آماده سرویس‌دهی</span>
+                            <button type="button" class="btn btn-link btn-sm text-primary p-0 text-decoration-none" onclick="editRealityParams()">
+                                تنظیمات کلید و SNI <i class="fas fa-chevron-left ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ۲. VLESS WebSocket (CDN) -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="xray-glass-card p-4 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="protocol-icon-box bg-info-subtle text-info">
+                                        <i class="fas fa-globe"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-0 text-dark">VLESS WebSocket (Cloudflare)</h6>
+                                        <span class="badge bg-info-subtle text-info small">CDN با آی‌پی‌های تمیز</span>
+                                    </div>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input" type="checkbox" id="sw_inb_vless_ws" {% if xray_config and xray_config.matrix_cdn_vless_ws %}checked{% endif %} onchange="updateInboundToggle('cdn_vless_ws', this.checked)">
+                                </div>
+                            </div>
+                            <p class="text-muted small mb-3">
+                                عبور امن از پروکسی کلودفلر، پنهان‌سازی آی‌پی سرور اصلی و اتصال پایدار حتی در محدودیت‌های شدید اینترنت ملی.
+                            </p>
+                            <div class="bg-light p-2.5 rounded-3 font-monospace small mb-3">
+                                <div class="d-flex justify-content-between text-muted"><span>Port:</span> <strong class="text-dark">{{ xray_config.ws_port|default(8443) }}</strong></div>
+                                <div class="d-flex justify-content-between text-muted"><span>Network:</span> <span class="text-info font-bold">ws (WebSocket)</span></div>
+                                <div class="d-flex justify-content-between text-muted"><span>WS Path:</span> <span>{{ xray_config.ws_path|default('/tgbot-ws') }}</span></div>
+                            </div>
+                        </div>
+                        <div class="border-top pt-2.5 d-flex justify-content-between align-items-center">
+                            <span class="text-success small"><i class="fas fa-circle fs-xs me-1"></i> آماده سرویس‌دهی</span>
+                            <button type="button" class="btn btn-link btn-sm text-primary p-0 text-decoration-none" onclick="editWsParams()">
+                                تنظیم مسیر WS <i class="fas fa-chevron-left ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ۳. VLESS gRPC (Gun Mode) -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="xray-glass-card p-4 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="protocol-icon-box bg-purple-subtle text-purple" style="background: rgba(147, 51, 234, 0.1); color: #9333ea;">
+                                    <i class="fas fa-gauge-high"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">VLESS gRPC (Gun Mode)</h6>
+                                    <span class="badge bg-secondary-subtle text-secondary small">پینگ بسیار پایین / گیمینگ</span>
+                                </div>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="sw_inb_vless_grpc" {% if xray_config and xray_config.matrix_cdn_vless_grpc %}checked{% endif %} onchange="updateInboundToggle('cdn_vless_grpc', this.checked)">
+                            </div>
+                            <p class="text-muted small mb-3">
+                                پروتکل مالتی‌پلکس مدرن گوگل gRPC با سربار بسیار کم، بازدهی عالی روی اینترنت سیم‌کارت و کاهش چشمگیر تاخیر.
+                            </p>
+                            <div class="bg-light p-2.5 rounded-3 font-monospace small mb-3">
+                                <div class="d-flex justify-content-between text-muted"><span>Port:</span> <strong class="text-dark">2053</strong></div>
+                                <div class="d-flex justify-content-between text-muted"><span>Service:</span> <span>tgbot-grpc</span></div>
+                                <div class="d-flex justify-content-between text-muted"><span>Mode:</span> <span class="text-purple font-bold">gun (multiplex)</span></div>
+                            </div>
+                        </div>
+                        <div class="border-top pt-2.5 d-flex justify-content-between align-items-center">
+                            <span class="text-success small"><i class="fas fa-circle fs-xs me-1"></i> آماده سرویس‌دهی</span>
+                            <span class="text-muted small">مالتی‌پورت فعال</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ۴. Trojan Direct & WS -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="xray-glass-card p-4 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="protocol-icon-box bg-warning-subtle text-warning">
+                                    <i class="fas fa-shield"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">Trojan (Direct TLS & WS)</h6>
+                                    <span class="badge bg-warning-subtle text-warning small">استتار کامل HTTPS</span>
+                                </div>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="sw_inb_trojan" {% if xray_config and (xray_config.matrix_direct_trojan or xray_config.matrix_cdn_trojan_ws) %}checked{% endif %} onchange="updateInboundToggle('cdn_trojan_ws', this.checked)">
+                            </div>
+                            <p class="text-muted small mb-3">
+                                رفتار ترافیک دقیقاً همانند یک وب‌سایت امن واقعی HTTPS است؛ سیستم فیلترینگ قادر به تشخیص پکت‌های وی‌پی‌ان نخواهد بود.
+                            </p>
+                            <div class="bg-light p-2.5 rounded-3 font-monospace small mb-3">
+                                <div class="d-flex justify-content-between text-muted"><span>Port:</span> <strong class="text-dark">2222 / 443</strong></div>
+                                <div class="d-flex justify-content-between text-muted"><span>ALPN:</span> <span>h2, http/1.1</span></div>
+                                <div class="d-flex justify-content-between text-muted"><span>Fallback:</span> <span>127.0.0.1:80 (Camouflage)</span></div>
+                            </div>
+                        </div>
+                        <div class="border-top pt-2.5 d-flex justify-content-between align-items-center">
+                            <span class="text-success small"><i class="fas fa-circle fs-xs me-1"></i> آماده سرویس‌دهی</span>
+                            <span class="text-muted small">Fallback هوشمند</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ۵. VMess WebSocket (سازگار با کلاینت‌های قدیمی) -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="xray-glass-card p-4 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="protocol-icon-box bg-secondary-subtle text-secondary">
+                                    <i class="fas fa-cube"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">VMess (WebSocket TLS)</h6>
+                                    <span class="badge bg-secondary-subtle text-secondary small">پشتیبانی کلاینت قدیمی</span>
+                                </div>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="sw_inb_vmess" {% if xray_config and xray_config.matrix_cdn_vmess_ws %}checked{% endif %} onchange="updateInboundToggle('cdn_vmess_ws', this.checked)">
+                            </div>
+                            <p class="text-muted small mb-3">
+                                برای کلاینت‌ها، تلویزیون‌های هوشمند یا گوشی‌های قدیمی که از استانداردهای جدید VLESS یا Reality پشتیبانی نمی‌کنند.
+                            </p>
+                            <div class="bg-light p-2.5 rounded-3 font-monospace small mb-3">
+                                <div class="d-flex justify-content-between text-muted"><span>AlterId:</span> <span>0 (اجباری AEAD)</span></div>
+                                <div class="d-flex justify-content-between text-muted"><span>Security:</span> <span>auto / aes-128-gcm</span></div>
+                                <div class="d-flex justify-content-between text-muted"><span>Format:</span> <span class="text-secondary font-bold">vmess:// Base64 JSON</span></div>
+                            </div>
+                        </div>
+                        <div class="border-top pt-2.5 d-flex justify-content-between align-items-center">
+                            <span class="text-muted small"><i class="fas fa-circle fs-xs me-1"></i> سازگاری بالا</span>
+                            <span class="text-muted small">Zero AlterId</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ۶. Shadowsocks (2022 AEAD) -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="xray-glass-card p-4 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="protocol-icon-box bg-danger-subtle text-danger">
+                                    <i class="fas fa-paper-plane"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">Shadowsocks (2022 AEAD)</h6>
+                                    <span class="badge bg-danger-subtle text-danger small">سبک و پرسرعت برای تلگرام</span>
+                                </div>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="sw_inb_ss" {% if xray_config and xray_config.matrix_direct_shadowsocks %}checked{% endif %} onchange="updateInboundToggle('direct_shadowsocks', this.checked)">
+                            </div>
+                            <p class="text-muted small mb-3">
+                                نسخه مدرن و بدون سربار شادوساکس با رمزنگاری 2022. ایده‌آل برای اتصال فوری تلگرام، دیسکورد و بازی بدون مصرف بالای باتری.
+                            </p>
+                            <div class="bg-light p-2.5 rounded-3 font-monospace small mb-3">
+                                <div class="d-flex justify-content-between text-muted"><span>Port:</span> <strong class="text-dark">{{ xray_config.ss_port|default(1080) }}</strong></div>
+                                <div class="d-flex justify-content-between text-muted"><span>Method:</span> <span class="text-danger font-bold">2022-blake3-aes-128-gcm</span></div>
+                                <div class="d-flex justify-content-between text-muted"><span>UDP Relay:</span> <span>فعال (Full Cone)</span></div>
+                            </div>
+                        </div>
+                        <div class="border-top pt-2.5 d-flex justify-content-between align-items-center">
+                            <span class="text-success small"><i class="fas fa-circle fs-xs me-1"></i> آماده سرویس‌دهی</span>
+                            <span class="text-muted small">پشتیبانی تلگرام</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═════════ تب ۲: دامنه‌ها و کلین آی‌پی اپراتورها ═════════ -->
+        <div class="tab-pane fade" id="domains-pane" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1 text-dark"><i class="fas fa-network-wired text-primary me-2"></i> سیستم مدیریت چنددامنه‌ای با نقش‌های مختلف</h5>
+                    <p class="text-muted small mb-0">تعریف دامنه‌ها با نقش‌های CDN، مستقیم و ساب‌اونلی همراه با آی‌پی‌های تمیز تفکیک‌شده کلودفلر.</p>
+                </div>
+                <button type="button" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm" onclick="openAddDomainModal()">
+                    <i class="fas fa-plus me-1"></i> افزودن دامنه جدید
+                </button>
+            </div>
+
+            <div class="xray-glass-card overflow-hidden">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="xrayDedicatedDomainsTable">
+                        <thead class="table-light text-muted small">
+                            <tr>
+                                <th class="py-3 px-3">دامنه / آدرس سرور</th>
+                                <th class="py-3">نقش دامنه (Role)</th>
+                                <th class="py-3">نام مستعار (Alias)</th>
+                                <th class="py-3">آی‌پی‌های تمیز کلودفلر (Clean IPs)</th>
+                                <th class="py-3">پورت و مسیر</th>
+                                <th class="py-3 text-center">وضعیت</th>
+                                <th class="py-3 text-center">عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dedicatedDomainTableBody">
+                            {% if xray_config and xray_config.domains %}
+                                {% for d in xray_config.domains %}
+                                <tr id="dom-row-{{ d.id }}">
+                                    <td class="px-3">
+                                        <div class="fw-bold text-dark font-monospace">{{ d.domain }}</div>
+                                        {% if d.sni and d.sni != d.domain %}
+                                            <div class="text-muted small font-monospace">SNI: {{ d.sni }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if d.role == 'cdn' %}
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1">
+                                                <i class="fas fa-cloud me-1"></i> CDN کلودفلر
+                                            </span>
+                                        {% elif d.role == 'direct' %}
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1">
+                                                <i class="fas fa-bolt me-1"></i> سرور مستقیم (Direct)
+                                            </span>
+                                        {% elif d.role == 'sub_only' %}
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1">
+                                                <i class="fas fa-link me-1"></i> فقط سابسکریپشن
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary-subtle text-secondary px-2.5 py-1">
+                                                <i class="fas fa-repeat me-1"></i> رله / تانل
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="text-dark">{{ d.alias or '-' }}</span>
+                                    </td>
+                                    <td>
+                                        {% if d.clean_ips %}
+                                            <div class="small font-monospace text-primary text-break" style="max-width: 250px;">
+                                                {{ d.clean_ips }}
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted small">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="small font-monospace">پورت: {{ d.port or (443 if d.role == 'direct' else 8443) }}</div>
+                                        {% if d.role == 'cdn' %}
+                                            <div class="text-muted small font-monospace">مسیر: {{ d.ws_path or '/tgbot-ws' }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="form-check form-switch d-inline-block m-0">
+                                            <input class="form-check-input" type="checkbox" onchange="toggleDedicatedDomainActive({{ d.id }}, this.checked)" {% if d.is_active %}checked{% endif %}>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1" style="width: 30px; height: 30px;" onclick="deleteDedicatedDomain({{ d.id }})" title="حذف دامنه">
+                                            <i class="fas fa-trash-can"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr id="noDomainsDedicatedRow">
+                                    <td colspan="7" class="text-center py-4 text-muted">
+                                        <i class="fas fa-info-circle me-1"></i> هنوز دامنه‌ای ثبت نشده است. از دکمه «افزودن دامنه جدید» استفاده کنید.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═════════ تب ۳: ماتریس سابسکریپشن ═════════ -->
+        <div class="tab-pane fade" id="matrix-pane" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1 text-dark"><i class="fas fa-sliders text-primary me-2"></i> ماتریس انتخاب پروتکل‌ها در خروجی سابسکریپشن</h5>
+                    <p class="text-muted small mb-0">با این سوئیچ‌ها دقیقاً مشخص کنید کدام پروتکل‌ها در لینک سابسکریپشن تجمیعی مشتری تولید شوند.</p>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm" onclick="saveDedicatedMatrixSettings()">
+                    <i class="fas fa-save me-1"></i> ذخیره تغییرات ماتریس
+                </button>
+            </div>
+
+            <div class="row g-3">
+                <!-- ستون ۱: پروتکل‌های CDN -->
+                <div class="col-md-4">
+                    <div class="xray-glass-card p-3 h-100">
+                        <div class="fw-bold text-dark border-bottom pb-2 mb-3 d-flex align-items-center justify-content-between">
+                            <span><i class="fas fa-cloud text-info me-1.5"></i> پروتکل‌های دامنه‌های CDN</span>
+                            <span class="badge bg-info-subtle text-info small">کلودفلر</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light mb-2">
+                                <div>
+                                    <div class="fw-semibold text-dark small">VLESS WebSocket</div>
+                                    <div class="text-muted fs-xs">پشت CDN با کلین آی‌پی</div>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input dedicated-matrix-switch" type="checkbox" id="dmat_cdn_vless_ws" {% if xray_config and xray_config.matrix_cdn_vless_ws %}checked{% endif %}>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light mb-2">
+                                <div>
+                                    <div class="fw-semibold text-dark small">Trojan WebSocket</div>
+                                    <div class="text-muted fs-xs">پشت CDN با امنیت TLS</div>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input dedicated-matrix-switch" type="checkbox" id="dmat_cdn_trojan_ws" {% if xray_config and xray_config.matrix_cdn_trojan_ws %}checked{% endif %}>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light mb-2">
+                                <div>
+                                    <div class="fw-semibold text-dark small">VLESS gRPC</div>
+                                    <div class="text-muted fs-xs">حالت gun mode مالتی‌پلکس</div>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input dedicated-matrix-switch" type="checkbox" id="dmat_cdn_vless_grpc" {% if xray_config and xray_config.matrix_cdn_vless_grpc %}checked{% endif %}>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light">
+                                <div>
+                                    <div class="fw-semibold text-dark small">VMess WebSocket</div>
+                                    <div class="text-muted fs-xs">سازگار با کلاینت‌های قدیمی</div>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input dedicated-matrix-switch" type="checkbox" id="dmat_cdn_vmess_ws" {% if xray_config and xray_config.matrix_cdn_vmess_ws %}checked{% endif %}>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ستون ۲: پروتکل‌های اتصال مستقیم -->
+                <div class="col-md-4">
+                    <div class="xray-glass-card p-3 h-100">
+                        <div class="fw-bold text-dark border-bottom pb-2 mb-3 d-flex align-items-center justify-content-between">
+                            <span><i class="fas fa-bolt text-primary me-1.5"></i> پروتکل‌های سرور مستقیم</span>
+                            <span class="badge bg-primary-subtle text-primary small">Direct</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light mb-2">
+                                <div>
+                                    <div class="fw-semibold text-dark small">VLESS Reality TCP Vision</div>
+                                    <div class="text-muted fs-xs">سریع‌ترین و ضد فیلترینگ شدید</div>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input dedicated-matrix-switch" type="checkbox" id="dmat_direct_reality_tcp" {% if xray_config and xray_config.matrix_direct_reality_tcp %}checked{% endif %}>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light mb-2">
+                                <div>
+                                    <div class="fw-semibold text-dark small">VLESS Reality gRPC</div>
+                                    <div class="text-muted fs-xs">پروتکل gRPC روی Reality</div>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input dedicated-matrix-switch" type="checkbox" id="dmat_direct_reality_grpc" {% if xray_config and xray_config.matrix_direct_reality_grpc %}checked{% endif %}>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light mb-2">
+                                <div>
+                                    <div class="fw-semibold text-dark small">Trojan Direct</div>
+                                    <div class="text-muted fs-xs">مستقیم با پورت TLS 443</div>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input dedicated-matrix-switch" type="checkbox" id="dmat_direct_trojan" {% if xray_config and xray_config.matrix_direct_trojan %}checked{% endif %}>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light">
+                                <div>
+                                    <div class="fw-semibold text-dark small">Shadowsocks 2022 AEAD</div>
+                                    <div class="text-muted fs-xs">سبک و پرسرعت برای تلگرام</div>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input dedicated-matrix-switch" type="checkbox" id="dmat_direct_shadowsocks" {% if xray_config and xray_config.matrix_direct_shadowsocks %}checked{% endif %}>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ستون ۳: ادغام نودهای خارجی -->
+                <div class="col-md-4">
+                    <div class="xray-glass-card p-3 h-100">
+                        <div class="fw-bold text-dark border-bottom pb-2 mb-3 d-flex align-items-center justify-content-between">
+                            <span><i class="fas fa-handshake text-success me-1.5"></i> نودهای خارجی و جانبی</span>
+                            <span class="badge bg-success-subtle text-success small">Hybrid Sub</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light mb-2">
+                                <div>
+                                    <div class="fw-semibold text-dark small">ادغام کانفیگ‌های نود هیدیفای</div>
+                                    <div class="text-muted fs-xs">تلفیق خودکار با هسته بدون قطعی</div>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input dedicated-matrix-switch" type="checkbox" id="dmat_include_external_node" {% if xray_config and xray_config.include_external_node %}checked{% endif %}>
+                                </div>
+                            </div>
+                            <div class="alert alert-info py-2 px-3 small rounded-3 mb-0">
+                                <i class="fas fa-shield-halved me-1"></i>
+                                <strong>تضمین پایداری:</strong> در صورت قطع شدن موقت پنل هیدیفای، سابسکریپشن از کار نمی‌افتد و کانفیگ‌های هسته بومی بلافاصله به کلاینت تحویل داده می‌شوند.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═════════ تب ۴: تانل WARP و روتینگ ضداسپم ═════════ -->
+        <div class="tab-pane fade" id="warp-pane" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1 text-dark"><i class="fas fa-route text-success me-2"></i> تانل Cloudflare WARP و روتینگ ضداسپم</h5>
+                    <p class="text-muted small mb-0">رفع تحریم سرویس‌های هوش مصنوعی (ChatGPT, Claude) و محافظت از مسدود شدن آی‌پی سرور توسط دیتاسنتر.</p>
+                </div>
+                <button type="button" class="btn btn-success btn-sm rounded-pill px-4 shadow-sm" onclick="saveWarpSettings()">
+                    <i class="fas fa-save me-1"></i> ذخیره تنظیمات روتینگ
+                </button>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <div class="xray-glass-card p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="protocol-icon-box bg-success-subtle text-success">
+                                    <i class="fas fa-cloud"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">فعال‌سازی خروجی Cloudflare WARP</h6>
+                                    <span class="text-muted small">هدایت خودکار ترافیک هوش مصنوعی و سرویس‌های تحریم‌شده</span>
+                                </div>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="sw_warp_enabled" {% if xray_config and xray_config.warp_enabled %}checked{% endif %}>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-3">
+                            با فعال‌سازی این قابلیت، ترافیک وب‌سایت‌های حساس به آی‌پی دیتاسنتر (نظیر OpenAI ChatGPT, Anthropic Claude, Spotify, Netflix) به طور خودکار از تانل رایگان و پرسرعت کلودفلر وارپ عبور کرده و مسدود نخواهند شد.
+                        </p>
+                        <div class="form-group mb-0">
+                            <label class="form-label small fw-semibold text-dark">دامنه‌های تحت پوشش WARP (با کاما جدا کنید):</label>
+                            <input type="text" class="form-control form-control-sm font-monospace" id="warp_domains_list" value="{{ xray_config.warp_domains|default('openai.com, chatgpt.com, anthropic.com, claude.ai, spotify.com, netflix.com') }}" style="direction: ltr;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="xray-glass-card p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="protocol-icon-box bg-danger-subtle text-danger">
+                                    <i class="fas fa-shield-virus"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">سیستم ضد هرزنامه و اسپم (Anti-Spam / Port 25)</h6>
+                                    <span class="text-muted small">جلوگیری از ارسال ایمیل تبلیغاتی و بلاک آی‌پی سرور</span>
+                                </div>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="sw_block_smtp" {% if xray_config and xray_config.block_smtp != False %}checked{% endif %}>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-3">
+                            بلاک کردن کامل پورت‌های ایمیل (25, 465, 587) در خروجی هسته جهت جلوگیری از سواستفاده ربات‌های ارسال اسپم و حفظ اعتبار آی‌پی در دیتاسنتر.
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light">
+                            <div>
+                                <span class="fw-semibold text-dark small">بلاک کردن دامنه‌ها و آی‌پی‌های داخلی ایران (geoip:ir)</span>
+                                <div class="text-muted fs-xs">جلوگیری از لوپ ترافیک یا ردیابی دسترسی به بانک‌های ایرانی</div>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="sw_block_iran" {% if xray_config and xray_config.block_iran %}checked{% endif %}>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═════════ تب ۵: پیش‌نمایش زنده خروجی کلاینت ═════════ -->
+        <div class="tab-pane fade" id="preview-pane" role="tabpanel">
+            <div class="xray-glass-card p-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-1 text-dark"><i class="fas fa-eye text-primary me-2"></i> پیش‌نمایش زنده کانفیگ‌های خروجی کلاینت</h5>
+                        <p class="text-muted small mb-0">مشاهده دقیق لیست لینک‌های تولیدشده برای یک اشتراک تستی بر اساس ماتریس و دامنه‌های فعال</p>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="refreshDedicatedLivePreview()">
+                        <i class="fas fa-rotate me-1"></i> بروزرسانی مجدد خروجی
+                    </button>
+                </div>
+
+                <div class="bg-dark text-light p-3 rounded-3 font-monospace small" style="direction: ltr; text-align: left; max-height: 400px; overflow-y: auto;" id="dedicatedPreviewCodeBox">
+                    در حال دریافت پیش‌نمایش خروجی...
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ═══ مودال افزودن / ویرایش دامنه ═══ -->
+<div class="modal fade" id="xrayDedicatedDomainModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1rem;">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-dark" id="domainModalTitle">
+                    <i class="fas fa-plus text-success me-2"></i> افزودن دامنه جدید به هسته Xray
+                </h5>
+                <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <form id="xrayDedicatedDomainForm" onsubmit="handleSaveDedicatedDomain(event)">
+                <input type="hidden" id="editDomainId" value="">
+                <div class="modal-body p-4 space-y-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">آدرس دامنه یا زیردامنه <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control font-monospace" id="dom_name" placeholder="مثال: cdn.yourdomain.com یا vpn.myserver.com" required style="direction: ltr;">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">نقش دامنه (Role) <span class="text-danger">*</span></label>
+                        <select class="form-select" id="dom_role" onchange="handleDedicatedRoleChange(this.value)" required>
+                            <option value="cdn">🌐 کلودفلر CDN (پشت پروکسی با آی‌پی تمیز)</option>
+                            <option value="direct">⚡ سرور مستقیم Direct (اتصال بدون CDN / Reality)</option>
+                            <option value="sub_only">🔗 فقط سابسکریپشن Sub-Only (تحویل لینک اشتراک)</option>
+                            <option value="relay">🔁 رله / تانل Relay</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">نام مستعار یا برچسب اپراتور (Alias)</label>
+                        <input type="text" class="form-control" id="dom_alias" placeholder="مثال: کلودفلر همراه اول و ایرانسل">
+                    </div>
+
+                    <div class="mb-3" id="cleanIpsGroup">
+                        <label class="form-label small fw-semibold text-dark">
+                            آی‌پی‌های تمیز کلودفلر (Clean IPs)
+                            <span class="text-muted small fw-normal">(با کاما یا اینتر جدا کنید)</span>
+                        </label>
+                        <textarea class="form-control font-monospace small" id="dom_clean_ips" rows="2" placeholder="مثال: 162.159.192.1, 104.16.132.22" style="direction: ltr;"></textarea>
+                        <div class="form-text small text-muted">
+                            کلاینت به این آی‌پی‌ها وصل می‌شود ولی هدر SNI و Host روی نام دامنه اصلی شما باقی می‌ماند.
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-dark">پورت اتصال</label>
+                            <input type="number" class="form-control font-monospace" id="dom_port" value="8443">
+                        </div>
+                        <div class="col-6" id="sniGroup">
+                            <label class="form-label small fw-semibold text-dark">SNI سفارشی</label>
+                            <input type="text" class="form-control font-monospace" id="dom_sni" placeholder="اختیاری" style="direction: ltr;">
+                        </div>
+                    </div>
+
+                    <div class="row g-2" id="pathsGroup">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-dark">مسیر WebSocket</label>
+                            <input type="text" class="form-control font-monospace" id="dom_ws_path" value="/tgbot-ws" style="direction: ltr;">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-dark">نام سرویس gRPC</label>
+                            <input type="text" class="form-control font-monospace" id="dom_grpc" value="tgbot-grpc" style="direction: ltr;">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4" id="saveDomainSubmitBtn">
+                        <i class="fas fa-save me-1"></i> ذخیره دامنه
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openAddDomainModal() {
+        document.getElementById('editDomainId').value = '';
+        document.getElementById('domainModalTitle').innerHTML = '<i class="fas fa-plus text-success me-2"></i> افزودن دامنه جدید به هسته Xray';
+        document.getElementById('dom_name').value = '';
+        document.getElementById('dom_role').value = 'cdn';
+        document.getElementById('dom_alias').value = '';
+        document.getElementById('dom_clean_ips').value = '';
+        document.getElementById('dom_port').value = '8443';
+        document.getElementById('dom_sni').value = '';
+        document.getElementById('dom_ws_path').value = '/tgbot-ws';
+        document.getElementById('dom_grpc').value = 'tgbot-grpc';
+        handleDedicatedRoleChange('cdn');
+
+        const modalEl = document.getElementById('xrayDedicatedDomainModal');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+
+    function handleDedicatedRoleChange(role) {
+        const cleanIpsGroup = document.getElementById('cleanIpsGroup');
+        const pathsGroup = document.getElementById('pathsGroup');
+        const portInput = document.getElementById('dom_port');
+
+        if (role === 'cdn') {
+            cleanIpsGroup.style.display = 'block';
+            pathsGroup.style.display = 'flex';
+            if (portInput.value === '443') portInput.value = '8443';
+        } else if (role === 'direct') {
+            cleanIpsGroup.style.display = 'none';
+            pathsGroup.style.display = 'none';
+            portInput.value = '443';
+        } else {
+            cleanIpsGroup.style.display = 'none';
+            pathsGroup.style.display = 'none';
+            portInput.value = '443';
+        }
+    }
+
+    async function handleSaveDedicatedDomain(event) {
+        event.preventDefault();
+        const domainId = document.getElementById('editDomainId').value;
+        const payload = {
+            domain: document.getElementById('dom_name').value.trim(),
+            role: document.getElementById('dom_role').value,
+            alias: document.getElementById('dom_alias').value.trim(),
+            clean_ips: document.getElementById('dom_clean_ips').value.trim(),
+            port: parseInt(document.getElementById('dom_port').value) || 443,
+            sni: document.getElementById('dom_sni').value.trim(),
+            ws_path: document.getElementById('dom_ws_path').value.trim(),
+            grpc_service_name: document.getElementById('dom_grpc').value.trim()
+        };
+
+        if (!payload.domain) {
+            alert('لطفاً آدرس دامنه را وارد کنید.');
+            return;
+        }
+
+        const url = domainId ? `/admin/api/xray/domains/${domainId}` : '/admin/api/xray/domains';
+        const method = domainId ? 'PUT' : 'POST';
+
+        try {
+            const resp = await fetch(url, {
+                method: method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (data.status === 'success') {
+                const modalEl = document.getElementById('xrayDedicatedDomainModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                window.location.reload();
+            } else {
+                alert('خطا در ذخیره دامنه: ' + (data.message || 'خطای نامشخص'));
+            }
+        } catch (e) {
+            alert('خطای ارتباط با سرور: ' + e.message);
+        }
+    }
+
+    async function toggleDedicatedDomainActive(domainId, isActive) {
+        try {
+            const resp = await fetch(`/admin/api/xray/domains/${domainId}/toggle`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({is_active: isActive})
+            });
+            const data = await resp.json();
+            if (data.status !== 'success') {
+                alert('خطا در تغییر وضعیت دامنه: ' + (data.message || 'خطا'));
+            }
+        } catch (e) {
+            alert('خطای ارتباط با سرور: ' + e.message);
+        }
+    }
+
+    async function deleteDedicatedDomain(domainId) {
+        if (!confirm('آیا از حذف این دامنه از هسته Xray اطمینان دارید؟')) return;
+        try {
+            const resp = await fetch(`/admin/api/xray/domains/${domainId}`, {method: 'DELETE'});
+            const data = await resp.json();
+            if (data.status === 'success') {
+                const row = document.getElementById(`dom-row-${domainId}`);
+                if (row) row.remove();
+            } else {
+                alert('خطا در حذف دامنه: ' + (data.message || 'خطا'));
+            }
+        } catch (e) {
+            alert('خطای ارتباط با سرور: ' + e.message);
+        }
+    }
+
+    async function saveDedicatedMatrixSettings() {
+        const payload = {
+            xray_matrix_cdn_vless_ws: document.getElementById('dmat_cdn_vless_ws').checked ? '1' : '0',
+            xray_matrix_cdn_trojan_ws: document.getElementById('dmat_cdn_trojan_ws').checked ? '1' : '0',
+            xray_matrix_cdn_vless_grpc: document.getElementById('dmat_cdn_vless_grpc').checked ? '1' : '0',
+            xray_matrix_cdn_vmess_ws: document.getElementById('dmat_cdn_vmess_ws').checked ? '1' : '0',
+            xray_matrix_direct_reality_tcp: document.getElementById('dmat_direct_reality_tcp').checked ? '1' : '0',
+            xray_matrix_direct_reality_grpc: document.getElementById('dmat_direct_reality_grpc').checked ? '1' : '0',
+            xray_matrix_direct_trojan: document.getElementById('dmat_direct_trojan').checked ? '1' : '0',
+            xray_matrix_direct_shadowsocks: document.getElementById('dmat_direct_shadowsocks').checked ? '1' : '0',
+            xray_include_external_node: document.getElementById('dmat_include_external_node').checked ? '1' : '0'
+        };
+
+        try {
+            const resp = await fetch('/admin/api/xray/matrix_settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (data.status === 'success') {
+                alert('تنظیمات ماتریس پروتکل‌ها با موفقیت ذخیره شد.');
+            } else {
+                alert('خطا در ذخیره ماتریس: ' + (data.message || 'خطا'));
+            }
+        } catch (e) {
+            alert('خطای ارتباط با سرور: ' + e.message);
+        }
+    }
+
+    async function updateInboundToggle(settingKey, isChecked) {
+        const payload = {};
+        payload[`xray_matrix_${settingKey}`] = isChecked ? '1' : '0';
+        try {
+            await fetch('/admin/api/xray/matrix_settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+        } catch (e) {
+            console.error('Error toggling inbound:', e);
+        }
+    }
+
+    async function saveWarpSettings() {
+        const payload = {
+            warp_enabled: document.getElementById('sw_warp_enabled').checked,
+            warp_domains: document.getElementById('warp_domains_list').value.trim(),
+            block_smtp: document.getElementById('sw_block_smtp').checked,
+            block_iran: document.getElementById('sw_block_iran').checked
+        };
+
+        try {
+            const resp = await fetch('/admin/api/xray/warp_settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (data.status === 'success') {
+                alert('تنظیمات روتینگ و تانل WARP با موفقیت ذخیره شد.');
+            } else {
+                alert('خطا در ذخیره تنظیمات: ' + (data.message || 'خطا'));
+            }
+        } catch (e) {
+            alert('خطای ارتباط با سرور: ' + e.message);
+        }
+    }
+
+    async function refreshDedicatedLivePreview() {
+        const box = document.getElementById('dedicatedPreviewCodeBox');
+        box.innerText = 'در حال دریافت پیش‌نمایش خروجی...';
+        try {
+            const resp = await fetch('/admin/api/xray/preview_sub/preview-demo-account');
+            const data = await resp.json();
+            if (data.status === 'success' && data.configs) {
+                if (data.configs.length === 0) {
+                    box.innerText = '# هیچ کانفیگی با تنظیمات فعلی فعال نیست. لطفاً حداقل یک پروتکل و دامنه را فعال کنید.';
+                } else {
+                    box.innerText = `# تعداد کانفیگ‌های خروجی: ${data.configs.length} عدد\n\n` + data.configs.join('\n\n');
+                }
+            } else {
+                box.innerText = 'خطا در بارگذاری پیش‌نمایش: ' + (data.message || 'خطای نامشخص');
+            }
+        } catch (e) {
+            box.innerText = 'خطای ارتباط با سرور: ' + e.message;
+        }
+    }
+
+    function openLivePreviewModal() {
+        const triggerEl = document.querySelector('#xrayTab button[data-bs-target="#preview-pane"]');
+        const tab = new bootstrap.Tab(triggerEl);
+        tab.show();
+        refreshDedicatedLivePreview();
+    }
+
+    async function restartXrayService(btn) {
+        if (!confirm('آیا از بازنشانی سرویس هسته Xray اطمینان دارید؟')) return;
+        const origText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> در حال ری‌استارت...';
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch('/admin/api/xray/restart', {method: 'POST'});
+            const data = await resp.json();
+            alert(data.message || 'دستور با موفقیت ارسال شد.');
+        } catch (e) {
+            alert('خطای ارتباط با سرور: ' + e.message);
+        } finally {
+            btn.innerHTML = origText;
+            btn.disabled = false;
+        }
+    }
+
+    function copyInstallScript(btn) {
+        const scriptCmd = 'sudo bash scripts/install_xray_core.sh';
+        navigator.clipboard.writeText(scriptCmd);
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check me-1 text-success"></i> دستور کپی شد!';
+        setTimeout(() => btn.innerHTML = orig, 2500);
+    }
+
+    function editRealityParams() {
+        const sni = prompt('مقدار SNI مجاز برای شبیه‌سازی Reality را وارد کنید:', '{{ xray_config.reality_sni|default("www.yahoo.com") }}');
+        if (sni && sni.trim()) {
+            fetch('/admin/api/xray/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({xray_reality_sni: sni.trim()})
+            }).then(() => window.location.reload());
+        }
+    }
+
+    function editWsParams() {
+        const wsPath = prompt('مسیر دلخواه WebSocket را وارد کنید:', '{{ xray_config.ws_path|default("/tgbot-ws") }}');
+        if (wsPath && wsPath.trim()) {
+            fetch('/admin/api/xray/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({xray_ws_path: wsPath.trim()})
+            }).then(() => window.location.reload());
+        }
+    }
+
+    document.getElementById('preview-tab').addEventListener('shown.bs.tab', function () {
+        refreshDedicatedLivePreview();
+    });
+</script>
+{% endblock %}

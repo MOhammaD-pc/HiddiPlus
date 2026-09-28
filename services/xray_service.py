@@ -183,6 +183,7 @@ class XrayService:
         sw_direct_reality_tcp = self.db.is_setting_enabled("xray_matrix_direct_reality_tcp", default=self.db.is_setting_enabled("xray_reality_enabled", default=True))
         sw_direct_reality_grpc = self.db.is_setting_enabled("xray_matrix_direct_reality_grpc", default=False)
         sw_direct_trojan = self.db.is_setting_enabled("xray_matrix_direct_trojan", default=False)
+        sw_direct_shadowsocks = self.db.is_setting_enabled("xray_matrix_direct_shadowsocks", default=False)
 
         # حالت CDN:
         sw_cdn_vless_ws = self.db.is_setting_enabled("xray_matrix_cdn_vless_ws", default=self.db.is_setting_enabled("xray_ws_enabled", default=True))
@@ -211,7 +212,7 @@ class XrayService:
             if not def_cdn and sw_cdn_vless_ws:
                 def_cdn = (self.db.get_setting("custom_domain") or def_direct).strip().replace("https://", "").replace("http://", "").rstrip("/")
 
-            if def_direct and (sw_direct_reality_tcp or sw_direct_reality_grpc or sw_direct_trojan):
+            if def_direct and (sw_direct_reality_tcp or sw_direct_reality_grpc or sw_direct_trojan or sw_direct_shadowsocks):
                 registered_domains.append({
                     "domain": def_direct,
                     "role": "direct",
@@ -281,6 +282,15 @@ class XrayService:
                         f"?security=tls&headerType=none&type=tcp&sni={sni}"
                         f"#{label_base} 🛡️{tag_alias} Trojan Direct"
                     )
+                    configs.append(uri)
+
+                # Shadowsocks 2022 AEAD
+                if sw_direct_shadowsocks:
+                    ss_method = "2022-blake3-aes-128-gcm"
+                    ss_port = int(self.db.get_setting("xray_ss_port", 1080) or 1080)
+                    raw_creds = f"{ss_method}:{clean_uuid[:16]}"
+                    b64_creds = base64.b64encode(raw_creds.encode("utf-8")).decode("utf-8")
+                    uri = f"ss://{b64_creds}@{dom}:{ss_port}#{label_base} 🕶️{tag_alias} Shadowsocks 2022"
                     configs.append(uri)
 
             # ۲. نقش CDN
@@ -456,6 +466,92 @@ class XrayService:
             }
         }
 
+        # لیست اینباندها
+        inbounds = [
+            inbound_api,
+            inbound_reality,
+            inbound_ws
+        ]
+
+        # اینباند Shadowsocks در صورت فعال بودن
+        if self.db.is_setting_enabled("xray_matrix_direct_shadowsocks", default=False):
+            ss_port = int(self.db.get_setting("xray_ss_port", 1080) or 1080)
+            inbound_ss = {
+                "tag": "inbound-ss",
+                "port": ss_port,
+                "protocol": "shadowsocks",
+                "settings": {
+                    "method": "2022-blake3-aes-128-gcm",
+                    "password": base64.b64encode(b"tgbotshadowsocks").decode("utf-8"),
+                    "network": "tcp,udp"
+                }
+            }
+            inbounds.append(inbound_ss)
+
+        # لیست اوت‌باندها
+        outbounds = [
+            {
+                "protocol": "freedom",
+                "tag": "direct"
+            },
+            {
+                "protocol": "blackhole",
+                "tag": "block"
+            }
+        ]
+
+        # اوت‌باند WARP در صورت فعال بودن
+        if self.db.is_setting_enabled("xray_warp_enabled", default=False):
+            outbounds.append({
+                "protocol": "socks",
+                "tag": "warp",
+                "settings": {
+                    "servers": [
+                        {"address": "127.0.0.1", "port": 40000}
+                    ]
+                }
+            })
+
+        # قوانین روتینگ و ضداسپم
+        routing_rules = [
+            {
+                "type": "field",
+                "inboundTag": ["api"],
+                "outboundTag": "api"
+            }
+        ]
+
+        if self.db.is_setting_enabled("xray_block_smtp", default=True):
+            routing_rules.append({
+                "type": "field",
+                "port": "25,465,587",
+                "network": "tcp",
+                "outboundTag": "block"
+            })
+
+        routing_rules.append({
+            "type": "field",
+            "ip": ["geoip:private"],
+            "outboundTag": "block"
+        })
+
+        if self.db.is_setting_enabled("xray_block_iran", default=False):
+            routing_rules.append({
+                "type": "field",
+                "ip": ["geoip:ir"],
+                "outboundTag": "block"
+            })
+
+        if self.db.is_setting_enabled("xray_warp_enabled", default=False):
+            raw_warp_domains = str(self.db.get_setting("xray_warp_domains", "openai.com, chatgpt.com, anthropic.com, claude.ai, spotify.com, netflix.com") or "")
+            warp_domains = [f"domain:{d.strip()}" for d in raw_warp_domains.split(",") if d.strip()]
+            if warp_domains:
+                routing_rules.append({
+                    "type": "field",
+                    "domain": warp_domains,
+                    "outboundTag": "warp"
+                })
+
         config = {
             "log": {
                 "loglevel": "warning"
@@ -481,35 +577,11 @@ class XrayService:
                     "statsInboundDownlink": True
                 }
             },
-            "inbounds": [
-                inbound_api,
-                inbound_reality,
-                inbound_ws
-            ],
-            "outbounds": [
-                {
-                    "protocol": "freedom",
-                    "tag": "direct"
-                },
-                {
-                    "protocol": "blackhole",
-                    "tag": "block"
-                }
-            ],
+            "inbounds": inbounds,
+            "outbounds": outbounds,
             "routing": {
                 "domainStrategy": "AsIs",
-                "rules": [
-                    {
-                        "type": "field",
-                        "inboundTag": ["api"],
-                        "outboundTag": "api"
-                    },
-                    {
-                        "type": "field",
-                        "ip": ["geoip:private"],
-                        "outboundTag": "block"
-                    }
-                ]
+                "rules": routing_rules
             }
         }
 
@@ -692,6 +764,7 @@ class XrayService:
             "matrix_cdn_trojan_ws": self.db.is_setting_enabled("xray_matrix_cdn_trojan_ws", default=False),
             "matrix_cdn_vless_grpc": self.db.is_setting_enabled("xray_matrix_cdn_vless_grpc", default=False),
             "matrix_cdn_vmess_ws": self.db.is_setting_enabled("xray_matrix_cdn_vmess_ws", default=False),
+            "matrix_direct_shadowsocks": self.db.is_setting_enabled("xray_matrix_direct_shadowsocks", default=False),
             "include_external_node": self.db.is_setting_enabled("xray_include_external_node", default=True),
             "reality_port": int(self.db.get_setting("xray_reality_port", 443) or 443),
             "reality_sni": str(self.db.get_setting("xray_reality_sni", "www.yahoo.com") or "www.yahoo.com").strip(),
@@ -700,6 +773,11 @@ class XrayService:
             "reality_short_id": credentials.get("short_id", ""),
             "ws_port": int(self.db.get_setting("xray_ws_port", 8443) or 8443),
             "ws_path": str(self.db.get_setting("xray_ws_path", "/tgbot-ws") or "/tgbot-ws").strip(),
+            "ss_port": int(self.db.get_setting("xray_ss_port", 1080) or 1080),
+            "warp_enabled": self.db.is_setting_enabled("xray_warp_enabled", default=False),
+            "warp_domains": str(self.db.get_setting("xray_warp_domains", "openai.com, chatgpt.com, anthropic.com, claude.ai, spotify.com, netflix.com") or "openai.com, chatgpt.com, anthropic.com, claude.ai, spotify.com, netflix.com"),
+            "block_smtp": self.db.is_setting_enabled("xray_block_smtp", default=True),
+            "block_iran": self.db.is_setting_enabled("xray_block_iran", default=False),
             "cdn_domain": self.db.get_setting("xray_cdn_domain") or "",
             "direct_domain": domain,
             "server_ip": self.db.get_setting("xray_server_ip") or "",
