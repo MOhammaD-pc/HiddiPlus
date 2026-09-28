@@ -27714,11 +27714,36 @@ def reseller_payment_manual_add():
 def internal_server_error(e):
     import traceback
     from datetime import datetime
-    with open('error_log.txt', 'a', encoding='utf-8') as f:
-        f.write(f'--- {datetime.now()} ---\n')
-        f.write(traceback.format_exc())
-        f.write('\n\n')
-    return 'Internal Server Error. Please check error_log.txt', 500
+    tb = traceback.format_exc()
+    try:
+        with open('error_log.txt', 'a', encoding='utf-8') as f:
+            f.write(f'--- 500 Error: {datetime.now()} ---\n')
+            f.write(tb)
+            f.write('\n\n')
+    except Exception:
+        pass
+    return f"""<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <title>خطای ۵۰۰ سرور | لاگ زنده</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
+    <style>body {{ background: #0b0f19; color: #f8fafc; padding: 25px; }}</style>
+</head>
+<body>
+    <div class="container" style="max-width: 950px;">
+        <div class="card bg-dark border-danger text-light p-4 shadow-lg rounded-4">
+            <h4 class="text-danger mb-3">⚠️ خطای داخلی سرور (Internal Server Error 500)</h4>
+            <p class="text-secondary small">متن دقیق خطا جهت رفع مشکل بدون نیاز به SSH:</p>
+            <pre class="bg-black text-warning p-3 rounded-3" style="direction: ltr; text-align: left; overflow-x: auto; font-size: 0.85rem; max-height: 500px;">{tb}</pre>
+            <div class="mt-3 d-flex gap-2">
+                <a href="/error-log" class="btn btn-outline-info btn-sm">مشاهده کامل error_log.txt</a>
+                <a href="/login" class="btn btn-outline-secondary btn-sm">تلاش مجدد برای ورود</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>""", 500
 
 @app.errorhandler(Exception)
 def handle_exception(e):
@@ -27727,11 +27752,72 @@ def handle_exception(e):
         return e
     import traceback
     from datetime import datetime
-    with open('error_log.txt', 'a', encoding='utf-8') as f:
-        f.write(f'--- {datetime.now()} ---\n')
-        f.write(traceback.format_exc())
-        f.write('\n\n')
-    return 'Unhandled Exception. Please check error_log.txt', 500
+    tb = traceback.format_exc()
+    try:
+        with open('error_log.txt', 'a', encoding='utf-8') as f:
+            f.write(f'--- Unhandled Exception: {datetime.now()} ---\n')
+            f.write(tb)
+            f.write('\n\n')
+    except Exception:
+        pass
+    return f"""<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <title>خطای سیستم | گزارش لاگ زنده</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
+    <style>body {{ background: #0b0f19; color: #f8fafc; padding: 25px; }}</style>
+</head>
+<body>
+    <div class="container" style="max-width: 950px;">
+        <div class="card bg-dark border-danger text-light p-4 shadow-lg rounded-4">
+            <h4 class="text-danger mb-3">⚠️ خطای پردازش در سرور (Unhandled Exception)</h4>
+            <p class="text-secondary small">متن دقیق خطای رخ‌داده جهت رفع سریع بدون نیاز به اتصال SSH:</p>
+            <pre class="bg-black text-warning p-3 rounded-3" style="direction: ltr; text-align: left; overflow-x: auto; font-size: 0.85rem; max-height: 500px;">{tb}</pre>
+            <div class="mt-3 d-flex gap-2">
+                <a href="/error-log" class="btn btn-outline-info btn-sm">مشاهده کامل error_log.txt</a>
+                <a href="/login" class="btn btn-outline-secondary btn-sm">تلاش مجدد برای ورود</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>""", 500
+
+@app.route('/error-log', methods=['GET'])
+def view_public_error_log():
+    """مشاهده مستقیم و زنده فایل error_log.txt در مرورگر بدون نیاز به SSH"""
+    try:
+        content = ""
+        if os.path.exists('error_log.txt'):
+            with open('error_log.txt', 'r', encoding='utf-8', errors='replace') as f:
+                content = f.read()
+        if not content.strip():
+            content = "فایل error_log.txt خالی است یا هنوز خطایی ثبت نشده است."
+        else:
+            if len(content) > 10000:
+                content = "...\n" + content[-10000:]
+        return f"""<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <title>گزارش خطاها (error_log.txt)</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
+    <style>body {{ background: #0b0f19; color: #f8fafc; padding: 25px; }}</style>
+</head>
+<body>
+    <div class="container" style="max-width: 950px;">
+        <div class="card bg-dark border-secondary text-light p-4 shadow-lg rounded-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="text-info mb-0">📄 لاگ خطاهای سیستم (error_log.txt)</h4>
+                <a href="/login" class="btn btn-outline-primary btn-sm">ورود به پنل</a>
+            </div>
+            <pre class="bg-black text-warning p-3 rounded-3" style="direction: ltr; text-align: left; overflow-x: auto; font-size: 0.85rem; max-height: 600px;">{content}</pre>
+        </div>
+    </div>
+</body>
+</html>"""
+    except Exception as ex:
+        return f"خطا در خواندن فایل لاگ: {ex}", 500
 
 # --- SSH Terminal Routes ---
 from terminal_manager import TerminalManager

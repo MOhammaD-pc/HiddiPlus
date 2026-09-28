@@ -528,10 +528,14 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
     """
     تولید کدهای بهینه‌شده CSS برای تزریق مستقیم به هدر قالب‌ها
     """
-    data = palette_config.get("data") or PALETTES["vps_aurora"]
-    intensity = palette_config.get("intensity", "normal")
-    animation = palette_config.get("animation", "static")
-    pid = data.get("id", "vps_aurora")
+    if not isinstance(palette_config, dict):
+        palette_config = {}
+    data = palette_config.get("data")
+    if not data or not isinstance(data, dict):
+        data = PALETTES["vps_aurora"]
+    intensity = str(palette_config.get("intensity") or "normal").strip()
+    animation = str(palette_config.get("animation") or "static").strip()
+    pid = str(data.get("id") or "vps_aurora").strip()
 
     # تولید CSS بهینه برای انیمیشن
     if animation == "off":
@@ -593,11 +597,11 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
         glass_blur = "14px"
         minimal_mesh_css = anim_css
 
-    l = data["light"]
-    d = data["dark"]
+    l = data.get("light") or PALETTES["vps_aurora"]["light"]
+    d = data.get("dark") or PALETTES["vps_aurora"]["dark"]
 
     css = f"""
-    /* ─── پالت اختصاصی: {data['name']} ─── */
+    /* ─── پالت اختصاصی: {data.get('name', 'VPS Aurora')} ─── */
     :root {{
         --palette-primary: {data['primary_color']};
         --palette-primary-hover: {data['primary_hover']};

@@ -2963,7 +2963,7 @@
                 <div class="collapse submenu-collapse {% if is_network_group_active %}show{% endif %}" id="adminNetworkCollapse">
                     <div class="submenu-inner">
                         {% if session.get('admin_role') == 'super_admin' or has_permission('settings_manage') %}
-                        <a class="submenu-item {% if request.endpoint == 'admin_xray_core' %}active{% endif %}" href="{{ url_for('admin_xray_core') }}">
+                        <a class="submenu-item {% if request.endpoint in ['admin_xray_core', 'admin_xray'] %}active{% endif %}" href="/admin/xray">
                             <i class="fas fa-shield-halved text-info"></i> هسته اختصاصی Xray و پروتکل‌ها
                         </a>
                         <a class="submenu-item {% if request.endpoint in ['admin_domains', 'admin_domains_view'] %}active{% endif %}" href="{{ url_for('admin_domains') }}">
