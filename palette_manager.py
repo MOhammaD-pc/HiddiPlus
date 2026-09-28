@@ -615,6 +615,21 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
         --aura-opacity: {dark_opacity};
         --aura-blend: {d['mesh_blend']};
     }}
+    /* بهینه‌سازی رفرش‌ریت و عملکرد اسکرول در دستگاه‌های لمسی و موبایل */
+    @media (max-width: 991.98px) {{
+        :root {{
+            --aura-blur: 20px !important;
+            --glass-blur: 0px !important;
+            --aura-blend: normal !important;
+        }}
+        [data-bs-theme="dark"] {{
+            --aura-blend: normal !important;
+            --palette-card-bg: rgba(17, 24, 39, 0.94);
+        }}
+        [data-bs-theme="light"] {{
+            --palette-card-bg: #ffffff;
+        }}
+    }}
     {minimal_mesh_css}
     """
     return css
