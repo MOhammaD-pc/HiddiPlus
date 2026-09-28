@@ -4365,7 +4365,9 @@ def setup_wizard():
     """ویزارد راه‌اندازی هوشمند، بازیابی بک‌آپ و تنظیم متغیرهای اساسی زیرساخت"""
     force = request.args.get("force") == "1"
     is_admin = session.get("logged_in") and session.get("role") == "admin"
-    if not is_setup_needed() and not is_admin and not force:
+    if not is_setup_needed() and not force:
+        if is_admin:
+            return redirect(url_for("dashboard"))
         flash("سیستم قبلاً راه‌اندازی شده است. لطفاً وارد حساب خود شوید.", "info")
         return redirect(get_login_url())
 
