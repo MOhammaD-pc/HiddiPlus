@@ -1513,6 +1513,7 @@ def smart_subscription_proxy(sub_uuid: str, sub_path: str = ""):
             logger.error(f"Error getting local inbounds for {sub_uuid}: {e}")
 
     # ۲. کانفیگ‌های نود خارجی هیدیفای در صورت اتصال
+    external_expire_ts = 0
     include_external = db.is_setting_enabled("xray_include_external_node", default=True)
     if is_sub_active and include_external and hiddify_url:
         target_url = f"{hiddify_url}/{proxy_path}/{sub_uuid}/all.txt"
@@ -1521,9 +1522,18 @@ def smart_subscription_proxy(sub_uuid: str, sub_path: str = ""):
         try:
             with httpx.Client(verify=False, follow_redirects=True, timeout=5.0) as client:
                 resp = client.get(target_url, headers=req_headers)
-                if resp.status_code == 200 and resp.text:
-                    h_configs = _parse_subscription_configs(resp.text)
-                    combined_configs.extend(h_configs)
+                if resp.status_code == 200:
+                    for h_name, h_val in resp.headers.items():
+                        if h_name.lower() == "subscription-userinfo":
+                            for part in h_val.split(";"):
+                                if "expire=" in part:
+                                    try:
+                                        external_expire_ts = int(part.split("expire=")[1].strip())
+                                    except Exception:
+                                        pass
+                    if resp.text:
+                        h_configs = _parse_subscription_configs(resp.text)
+                        combined_configs.extend(h_configs)
         except Exception as e:
             logger.warning(f"Could not fetch external configs from {target_url}: {e}")
 
@@ -1555,13 +1565,53 @@ def smart_subscription_proxy(sub_uuid: str, sub_path: str = ""):
             used_bytes = int(float(sub.get("data_used") or 0) * (1024 ** 3))
             limit_bytes = int(float(sub.get("data_limit") or 0) * (1024 ** 3))
             exp_ts = 0
-            exp_date = sub.get("expire_date")
-            if exp_date:
-                try:
-                    dt = datetime.fromisoformat(str(exp_date).replace("Z", ""))
-                    exp_ts = int(dt.timestamp())
-                except Exception:
-                    pass
+
+            # ۱. اولویت اول: انقضای معتبر بازگشتی از نود خارجی هیدیفای در صورت وجود
+            if external_expire_ts and external_expire_ts > 0:
+                exp_ts = external_expire_ts
+
+            # ۲. اولویت دوم: محاسبه دقیق و پایدار از روی دیتای اشتراک محلی
+            if exp_ts <= 0:
+                duration = int(sub.get("duration") or 30)
+                now_dt = get_now_naive()
+
+                # الف) بررسی expire_date در دیتابیس
+                exp_date_raw = sub.get("expire_date")
+                if exp_date_raw and str(exp_date_raw).strip() not in ["None", "null", ""]:
+                    try:
+                        clean_exp = str(exp_date_raw).strip().replace("Z", "")
+                        if len(clean_exp) == 10:
+                            dt = datetime.strptime(clean_exp, "%Y-%m-%d")
+                        else:
+                            dt = datetime.fromisoformat(clean_exp)
+                        if dt.tzinfo is not None:
+                            dt = dt.astimezone(TEHRAN_TZ).replace(tzinfo=None)
+                        exp_ts = int(dt.timestamp())
+                    except Exception as e_exp:
+                        logger.debug(f"Error parsing expire_date: {e_exp}")
+
+                # ب) محاسبه بر اساس start_date + duration
+                if exp_ts <= 0:
+                    start_date_raw = sub.get("start_date")
+                    if start_date_raw and str(start_date_raw).strip() not in ["None", "null", ""]:
+                        try:
+                            clean_start = str(start_date_raw).strip().replace("Z", "")
+                            if len(clean_start) == 10:
+                                s_dt = datetime.strptime(clean_start, "%Y-%m-%d")
+                            else:
+                                s_dt = datetime.fromisoformat(clean_start)
+                            if s_dt.tzinfo is not None:
+                                s_dt = s_dt.astimezone(TEHRAN_TZ).replace(tzinfo=None)
+                            exp_dt = s_dt + timedelta(days=duration)
+                            exp_ts = int(exp_dt.timestamp())
+                        except Exception as e_start:
+                            logger.debug(f"Error parsing start_date: {e_start}")
+
+                # ج) در صورت عدم شروع (شروع با اولین اتصال)، تعیین بر اساس زمان حال + duration روز
+                if exp_ts <= 0 and duration > 0:
+                    exp_dt = now_dt + timedelta(days=duration)
+                    exp_ts = int(exp_dt.timestamp())
+
             resp_headers["Subscription-Userinfo"] = f"upload=0; download={used_bytes}; total={limit_bytes}; expire={exp_ts}"
 
         return Response(encoded_body, status=200, headers=resp_headers)

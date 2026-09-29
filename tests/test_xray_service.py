@@ -420,6 +420,10 @@ class TestXrayService(unittest.TestCase):
                 )
                 self.assertEqual(res_vpn.status_code, 200)
                 self.assertIn("Subscription-Userinfo", res_vpn.headers)
+                userinfo_val = res_vpn.headers["Subscription-Userinfo"]
+                self.assertIn("expire=", userinfo_val)
+                exp_ts_val = int(userinfo_val.split("expire=")[1].split(";")[0].strip())
+                self.assertGreater(exp_ts_val, 0)
                 decoded_configs = base64.b64decode(res_vpn.data).decode("utf-8")
                 self.assertIn("vless://", decoded_configs)
                 self.assertIn("DeliveryUser", decoded_configs)
