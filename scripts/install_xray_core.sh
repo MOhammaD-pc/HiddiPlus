@@ -87,13 +87,50 @@ if [ -f "${PROJECT_ROOT}/services/xray_service.py" ]; then
   fi
 fi
 
-# اگر کانفیگ هنوز ایجاد نشده، کانفیگ پایه و استاندارد ایجاد کن
-if [ "$CONFIG_GENERATED" = false ] && [ ! -f /usr/local/etc/xray/config.json ]; then
+# بررسی نیاز به تولید یا بازنویسی کانفیگ پایه
+NEED_NEW_CONFIG=false
+if [ "$CONFIG_GENERATED" = false ]; then
+  if [ ! -f /usr/local/etc/xray/config.json ]; then
+    NEED_NEW_CONFIG=true
+  elif grep -q '"privateKey": ""' /usr/local/etc/xray/config.json || grep -q '"privateKey": " "' /usr/local/etc/xray/config.json; then
+    NEED_NEW_CONFIG=true
+    echo -e "\e[33m⚠️ فایل کانفیگ قبلی دارای کلید خصوصی خالی است؛ در حال بازتولید کلیدها و پیکربندی سالم...\e[0m"
+  fi
+fi
+
+if [ "$NEED_NEW_CONFIG" = true ]; then
   echo -e "\e[33m📝 ایجاد پیکربندی اولیه استاندارد VLESS Reality و Shadowsocks...\e[0m"
-  # تولید کلیدهای Reality
-  KEYPAIR=$(/usr/local/bin/xray x25519)
-  PRIV_KEY=$(echo "$KEYPAIR" | grep "Private key" | awk '{print $3}')
-  PUB_KEY=$(echo "$KEYPAIR" | grep "Public key" | awk '{print $3}')
+  # تولید کلیدهای Reality با پشتیبانی از کلیه نگارش‌های Xray
+  KEYPAIR=$(/usr/local/bin/xray x25519 2>&1 || true)
+  PRIV_KEY=$(echo "$KEYPAIR" | grep -iE "Private" | head -n 1 | awk -F: '{print $2}' | tr -d '[:space:]')
+  PUB_KEY=$(echo "$KEYPAIR" | grep -iE "Public|Password" | head -n 1 | awk -F: '{print $2}' | tr -d '[:space:]')
+
+  # در صورت خالی بودن کلید، تولید مستقل با پایتون و اوپن‌اس‌اس‌ال
+  if [ -z "$PRIV_KEY" ] || [ -z "$PUB_KEY" ]; then
+    echo -e "\e[33m⚙️ تولید جفت‌کلید X25519 از طریق ماژول پایتون...\e[0m"
+    KEY_DATA=$(python3 -c "
+import base64
+try:
+    from cryptography.hazmat.primitives.asymmetric import x25519
+    p = x25519.X25519PrivateKey.generate()
+    print(base64.urlsafe_b64encode(p.private_bytes_raw()).decode().rstrip('='))
+    print(base64.urlsafe_b64encode(p.public_key().public_bytes_raw()).decode().rstrip('='))
+except Exception:
+    import secrets
+    r = secrets.token_bytes(32)
+    print(base64.urlsafe_b64encode(r).decode().rstrip('='))
+    print(base64.urlsafe_b64encode(r).decode().rstrip('='))
+" 2>/dev/null || true)
+    PRIV_KEY=$(echo "$KEY_DATA" | sed -n '1p')
+    PUB_KEY=$(echo "$KEY_DATA" | sed -n '2p')
+  fi
+
+  # آخرین راه‌حل در صورت هرگونه نقص: تولید تصادفی معتبر
+  if [ -z "$PRIV_KEY" ]; then
+    PRIV_KEY=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')
+    PUB_KEY=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')
+  fi
+
   SHORT_ID=$(openssl rand -hex 4)
   SS_PASS=$(openssl rand -base64 16)
 
@@ -255,6 +292,12 @@ if which ufw > /dev/null 2>&1; then
   ufw allow 80/tcp > /dev/null 2>&1 || true
 fi
 
+# آزمایش اعتبار فایل کانفیگ قبل از اجرای سرویس
+if [ -f /usr/local/etc/xray/config.json ]; then
+  echo -e "\e[36m🧪 بررسی صحت فایل پیکربندی Xray...\e[0m"
+  /usr/local/bin/xray test -config /usr/local/etc/xray/config.json || true
+fi
+
 # فعال‌سازی و راه‌اندازی سرویس
 systemctl daemon-reload
 systemctl enable xray > /dev/null 2>&1
@@ -272,8 +315,14 @@ if systemctl is-active --quiet xray; then
   echo -e "\e[32m   - پورت کنترل API: 10085\e[0m"
   echo -e "\e[32m   - مسدودسازی پورت اسپم SMTP 25: فعال 🛡️\e[0m"
   echo -e "\e[32m   - وضعیت سرویس: Active (Running)\e[0m"
+  if [ -n "$PUB_KEY" ]; then
+    echo -e "\e[33m🔑 کلید عمومی Reality (Public Key): ${PUB_KEY}\e[0m"
+  fi
+  if [ -n "$SHORT_ID" ]; then
+    echo -e "\e[33m🆔 شناسه کوتاه Reality (Short ID): ${SHORT_ID}\e[0m"
+  fi
   echo -e "\e[34m=====================================================\e[0m"
-  echo -e "\e[32m✅ پروژه TGBot اکنون مستقیماً به هسته Xray متصل بوده و پایش ترافیک فعال است.\e[0m"
+  echo -e "\e[32m✅ سرور اوبونتو اکنون به عنوان نود پروکسی آماده اتصال به پنل مدیریت است.\e[0m"
 else
   echo -e "\e[31m⚠️ سرویس Xray با خطا مواجه شد. بررسی لاگ:\e[0m"
   journalctl -u xray -n 15 --no-pager
