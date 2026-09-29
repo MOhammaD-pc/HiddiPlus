@@ -7226,6 +7226,18 @@ async def admin_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def lock_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """قفل کردن فوری سشن پنل مدیریت"""
+    user = update.effective_user
+    is_super_admin = (user.id == ADMIN_ID or str(user.id) == str(db.get_setting("admin_telegram_id")))
+    admin_mgr = db.get_admin_manager_by_telegram_id(user.id)
+    is_admin_mgr = bool(admin_mgr and admin_mgr.get("bot_access"))
+    if is_super_admin or is_admin_mgr:
+        from admin_pin_guard import lock_admin_session
+        lock_admin_session(context)
+        await update.message.reply_text("🔒 **پنل مدیریت قفل شد.**\nجهت دسترسی مجدد نیاز به وارد کردن پین‌کد امنیتی است.", parse_mode="Markdown")
+
+
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """پنل مدیریت ادمین کل و نماینده فروش"""
     user = update.effective_user
@@ -7245,6 +7257,13 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     if is_super_admin or is_admin_mgr:
+        # بررسی احراز هویت پین‌کد مدیریت (برگرفته از پین خط فرمان)
+        saved_pin = to_english_digits(str(db.get_setting("terminal_pin") or "").strip())
+        if saved_pin:
+            from admin_pin_guard import is_admin_session_unlocked, show_admin_pin_prompt
+            if not is_admin_session_unlocked(context):
+                return await show_admin_pin_prompt(update, context)
+
         effective_role = "super_admin" if is_super_admin else (admin_mgr.get("role") or "super_admin")
         context.user_data["admin_role"] = effective_role
         context.user_data["admin_mgr_username"] = admin_mgr.get("username") if admin_mgr else "super_admin"
@@ -7315,9 +7334,22 @@ async def admin_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not reseller and is_r_adm:
         reseller = db.get_reseller(r_id_found)
 
+    # ─── پردازش دکمه‌های شیشه‌ای پین‌کد مدیریت و قفل پنل ───
+    if data.startswith("adm_pin_") or data == "adm_lock_panel":
+        from admin_pin_guard import handle_admin_pin_callback
+        return await handle_admin_pin_callback(update, context)
+
     if data == "admin_back":
         await query.edit_message_text("❌ پنل مدیریت بسته شد.")
         return ConversationHandler.END
+
+    # بررسی احراز هویت پین‌کد مدیریت قبل از اجرای هر عملیات ادمین
+    if is_sys_admin:
+        saved_pin = to_english_digits(str(db.get_setting("terminal_pin") or "").strip())
+        if saved_pin:
+            from admin_pin_guard import is_admin_session_unlocked, show_admin_pin_prompt
+            if not is_admin_session_unlocked(context):
+                return await show_admin_pin_prompt(update, context)
 
     if data in ("admin_back_menu", "res_adm_menu", "adm_adv_menu"):
         return await admin_panel(update, context)
@@ -10558,6 +10590,8 @@ def main():
             CommandHandler("language", change_language_prompt),
             CommandHandler("lang", change_language_prompt),
             CommandHandler("admin_panel", admin_panel),
+            CommandHandler("lock", lock_command),
+            CommandHandler("admin_lock", lock_command),
             CommandHandler("renew", renew_subscription),
             CommandHandler("status", show_status),
             CommandHandler("link", get_link),
@@ -10752,6 +10786,8 @@ def main():
     application.add_handler(CommandHandler("admin_stats", admin_stats))
     application.add_handler(CommandHandler("admin_test", admin_test))
     application.add_handler(CommandHandler("admin_panel", admin_panel))
+    application.add_handler(CommandHandler("lock", lock_command))
+    application.add_handler(CommandHandler("admin_lock", lock_command))
 
     # دستورات پشتیبان‌گیری و مدیریت داده‌ها
     application.add_handler(CommandHandler("backup", backup_command))

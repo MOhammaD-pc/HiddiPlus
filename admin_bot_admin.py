@@ -190,6 +190,7 @@ def get_admin_advanced_keyboard(is_bundle_bot: bool = False, role: str = "super_
                     InlineKeyboardButton("⚙️ وضعیت درگاه‌ها و حساب‌ها", callback_data="adm_adv_settings"),
                 ],
                 [
+                    InlineKeyboardButton("🔒 قفل پنل مدیریت", callback_data="adm_lock_panel"),
                     InlineKeyboardButton("🔙 بازگشت به منوی کاربری", callback_data=back_cb)
                 ]
             ]
@@ -205,6 +206,7 @@ def get_admin_advanced_keyboard(is_bundle_bot: bool = False, role: str = "super_
                     InlineKeyboardButton("🔄 تمدید مشتری (جستجو)", callback_data="adm_adv_renew_user"),
                 ],
                 [
+                    InlineKeyboardButton("🔒 قفل پنل مدیریت", callback_data="adm_lock_panel"),
                     InlineKeyboardButton("🔙 بازگشت به منوی کاربری", callback_data=back_cb)
                 ]
             ]
@@ -212,7 +214,10 @@ def get_admin_advanced_keyboard(is_bundle_bot: bool = False, role: str = "super_
             keyboard = [
                 [InlineKeyboardButton("📊 آمار دقیق و جامع سامانه", callback_data="adm_adv_stats")],
                 [InlineKeyboardButton("📈 گزارشات کاربردی", callback_data="adm_adv_reports")],
-                [InlineKeyboardButton("🔙 بازگشت به منوی کاربری", callback_data=back_cb)]
+                [
+                    InlineKeyboardButton("🔒 قفل پنل مدیریت", callback_data="adm_lock_panel"),
+                    InlineKeyboardButton("🔙 بازگشت به منوی کاربری", callback_data=back_cb)
+                ]
             ]
         else:
             keyboard = [
@@ -248,6 +253,7 @@ def get_admin_advanced_keyboard(is_bundle_bot: bool = False, role: str = "super_
                     InlineKeyboardButton("💾 مدیریت پشتیبان‌گیری و بازیابی", callback_data="adm_backup_menu"),
                 ],
                 [
+                    InlineKeyboardButton("🔒 قفل پنل مدیریت", callback_data="adm_lock_panel"),
                     InlineKeyboardButton("🔙 بازگشت به منوی کاربری", callback_data=back_cb)
                 ]
             ]

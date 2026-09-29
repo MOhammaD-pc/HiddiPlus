@@ -39,7 +39,7 @@ from utils import (
     generate_qr_code_bytes, get_now_iso, get_now_naive, get_single_link_template, 
     format_single_link, gregorian_to_shamsi, gregorian_to_shamsi_full, get_now_shamsi, TEHRAN_TZ,
     get_now, get_now_tehran, parse_to_tehran_dt, is_tehran_hour, is_in_quiet_hours,
-    to_persian_digits, format_activity_time, calculate_debt_auto_disable_at
+    to_persian_digits, to_english_digits, format_activity_time, calculate_debt_auto_disable_at
 )
 from admin_manager import (
     get_all_plans, add_plan, update_plan, delete_plan, move_plan_up, move_plan_down,
@@ -27975,7 +27975,7 @@ def admin_terminal():
 def admin_terminal_auth():
     action = request.form.get('action')
     if action == 'set_pin':
-        new_pin = request.form.get('new_pin')
+        new_pin = to_english_digits(str(request.form.get('new_pin', '')).strip())
         if new_pin and len(new_pin) >= 4:
             db.set_setting('terminal_pin', new_pin)
             session['terminal_auth'] = True
@@ -27983,8 +27983,8 @@ def admin_terminal_auth():
         return jsonify({'success': False, 'error': 'پین باید حداقل ۴ کاراکتر باشد.'})
     
     elif action == 'login':
-        pin = request.form.get('pin')
-        saved_pin = db.get_setting('terminal_pin')
+        pin = to_english_digits(str(request.form.get('pin', '')).strip())
+        saved_pin = to_english_digits(str(db.get_setting('terminal_pin') or '').strip())
         if saved_pin and pin == saved_pin:
             session['terminal_auth'] = True
             return jsonify({'success': True})

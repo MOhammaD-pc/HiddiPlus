@@ -1,6 +1,7 @@
 
 # --- SSH Terminal Routes ---
 from terminal_manager import TerminalManager
+from utils import to_english_digits
 
 @app.route('/admin/terminal')
 @admin_required
@@ -14,7 +15,7 @@ def admin_terminal():
 def admin_terminal_auth():
     action = request.form.get('action')
     if action == 'set_pin':
-        new_pin = request.form.get('new_pin')
+        new_pin = to_english_digits(str(request.form.get('new_pin', '')).strip())
         if new_pin and len(new_pin) >= 4:
             db.set_setting('terminal_pin', new_pin)
             session['terminal_auth'] = True
@@ -22,8 +23,8 @@ def admin_terminal_auth():
         return jsonify({'success': False, 'error': 'پین باید حداقل ۴ کاراکتر باشد.'})
     
     elif action == 'login':
-        pin = request.form.get('pin')
-        saved_pin = db.get_setting('terminal_pin')
+        pin = to_english_digits(str(request.form.get('pin', '')).strip())
+        saved_pin = to_english_digits(str(db.get_setting('terminal_pin') or '').strip())
         if saved_pin and pin == saved_pin:
             session['terminal_auth'] = True
             return jsonify({'success': True})
@@ -49,7 +50,9 @@ def admin_terminal_run():
     
     if mode == 'local':
         success, output = TerminalManager.run_local_command(cmd)
-        return jsonify({'success': success, 'output': output})
+        if success:
+            return jsonify({'success': True, 'output': output})
+        return jsonify({'success': False, 'error': output})
     elif mode == 'remote':
         host = request.form.get('host')
         port = int(request.form.get('port', 22))
@@ -60,6 +63,27 @@ def admin_terminal_run():
             return jsonify({'success': False, 'error': 'اطلاعات ورود ریموت ناقص است.'})
             
         success, output = TerminalManager.run_remote_command(host, port, user, password, cmd)
-        return jsonify({'success': success, 'output': output})
+        if success:
+            return jsonify({'success': True, 'output': output})
+        return jsonify({'success': False, 'error': output})
         
     return jsonify({'success': False, 'error': 'حالت نامعتبر'})
+
+@app.route('/admin/api/terminal/test_connection', methods=['POST'])
+@admin_required
+def admin_terminal_test_connection():
+    if not session.get('terminal_auth'):
+        return jsonify({'success': False, 'error': 'لطفا ابتدا با پین لاگین کنید.'})
+        
+    host = request.form.get('host')
+    port = int(request.form.get('port', 22))
+    user = request.form.get('user')
+    password = request.form.get('password')
+    
+    if not all([host, user, password]):
+        return jsonify({'success': False, 'error': 'اطلاعات ورود ریموت ناقص است.'})
+        
+    success, output = TerminalManager.run_remote_command(host, port, user, password, "echo 'Connection Successful'")
+    if success:
+        return jsonify({'success': True, 'message': 'اتصال با موفقیت برقرار شد.'})
+    return jsonify({'success': False, 'error': output})

@@ -2,175 +2,6 @@
 {% block title %}خط فرمان سیستم (SSH / Local){% endblock %}
 
 {% block content %}
-<script>
-    function toggleRemoteMode() {
-        const isRemote = document.getElementById('remoteModeSwitch').checked;
-        document.getElementById('remoteSettings').style.display = isRemote ? 'block' : 'none';
-        document.getElementById('termPrompt').innerText = isRemote ? 'remote:~#' : 'root@local:~#';
-        document.getElementById('termInput').focus();
-        document.getElementById('connStatus').style.display = 'none';
-    }
-
-    async function testConnection() {
-        const btn = document.getElementById('btnTestConn');
-        const status = document.getElementById('connStatus');
-        const host = document.getElementById('sshHost').value;
-        const port = document.getElementById('sshPort').value;
-        const user = document.getElementById('sshUser').value;
-        const pass = document.getElementById('sshPass').value;
-        
-        if (!host || !user || !pass) {
-            status.style.display = 'block';
-            status.className = 'mt-2 small fw-bold text-danger';
-            status.innerText = 'لطفاً هاست، یوزر و پسورد را وارد کنید.';
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        status.style.display = 'block';
-        status.className = 'mt-2 small fw-bold text-info';
-        status.innerText = 'در حال بررسی اتصال...';
-
-        const formData = new URLSearchParams();
-        formData.append('host', host);
-        formData.append('port', port || '22');
-        formData.append('user', user);
-        formData.append('password', pass);
-
-        try {
-            const res = await fetch('/admin/api/terminal/test_connection', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData
-            });
-            const data = await res.json();
-            
-            if (data.success) {
-                status.className = 'mt-2 small fw-bold text-success';
-                status.innerText = '✅ ' + data.message;
-            } else {
-                status.className = 'mt-2 small fw-bold text-danger';
-                status.innerText = '❌ خطا: ' + (data.error || 'Unknown Error');
-            }
-        } catch (e) {
-            status.className = 'mt-2 small fw-bold text-danger';
-            status.innerText = '❌ خطای شبکه در ارتباط با سرور';
-        }
-        
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-plug"></i>';
-    }
-
-    const termInput = document.getElementById('termInput');
-    const termOutput = document.getElementById('termOutput');
-    const termContainer = document.getElementById('termContainer');
-    
-    let isRunning = false;
-
-    if (termInput) {
-        termInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                const cmd = this.value.trim();
-                if (cmd === '') return;
-                
-                if (cmd === 'clear') {
-                    termOutput.innerHTML = '';
-                    this.value = '';
-                    return;
-                }
-                
-                if (isRunning) return;
-                isRunning = true;
-                this.value = '';
-                
-                const prompt = document.getElementById('termPrompt').innerText;
-                termOutput.innerHTML += `\n<span class="text-white">${prompt} ${cmd}</span>\n<span class="terminal-warning">در حال اجرا...</span>`;
-                termContainer.scrollTop = termContainer.scrollHeight;
-                
-                runCommand(cmd);
-            }
-        });
-    }
-
-    async function runCommand(cmd) {
-        const isRemote = document.getElementById('remoteModeSwitch').checked;
-        const formData = new FormData();
-        formData.append('command', cmd);
-        
-        if (isRemote) {
-            formData.append('mode', 'remote');
-            formData.append('host', document.getElementById('sshHost').value);
-            formData.append('port', document.getElementById('sshPort').value);
-            formData.append('user', document.getElementById('sshUser').value);
-            formData.append('password', document.getElementById('sshPass').value);
-        } else {
-            formData.append('mode', 'local');
-        }
-
-        try {
-            const resp = await fetch("{{ url_for('admin_terminal_run') }}", {
-                method: "POST",
-                body: formData
-            });
-            const data = await resp.json();
-            
-            // Remove the 'در حال اجرا...' line
-            const lines = termOutput.innerHTML.split('\n');
-            lines.pop(); // remove last line which is the loading text
-            termOutput.innerHTML = lines.join('\n') + '\n';
-            
-            if (data.success) {
-                const safeOutput = data.output.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                termOutput.innerHTML += `<span class="terminal-success">${safeOutput}</span>\n`;
-            } else {
-                const safeError = (data.error || "Unknown Error").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                termOutput.innerHTML += `<span class="terminal-error">${safeError}</span>\n`;
-            }
-        } catch (e) {
-            const lines = termOutput.innerHTML.split('\n');
-            lines.pop();
-            termOutput.innerHTML = lines.join('\n') + '\n';
-            termOutput.innerHTML += `<span class="terminal-error">خطا در ارتباط با سرور: ${e}</span>\n`;
-        }
-        
-        isRunning = false;
-        termContainer.scrollTop = termContainer.scrollHeight;
-        document.getElementById('termInput').focus();
-    }
-
-    async function setPin() {
-        const pin = document.getElementById('newPin').value;
-        const formData = new FormData();
-        formData.append('action', 'set_pin');
-        formData.append('new_pin', pin);
-        
-        const resp = await fetch("{{ url_for('admin_terminal_auth') }}", { method: "POST", body: formData });
-        const data = await resp.json();
-        if (data.success) location.reload();
-        else alert(data.error);
-    }
-    
-    async function loginPin() {
-        const pin = document.getElementById('loginPin').value;
-        const formData = new FormData();
-        formData.append('action', 'login');
-        formData.append('pin', pin);
-        
-        const resp = await fetch("{{ url_for('admin_terminal_auth') }}", { method: "POST", body: formData });
-        const data = await resp.json();
-        if (data.success) location.reload();
-        else alert(data.error);
-    }
-
-    async function logoutTerminal() {
-        const formData = new FormData();
-        formData.append('action', 'logout');
-        await fetch("{{ url_for('admin_terminal_auth') }}", { method: "POST", body: formData });
-        location.reload();
-    }
-</script>
-
 <style>
     .terminal-container {
         background-color: #0c0c0c;
@@ -190,12 +21,19 @@
     .terminal-input-group {
         display: flex;
         align-items: center;
-        margin-top: 10px;
+        gap: 8px;
+        margin-top: 12px;
+        background: #181818;
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid #333;
     }
     .terminal-prompt {
         color: #00ff00;
-        margin-right: 10px;
+        font-family: inherit;
         font-weight: bold;
+        white-space: nowrap;
+        user-select: none;
     }
     .terminal-input {
         background: transparent;
@@ -205,6 +43,41 @@
         flex-grow: 1;
         outline: none;
         font-size: 1rem;
+        direction: ltr;
+    }
+    .terminal-send-btn {
+        background: #0d6efd;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 6px 16px;
+        font-size: 0.9rem;
+        font-weight: bold;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: background 0.2s, transform 0.1s;
+    }
+    .terminal-send-btn:hover {
+        background: #0b5ed7;
+    }
+    .terminal-send-btn:active {
+        transform: scale(0.98);
+    }
+    .terminal-clear-btn {
+        background: #2b2b2b;
+        color: #adb5bd;
+        border: 1px solid #444;
+        border-radius: 5px;
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+    }
+    .terminal-clear-btn:hover {
+        background: #3d3d3d;
+        color: #fff;
     }
     .terminal-error { color: #ff3333; }
     .terminal-success { color: #00ff00; }
@@ -234,14 +107,20 @@
                 {% if not has_pin %}
                 <p class="small text-muted mb-3">برای اولین بار، یک پین کد (PIN) امنیتی حداقل ۴ رقمی برای دسترسی به ترمینال تنظیم کنید.</p>
                 <div class="input-group mb-3">
-                    <input type="password" id="newPin" class="form-control" placeholder="پین کد جدید" dir="ltr">
-                    <button class="btn btn-primary" onclick="setPin()">تنظیم و ورود</button>
+                    <input type="password" id="newPin" class="form-control" placeholder="پین کد جدید" dir="ltr" onkeydown="if(event.key==='Enter') setPin()">
+                    <button class="btn btn-primary" onclick="setPin()" id="btnSetPin">تنظیم و ورود</button>
                 </div>
                 {% else %}
                 <p class="small text-muted mb-3">لطفاً برای دسترسی به محیط اجرای دستورات، پین کد خود را وارد کنید.</p>
                 <div class="input-group mb-3">
-                    <input type="password" id="loginPin" class="form-control text-center" placeholder="****" dir="ltr">
-                    <button class="btn btn-primary" onclick="loginPin()">ورود</button>
+                    <input type="password" id="loginPin" class="form-control text-center" placeholder="****" dir="ltr" autofocus onkeydown="if(event.key==='Enter') loginPin()">
+                    <button class="btn btn-primary" onclick="loginPin()" id="btnLoginPin">ورود</button>
+                </div>
+                <div id="pinError" class="text-danger small mt-2 fw-bold" style="display:none;"></div>
+                <div class="mt-3">
+                    <small class="text-muted d-block">
+                        <i class="fas fa-info-circle"></i> در صورت فراموشی پین، در سرور لینوکس دستور <code>python manage_pin.py</code> را اجرا فرمایید.
+                    </small>
                 </div>
                 {% endif %}
             </div>
@@ -286,16 +165,338 @@
     </div>
 </div>
 
+<!-- دستورات سریع و کاربردی -->
+<div class="d-flex flex-wrap gap-2 mb-2 align-items-center" dir="ltr">
+    <span class="text-muted small me-1"><i class="fas fa-bolt text-warning"></i> Quick:</span>
+    <button class="btn btn-sm btn-dark border-secondary py-1 px-2" type="button" onclick="setAndRunQuickCmd('uptime')"><i class="fas fa-clock text-info me-1"></i> uptime</button>
+    <button class="btn btn-sm btn-dark border-secondary py-1 px-2" type="button" onclick="setAndRunQuickCmd('free -h')"><i class="fas fa-memory text-warning me-1"></i> free -h</button>
+    <button class="btn btn-sm btn-dark border-secondary py-1 px-2" type="button" onclick="setAndRunQuickCmd('df -h /')"><i class="fas fa-hdd text-success me-1"></i> df -h</button>
+    <button class="btn btn-sm btn-dark border-secondary py-1 px-2" type="button" onclick="setAndRunQuickCmd('systemctl status tgbot')"><i class="fas fa-robot text-primary me-1"></i> tgbot status</button>
+</div>
+
 <div class="terminal-container" id="termContainer" dir="ltr">
     <div class="terminal-output" id="termOutput">TGBot Terminal Lite v1.0
-Type your command and press Enter. Interactive commands (top, nano) are restricted.
+Type your command and press Enter or click the Send button.
+Interactive commands (top, nano) are restricted.
 -----------------------------------------------------------------------------------
 </div>
     <div class="terminal-input-group">
         <span class="terminal-prompt" id="termPrompt">root@local:~#</span>
-        <input type="text" class="terminal-input" id="termInput" autocomplete="off" spellcheck="false" autofocus>
+        <input type="text" class="terminal-input" id="termInput" autocomplete="off" spellcheck="false" placeholder="دستور را وارد کنید (مثلاً uptime)..." autofocus>
+        <button type="button" class="terminal-send-btn" id="btnSendCmd" onclick="submitTerminalCommand()" title="ارسال دستور (Enter)">
+            <i class="fas fa-paper-plane"></i>
+            <span>ارسال</span>
+        </button>
+        <button type="button" class="terminal-clear-btn" onclick="clearTerminalOutput()" title="پاک کردن صفحه ترمینال">
+            <i class="fas fa-trash-alt"></i>
+        </button>
     </div>
 </div>
 
 {% endif %}
+
+<!-- اسکریپت در انتهای سند قرار گرفته تا پس از آماده‌سازی کامل المان‌های DOM لود شود -->
+<script>
+    let isRunning = false;
+    let cmdHistory = [];
+    let historyIndex = -1;
+
+    function toggleRemoteMode() {
+        const switchEl = document.getElementById('remoteModeSwitch');
+        if (!switchEl) return;
+        const isRemote = switchEl.checked;
+        const remSettings = document.getElementById('remoteSettings');
+        const promptEl = document.getElementById('termPrompt');
+        const connStatus = document.getElementById('connStatus');
+        
+        if (remSettings) remSettings.style.display = isRemote ? 'block' : 'none';
+        if (promptEl) promptEl.innerText = isRemote ? 'remote:~#' : 'root@local:~#';
+        if (connStatus) connStatus.style.display = 'none';
+        
+        const termInput = document.getElementById('termInput');
+        if (termInput) termInput.focus();
+    }
+
+    async function testConnection() {
+        const btn = document.getElementById('btnTestConn');
+        const status = document.getElementById('connStatus');
+        const host = document.getElementById('sshHost').value;
+        const port = document.getElementById('sshPort').value;
+        const user = document.getElementById('sshUser').value;
+        const pass = document.getElementById('sshPass').value;
+        
+        if (!host || !user || !pass) {
+            status.style.display = 'block';
+            status.className = 'mt-2 small fw-bold text-danger';
+            status.innerText = 'لطفاً هاست، یوزر و پسورد را وارد کنید.';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        status.style.display = 'block';
+        status.className = 'mt-2 small fw-bold text-info';
+        status.innerText = 'در حال بررسی اتصال...';
+
+        const formData = new URLSearchParams();
+        formData.append('host', host);
+        formData.append('port', port || '22');
+        formData.append('user', user);
+        formData.append('password', pass);
+
+        try {
+            const res = await fetch('/admin/api/terminal/test_connection', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                status.className = 'mt-2 small fw-bold text-success';
+                status.innerText = '✅ ' + (data.message || 'اتصال با موفقیت برقرار شد.');
+            } else {
+                status.className = 'mt-2 small fw-bold text-danger';
+                status.innerText = '❌ خطا: ' + (data.error || 'خطا در برقراری ارتباط');
+            }
+        } catch (e) {
+            status.className = 'mt-2 small fw-bold text-danger';
+            status.innerText = '❌ خطای شبکه در ارتباط با سرور';
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-plug"></i>';
+    }
+
+    function clearTerminalOutput() {
+        const termOutput = document.getElementById('termOutput');
+        if (termOutput) {
+            termOutput.innerHTML = '';
+        }
+    }
+
+    function setAndRunQuickCmd(cmd) {
+        const termInput = document.getElementById('termInput');
+        if (termInput) {
+            termInput.value = cmd;
+            submitTerminalCommand();
+        }
+    }
+
+    function submitTerminalCommand() {
+        const termInput = document.getElementById('termInput');
+        const termOutput = document.getElementById('termOutput');
+        const termContainer = document.getElementById('termContainer');
+        const btnSend = document.getElementById('btnSendCmd');
+        
+        if (!termInput || !termOutput) return;
+
+        const cmd = termInput.value.trim();
+        if (cmd === '') return;
+
+        if (cmd === 'clear') {
+            clearTerminalOutput();
+            termInput.value = '';
+            return;
+        }
+
+        if (isRunning) return;
+
+        // ذخیره در سابقه دستورات
+        cmdHistory.push(cmd);
+        historyIndex = cmdHistory.length;
+
+        isRunning = true;
+        termInput.value = '';
+        if (btnSend) {
+            btnSend.disabled = true;
+            btnSend.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>ارسال</span>';
+        }
+
+        const prompt = document.getElementById('termPrompt') ? document.getElementById('termPrompt').innerText : 'root@local:~#';
+        termOutput.innerHTML += `\n<span class="text-white">${prompt} ${cmd}</span>\n<span class="terminal-warning" id="executingIndicator">در حال اجرا...</span>`;
+        if (termContainer) termContainer.scrollTop = termContainer.scrollHeight;
+
+        runCommand(cmd);
+    }
+
+    async function runCommand(cmd) {
+        const termOutput = document.getElementById('termOutput');
+        const termContainer = document.getElementById('termContainer');
+        const termInput = document.getElementById('termInput');
+        const btnSend = document.getElementById('btnSendCmd');
+        const switchEl = document.getElementById('remoteModeSwitch');
+        const isRemote = switchEl ? switchEl.checked : false;
+
+        const formData = new FormData();
+        formData.append('command', cmd);
+        
+        if (isRemote) {
+            formData.append('mode', 'remote');
+            formData.append('host', document.getElementById('sshHost') ? document.getElementById('sshHost').value : '');
+            formData.append('port', document.getElementById('sshPort') ? document.getElementById('sshPort').value : '22');
+            formData.append('user', document.getElementById('sshUser') ? document.getElementById('sshUser').value : '');
+            formData.append('password', document.getElementById('sshPass') ? document.getElementById('sshPass').value : '');
+        } else {
+            formData.append('mode', 'local');
+        }
+
+        try {
+            const resp = await fetch("/admin/api/terminal/run", {
+                method: "POST",
+                body: formData
+            });
+            const data = await resp.json();
+            
+            // حذف برچسب 'در حال اجرا...'
+            const indicator = document.getElementById('executingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+            
+            if (data.success) {
+                const safeOutput = (data.output || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                termOutput.innerHTML += `<span class="terminal-success">${safeOutput}</span>\n`;
+            } else {
+                const safeError = (data.error || "خطای ناشناخته").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                termOutput.innerHTML += `<span class="terminal-error">${safeError}</span>\n`;
+            }
+        } catch (e) {
+            const indicator = document.getElementById('executingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+            termOutput.innerHTML += `<span class="terminal-error">خطا در برقراری ارتباط با سرور: ${e}</span>\n`;
+        }
+        
+        isRunning = false;
+        if (btnSend) {
+            btnSend.disabled = false;
+            btnSend.innerHTML = '<i class="fas fa-paper-plane"></i> <span>ارسال</span>';
+        }
+        if (termContainer) termContainer.scrollTop = termContainer.scrollHeight;
+        if (termInput) termInput.focus();
+    }
+
+    async function setPin() {
+        const pinInput = document.getElementById('newPin');
+        const btn = document.getElementById('btnSetPin');
+        if (!pinInput) return;
+        const pin = pinInput.value.trim();
+        if (!pin || pin.length < 4) {
+            alert('پین باید حداقل ۴ رقم یا کاراکتر باشد.');
+            return;
+        }
+
+        if (btn) btn.disabled = true;
+        const formData = new FormData();
+        formData.append('action', 'set_pin');
+        formData.append('new_pin', pin);
+        
+        try {
+            const resp = await fetch("/admin/api/terminal/auth", { method: "POST", body: formData });
+            const data = await resp.json();
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'خطا در ثبت پین');
+                if (btn) btn.disabled = false;
+            }
+        } catch(e) {
+            alert('خطای ارتباط با سرور');
+            if (btn) btn.disabled = false;
+        }
+    }
+    
+    async function loginPin() {
+        const pinInput = document.getElementById('loginPin');
+        const btn = document.getElementById('btnLoginPin');
+        const errEl = document.getElementById('pinError');
+        if (!pinInput) return;
+        const pin = pinInput.value.trim();
+        if (!pin) {
+            if (errEl) { errEl.style.display = 'block'; errEl.innerText = 'لطفاً پین کد را وارد کنید.'; }
+            return;
+        }
+
+        if (btn) btn.disabled = true;
+        if (errEl) errEl.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('action', 'login');
+        formData.append('pin', pin);
+        
+        try {
+            const resp = await fetch("/admin/api/terminal/auth", { method: "POST", body: formData });
+            const data = await resp.json();
+            if (data.success) {
+                location.reload();
+            } else {
+                if (errEl) {
+                    errEl.style.display = 'block';
+                    errEl.innerText = data.error || 'پین وارد شده اشتباه است.';
+                } else {
+                    alert(data.error || 'پین وارد شده اشتباه است.');
+                }
+                if (btn) btn.disabled = false;
+                pinInput.value = '';
+                pinInput.focus();
+            }
+        } catch (e) {
+            if (errEl) {
+                errEl.style.display = 'block';
+                errEl.innerText = 'خطا در ارتباط با سرور.';
+            }
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async function logoutTerminal() {
+        const formData = new FormData();
+        formData.append('action', 'logout');
+        try {
+            await fetch("/admin/api/terminal/auth", { method: "POST", body: formData });
+        } catch(e) {}
+        location.reload();
+    }
+
+    // متصل کردن لیسنرها پس از لود کامل صفحه
+    function initTerminal() {
+        const termInput = document.getElementById('termInput');
+        if (termInput) {
+            termInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitTerminalCommand();
+                } else if (e.key === 'ArrowUp') {
+                    if (cmdHistory.length > 0) {
+                        e.preventDefault();
+                        if (historyIndex > 0) {
+                            historyIndex--;
+                        }
+                        this.value = cmdHistory[historyIndex] || '';
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    if (cmdHistory.length > 0) {
+                        e.preventDefault();
+                        if (historyIndex < cmdHistory.length - 1) {
+                            historyIndex++;
+                            this.value = cmdHistory[historyIndex] || '';
+                        } else {
+                            historyIndex = cmdHistory.length;
+                            this.value = '';
+                        }
+                    }
+                }
+            });
+            termInput.focus();
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initTerminal);
+    } else {
+        initTerminal();
+    }
+</script>
 {% endblock %}

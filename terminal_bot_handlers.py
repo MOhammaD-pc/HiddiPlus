@@ -13,11 +13,15 @@ async def adm_terminal_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pin = db.get_setting("terminal_pin")
     if not pin:
         await query.edit_message_text(
-            "⚠️ **هشدار امنیتی**\n\nبرای استفاده از خط فرمان، باید ابتدا یک **پین‌کد امنیتی** در پنل وب (بخش سیستم و تنظیمات -> خط فرمان) تنظیم کنید.",
+            "⚠️ **هشدار امنیتی**\n\nبرای استفاده از خط فرمان، باید ابتدا یک **پین‌کد امنیتی** در پنل وب یا با اجرای `python manage_pin.py` در سرور تنظیم کنید.",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 بازگشت", callback_data="adm_adv_menu")]])
         )
         return ConversationHandler.END
+
+    from admin_pin_guard import is_admin_session_unlocked, show_admin_pin_prompt
+    if not is_admin_session_unlocked(context):
+        return await show_admin_pin_prompt(update, context)
 
     txt = (
         "🖥️ **خط فرمان سرور (Terminal Lite)**\n\n"
