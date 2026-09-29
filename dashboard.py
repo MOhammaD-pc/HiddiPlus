@@ -7704,12 +7704,12 @@ def subscriptions():
         base_conditions.append("status = 'active'")
     elif status_filter == "expired":
         base_conditions.append("status != 'active'")
-    elif status_filter == "direct":
-        base_conditions.append("(reseller_id IS NULL OR reseller_id = 0)")
-    elif status_filter == "resellers":
-        base_conditions.append("(reseller_id IS NOT NULL AND reseller_id > 0)")
 
-    if reseller_filter_id and reseller_filter_id.isdigit():
+    if reseller_filter_id == "direct" or status_filter == "direct":
+        base_conditions.append("(reseller_id IS NULL OR reseller_id = 0)")
+    elif reseller_filter_id == "resellers" or status_filter == "resellers":
+        base_conditions.append("(reseller_id IS NOT NULL AND reseller_id > 0)")
+    elif reseller_filter_id and reseller_filter_id.isdigit():
         base_conditions.append("reseller_id = ?")
         params.append(int(reseller_filter_id))
 

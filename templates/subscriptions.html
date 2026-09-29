@@ -10,13 +10,7 @@
     </div>
     <div class="d-flex gap-2 flex-wrap">
         <a href="{{ url_for('subscriptions', reseller_id=reseller_filter_id or '', status='all', per_page=per_page_str, search=search) }}" class="btn btn-sm {{ 'btn-primary' if status_filter == 'all' or not status_filter else 'btn-outline-secondary' }}">همه مشتریان</a>
-        <a href="{{ url_for('subscriptions', reseller_id=reseller_filter_id or '', status='direct', per_page=per_page_str, search=search) }}" class="btn btn-sm {{ 'btn-primary' if status_filter == 'direct' else 'btn-outline-primary' }}">
-            <i class="fas fa-crown me-1"></i> مشتریان مستقیم مدیریت
-        </a>
-        <a href="{{ url_for('subscriptions', reseller_id=reseller_filter_id or '', status='resellers', per_page=per_page_str, search=search) }}" class="btn btn-sm {{ 'btn-info text-dark' if status_filter == 'resellers' else 'btn-outline-info' }}">
-            <i class="fas fa-handshake me-1"></i> مشتریان نمایندگان
-        </a>
-        <a href="{{ url_for('subscriptions', reseller_id=reseller_filter_id or '', status='vip', per_page=per_page_str, search=search) }}" class="btn btn-sm {{ 'btn-warning text-dark fw-bold' if status_filter == 'vip' else 'btn-outline-warning' }}">
+        <a href="{{ url_for('subscriptions', reseller_id=reseller_filter_id or '', status='vip', per_page=per_page_str, search=search) }}" class="btn btn-sm {{ 'btn-warning fw-bold shadow-sm' if status_filter == 'vip' else 'btn-outline-warning' }}">
             <i class="fas fa-crown me-1"></i> مشتریان پریمیوم ⭐️
         </a>
         <a href="{{ url_for('subscriptions', reseller_id=reseller_filter_id or '', status='debtors', per_page=per_page_str, search=search) }}" class="btn btn-sm {{ 'btn-danger text-white fw-bold shadow-sm' if status_filter == 'debtors' else 'btn-outline-danger' }}">
@@ -49,27 +43,33 @@
     </div>
 </div>
 
-<!-- منوی کشویی فیلتر به تفکیک نماینده -->
+<!-- منوی کشویی فیلتر مشتریان -->
 <div class="card mb-4 border-0 shadow-sm bg-light">
     <div class="card-body py-2 px-3">
         <div class="row align-items-center g-2">
-            <div class="col-md-6 d-flex align-items-center gap-2">
+            <div class="col-md-7 d-flex align-items-center gap-2">
                 <label class="form-label fw-bold small text-primary mb-0 text-nowrap">
-                    <i class="fas fa-user-tie me-1"></i> فیلتر مشتریان یک نماینده خاص:
+                    <i class="fas fa-filter me-1"></i> فیلتر مشتریان:
                 </label>
-                <select class="form-select form-select-sm" onchange="location.href='{{ url_for('subscriptions', status=status_filter, per_page=per_page_str, search=search) }}&reseller_id=' + this.value;">
-                    <option value="">-- نمایش مشتریان کلیه نمایندگان و مدیریت --</option>
-                    {% for r in resellers_list %}
-                    <option value="{{ r['id'] }}" {% if reseller_filter_id == (r['id']|string) %}selected{% endif %}>
-                        مشتریان نماینده: {{ r['name'] }} (@{{ r['username'] }})
-                    </option>
-                    {% endfor %}
+                <select class="form-select form-select-sm" onchange="location.href='{{ url_for('subscriptions', status=status_filter if status_filter not in ['direct', 'resellers'] else 'all', per_page=per_page_str, search=search) }}&reseller_id=' + this.value;">
+                    <option value="" {% if not reseller_filter_id or reseller_filter_id == 'all' %}selected{% endif %}>-- همه مشتریان (کلیه نمایندگان و مدیریت) --</option>
+                    <option value="direct" {% if reseller_filter_id == 'direct' or status_filter == 'direct' %}selected{% endif %}>👑 مشتریان مستقیم مدیریت (بدون نماینده)</option>
+                    <option value="resellers" {% if reseller_filter_id == 'resellers' or status_filter == 'resellers' %}selected{% endif %}>🤝 مشتریان کلیه نمایندگان</option>
+                    {% if resellers_list %}
+                    <optgroup label="── تفکیک بر اساس نماینده خاص ──">
+                        {% for r in resellers_list %}
+                        <option value="{{ r['id'] }}" {% if reseller_filter_id == (r['id']|string) %}selected{% endif %}>
+                            مشتریان نماینده: {{ r['name'] }} (@{{ r['username'] }})
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endif %}
                 </select>
             </div>
-            <div class="col-md-6 text-md-end">
-                {% if reseller_filter_id %}
-                <a href="{{ url_for('subscriptions', status=status_filter, per_page=per_page_str, search=search) }}" class="btn btn-sm btn-outline-secondary">
-                    <i class="fas fa-times me-1"></i> پاک کردن فیلتر نماینده
+            <div class="col-md-5 text-md-end">
+                {% if reseller_filter_id and reseller_filter_id != 'all' %}
+                <a href="{{ url_for('subscriptions', status=status_filter if status_filter not in ['direct', 'resellers'] else 'all', per_page=per_page_str, search=search) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i> پاک کردن فیلتر (نمایش همه)
                 </a>
                 {% endif %}
             </div>
