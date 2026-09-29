@@ -3889,6 +3889,8 @@ def admin_required(f):
     @functools.wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get("logged_in") or session.get("role") != "admin":
+            if request.path.startswith("/admin/api/") or request.path.startswith("/api/") or request.is_json:
+                return jsonify({"status": "error", "success": False, "message": "دسترسی غیرمجاز یا نشست کاربری منقضی شده است."}), 401
             return redirect(get_login_url())
         return f(*args, **kwargs)
     return decorated_function
@@ -3899,8 +3901,12 @@ def super_admin_required(f):
     @functools.wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get("logged_in") or session.get("role") != "admin":
+            if request.path.startswith("/admin/api/") or request.path.startswith("/api/") or request.is_json:
+                return jsonify({"status": "error", "success": False, "message": "دسترسی غیرمجاز یا نشست کاربری منقضی شده است."}), 401
             return redirect(get_login_url())
-        if session.get("admin_role") != "super_admin":
+        if session.get("admin_role") not in ("super_admin", "admin"):
+            if request.path.startswith("/admin/api/") or request.path.startswith("/api/") or request.is_json:
+                return jsonify({"status": "error", "success": False, "message": "این عملیات فقط توسط مدیر ارشد قابل انجام است."}), 403
             flash("⛔ این عملیات حساس و کلیدی فقط توسط مدیر ارشد (Super Admin) قابل انجام است.", "danger")
             return redirect(url_for("dashboard"))
         return f(*args, **kwargs)
@@ -15321,20 +15327,30 @@ def admin_api_xray_status():
 
 
 @app.route("/admin/api/xray/settings", methods=["POST"])
-@super_admin_required
+@admin_required
 def admin_api_xray_save_settings():
     """ذخیره تنظیمات هسته اختصاصی Xray و به‌روزرسانی فایل کانفیگ"""
     data = request.get_json(silent=True) or request.form.to_dict() or {}
 
-    xray_enabled = str(data.get("xray_core_enabled", "0")).lower() in ("1", "true")
-    reality_enabled = str(data.get("xray_reality_enabled", "1")).lower() in ("1", "true")
-    ws_enabled = str(data.get("xray_ws_enabled", "1")).lower() in ("1", "true")
-    include_ext = str(data.get("xray_include_external_node", "1")).lower() in ("1", "true")
+    if "xray_core_enabled" in data:
+        xray_enabled = str(data.get("xray_core_enabled", "0")).lower() in ("1", "true")
+        db.set_setting("xray_core_enabled", "1" if xray_enabled else "0")
+    else:
+        # در صورتی که تنظیمات کلیدها یا پورت‌ها ذخیره می‌شوند هسته را فعال نگه می‌داریم
+        xray_enabled = db.is_setting_enabled("xray_core_enabled", default=True)
+        db.set_setting("xray_core_enabled", "1" if xray_enabled else "0")
 
-    db.set_setting("xray_core_enabled", "1" if xray_enabled else "0")
-    db.set_setting("xray_reality_enabled", "1" if reality_enabled else "0")
-    db.set_setting("xray_ws_enabled", "1" if ws_enabled else "0")
-    db.set_setting("xray_include_external_node", "1" if include_ext else "0")
+    if "xray_reality_enabled" in data:
+        reality_enabled = str(data.get("xray_reality_enabled", "1")).lower() in ("1", "true")
+        db.set_setting("xray_reality_enabled", "1" if reality_enabled else "0")
+
+    if "xray_ws_enabled" in data:
+        ws_enabled = str(data.get("xray_ws_enabled", "1")).lower() in ("1", "true")
+        db.set_setting("xray_ws_enabled", "1" if ws_enabled else "0")
+
+    if "xray_include_external_node" in data:
+        include_ext = str(data.get("xray_include_external_node", "1")).lower() in ("1", "true")
+        db.set_setting("xray_include_external_node", "1" if include_ext else "0")
 
     if "reality_port" in data:
         db.set_setting("xray_reality_port", int(data.get("reality_port") or 443))
@@ -15358,19 +15374,22 @@ def admin_api_xray_save_settings():
     if "server_ip" in data:
         db.set_setting("xray_server_ip", str(data.get("server_ip") or "").strip())
 
-    # به‌روزرسانی فایل config.json در لینوکس در صورت وجود
-    if os.name != "nt":
-        xray_service.write_config_file()
-        if xray_enabled:
-            xray_service.restart_service()
+    # به‌روزرسانی فایل config.json در لینوکس در صورتی که هسته Xray به شکل محلی نصب باشد
+    if os.name != "nt" and xray_service.is_installed():
+        try:
+            xray_service.write_config_file()
+            if xray_enabled:
+                xray_service.restart_service()
+        except Exception as e:
+            logger.warning(f"Could not apply local Xray config/restart: {e}")
 
-    if xray_enabled:
+    if xray_enabled and xray_service.is_installed():
         xray_service.start_traffic_worker()
     else:
         xray_service.stop_traffic_worker()
 
     if request.is_json:
-        return jsonify({"success": True, "message": "تنظیمات هسته Xray با موفقیت ذخیره گردید."})
+        return jsonify({"status": "success", "success": True, "message": "تنظیمات هسته Xray با موفقیت ذخیره گردید."})
     flash("تنظیمات هسته Xray با موفقیت به‌روزرسانی شد.", "success")
     return redirect(url_for("settings", active_tab="infra"))
 
@@ -15406,11 +15425,11 @@ def admin_xray_download_config():
 
 
 @app.route("/admin/api/xray/restart", methods=["POST"])
-@super_admin_required
+@admin_required
 def admin_api_xray_restart():
     """ری‌استارت کردن دستی سرویس هسته Xray"""
     success, msg = xray_service.restart_service()
-    return jsonify({"success": success, "message": msg})
+    return jsonify({"status": "success" if success else "error", "success": success, "message": msg})
 
 
 @app.route("/admin/api/xray/sync_traffic", methods=["POST"])
@@ -15418,7 +15437,32 @@ def admin_api_xray_restart():
 def admin_api_xray_sync_traffic():
     """استعلام و همگام‌سازی بلادرنگ ترافیک مصرفی کاربران از هسته Xray"""
     res = xray_service.sync_traffic_with_database()
-    return jsonify({"success": True, "data": res})
+    return jsonify({"status": "success", "success": True, "data": res})
+
+
+@app.route("/admin/api/xray/node_config", methods=["GET"])
+def admin_api_xray_node_config():
+    """ارائه خودکار فایل پیکربندی کامل config.json با تمامی کاربران فعال سیستم به نود اوبونتو"""
+    import secrets
+    token = request.args.get("token", "").strip()
+    valid_token = db.get_setting("xray_installer_token")
+
+    is_admin_session = session.get("logged_in") and session.get("role") == "admin"
+    is_valid_token = bool(valid_token and token and secrets.compare_digest(token, valid_token))
+
+    if not (is_admin_session or is_valid_token):
+        return jsonify({"status": "error", "success": False, "error": "Unauthorized. Please provide valid ?token= or login as admin."}), 401
+
+    cfg = xray_service.generate_full_xray_config()
+    cfg_str = json.dumps(cfg, indent=2, ensure_ascii=False)
+    return Response(
+        cfg_str,
+        mimetype="application/json; charset=utf-8",
+        headers={
+            "Content-Disposition": "inline; filename=config.json",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+        }
+    )
 
 
 @app.route("/admin/api/xray/install_script", methods=["GET"])
@@ -15445,6 +15489,17 @@ def admin_api_xray_install_script():
     except Exception as e:
         return jsonify({"error": f"Failed reading script: {e}"}), 500
 
+    # تزریق خودکار متغیرهای اتصال و کلیدهای پنل در ابتدای اسکریپت
+    creds = xray_service.ensure_reality_credentials()
+    node_config_url = f"{request.host_url.rstrip('/')}/admin/api/xray/node_config?token={token or valid_token}"
+    injection = (
+        f'export PANEL_CONFIG_URL="{node_config_url}"\n'
+        f'export PRESET_PRIV_KEY="{creds.get("private_key", "")}"\n'
+        f'export PRESET_PUB_KEY="{creds.get("public_key", "")}"\n'
+        f'export PRESET_SHORT_ID="{creds.get("short_id", "")}"\n'
+    )
+    script_content = script_content.replace("#!/bin/bash\n", f"#!/bin/bash\n{injection}\n", 1)
+
     return Response(
         script_content,
         mimetype="text/plain; charset=utf-8",
@@ -15459,11 +15514,11 @@ def admin_api_xray_install_script():
 @admin_required
 def admin_api_xray_daemon_status():
     """دریافت وضعیت اجرای ورکر پس‌زمینه همگام‌سازی ترافیک"""
-    return jsonify({"success": True, "status": xray_service.get_daemon_status()})
+    return jsonify({"status": "success", "success": True, "status": xray_service.get_daemon_status()})
 
 
 @app.route("/admin/api/xray/toggle_daemon", methods=["POST"])
-@super_admin_required
+@admin_required
 def admin_api_xray_toggle_daemon():
     """روشن یا خاموش کردن ورکر پس‌زمینه همگام‌سازی ترافیک"""
     data = request.get_json(silent=True) or {}
@@ -15475,10 +15530,10 @@ def admin_api_xray_toggle_daemon():
     if enable:
         interval = int(data.get("interval", 60))
         xray_service.start_traffic_worker(interval_seconds=interval)
-        return jsonify({"success": True, "message": "ورکر همگام‌سازی خودکار ترافیک فعال شد.", "status": xray_service.get_daemon_status()})
+        return jsonify({"status": "success", "success": True, "message": "ورکر همگام‌سازی خودکار ترافیک فعال شد.", "status": xray_service.get_daemon_status()})
     else:
         xray_service.stop_traffic_worker()
-        return jsonify({"success": True, "message": "ورکر همگام‌سازی ترافیک متوقف شد.", "status": xray_service.get_daemon_status()})
+        return jsonify({"status": "success", "success": True, "message": "ورکر همگام‌سازی ترافیک متوقف شد.", "status": xray_service.get_daemon_status()})
 
 
 # ─── API های مدیریت چنددامنه‌ای و ماتریس پروتکل‌ها (Multi-Domain & Matrix API) ───
@@ -15488,11 +15543,11 @@ def admin_api_xray_toggle_daemon():
 def admin_api_xray_domains_list():
     """دریافت لیست دامنه‌های پیکربندی‌شده با نقش‌هایشان"""
     domains = db.get_xray_domains()
-    return jsonify({"success": True, "domains": domains})
+    return jsonify({"status": "success", "success": True, "domains": domains})
 
 
 @app.route("/admin/api/xray/domains", methods=["POST"])
-@super_admin_required
+@admin_required
 def admin_api_xray_domain_add():
     """افزودن دامنه جدید با نقش CDN، مستقیم، ساب‌اونلی یا رله"""
     data = request.get_json(silent=True) or request.form.to_dict() or {}
@@ -15506,7 +15561,7 @@ def admin_api_xray_domain_add():
     port = int(data.get("port") or (443 if role == "direct" else 8443))
 
     if not domain:
-        return jsonify({"success": False, "message": "نام دامنه الزامی است"}), 400
+        return jsonify({"status": "error", "success": False, "message": "نام دامنه الزامی است"}), 400
 
     res = db.add_xray_domain(
         domain=domain,
@@ -15518,36 +15573,43 @@ def admin_api_xray_domain_add():
         grpc_service_name=grpc_service_name,
         port=port
     )
-    return jsonify(res)
+    status = "success" if res.get("success") else "error"
+    return jsonify({"status": status, **res})
 
 
 @app.route("/admin/api/xray/domains/<int:domain_id>", methods=["PUT", "POST"])
-@super_admin_required
+@admin_required
 def admin_api_xray_domain_update(domain_id: int):
     """ویرایش تنظیمات یک دامنه"""
     data = request.get_json(silent=True) or request.form.to_dict() or {}
     res = db.update_xray_domain(domain_id, **data)
-    return jsonify(res)
+    status = "success" if res.get("success") else "error"
+    return jsonify({"status": status, **res})
 
 
 @app.route("/admin/api/xray/domains/<int:domain_id>", methods=["DELETE"])
-@super_admin_required
+@admin_required
 def admin_api_xray_domain_delete(domain_id: int):
     """حذف یک دامنه از لیست دامنه‌ها"""
     success = db.delete_xray_domain(domain_id)
-    return jsonify({"success": success, "message": "دامنه با موفقیت حذف شد" if success else "خطا در حذف دامنه"})
+    return jsonify({
+        "status": "success" if success else "error",
+        "success": success,
+        "message": "دامنه با موفقیت حذف شد" if success else "خطا در حذف دامنه"
+    })
 
 
 @app.route("/admin/api/xray/domains/<int:domain_id>/toggle", methods=["POST"])
-@super_admin_required
+@admin_required
 def admin_api_xray_domain_toggle(domain_id: int):
     """تغییر وضعیت فعال/غیرفعال دامنه"""
     res = db.toggle_xray_domain(domain_id)
-    return jsonify(res)
+    status = "success" if res.get("success") else "error"
+    return jsonify({"status": status, **res})
 
 
 @app.route("/admin/api/xray/matrix_settings", methods=["POST"])
-@super_admin_required
+@admin_required
 def admin_api_xray_save_matrix_settings():
     """ذخیره وضعیت سوئیچ‌های ماتریس پروتکل‌ها (مشابه هیدیفای)"""
     data = request.get_json(silent=True) or request.form.to_dict() or {}
@@ -15572,7 +15634,7 @@ def admin_api_xray_save_matrix_settings():
 
 
 @app.route("/admin/api/xray/warp_settings", methods=["POST"])
-@super_admin_required
+@admin_required
 def admin_api_xray_save_warp_settings():
     """ذخیره تنظیمات تانل Cloudflare WARP و روتینگ ضداسپم"""
     data = request.get_json(silent=True) or request.form.to_dict() or {}

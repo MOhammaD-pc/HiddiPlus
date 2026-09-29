@@ -87,6 +87,18 @@ if [ -f "${PROJECT_ROOT}/services/xray_service.py" ]; then
   fi
 fi
 
+# اگر آدرس دریافت کانفیگ از پنل مشخص شده باشد، فایل کامل را مستقیماً دریافت می‌کنیم
+if [ -n "$PANEL_CONFIG_URL" ]; then
+  echo -e "\e[36m📥 در حال دریافت فایل پیکربندی هسته و کاربران از پنل مدیریت...\e[0m"
+  TMP_CFG="${TMP_DIR}/panel_config.json"
+  if curl -sSL "$PANEL_CONFIG_URL" -o "$TMP_CFG" && grep -q "inbound-reality" "$TMP_CFG"; then
+    mkdir -p /usr/local/etc/xray
+    cp "$TMP_CFG" /usr/local/etc/xray/config.json
+    CONFIG_GENERATED=true
+    echo -e "\e[32m✅ پیکربندی و لیست کاربران فعال با موفقیت از پنل مدیریت دریافت شد.\e[0m"
+  fi
+fi
+
 # بررسی نیاز به تولید یا بازنویسی کانفیگ پایه
 NEED_NEW_CONFIG=false
 if [ "$CONFIG_GENERATED" = false ]; then
@@ -100,10 +112,16 @@ fi
 
 if [ "$NEED_NEW_CONFIG" = true ]; then
   echo -e "\e[33m📝 ایجاد پیکربندی اولیه استاندارد VLESS Reality و Shadowsocks...\e[0m"
-  # تولید کلیدهای Reality با پشتیبانی از کلیه نگارش‌های Xray
-  KEYPAIR=$(/usr/local/bin/xray x25519 2>&1 || true)
-  PRIV_KEY=$(echo "$KEYPAIR" | grep -iE "Private" | head -n 1 | awk -F: '{print $2}' | tr -d '[:space:]')
-  PUB_KEY=$(echo "$KEYPAIR" | grep -iE "Public|Password" | head -n 1 | awk -F: '{print $2}' | tr -d '[:space:]')
+  PRIV_KEY="${PRESET_PRIV_KEY:-}"
+  PUB_KEY="${PRESET_PUB_KEY:-}"
+  SHORT_ID="${PRESET_SHORT_ID:-}"
+
+  if [ -z "$PRIV_KEY" ] || [ -z "$PUB_KEY" ]; then
+    # تولید کلیدهای Reality با پشتیبانی از کلیه نگارش‌های Xray
+    KEYPAIR=$(/usr/local/bin/xray x25519 2>&1 || true)
+    PRIV_KEY=$(echo "$KEYPAIR" | grep -iE "Private" | head -n 1 | awk -F: '{print $2}' | tr -d '[:space:]')
+    PUB_KEY=$(echo "$KEYPAIR" | grep -iE "Public|Password" | head -n 1 | awk -F: '{print $2}' | tr -d '[:space:]')
+  fi
 
   # در صورت خالی بودن کلید، تولید مستقل با پایتون و اوپن‌اس‌اس‌ال
   if [ -z "$PRIV_KEY" ] || [ -z "$PUB_KEY" ]; then
@@ -131,7 +149,7 @@ except Exception:
     PUB_KEY=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')
   fi
 
-  SHORT_ID=$(openssl rand -hex 4)
+  [ -z "$SHORT_ID" ] && SHORT_ID=$(openssl rand -hex 4)
   SS_PASS=$(openssl rand -base64 16)
 
   cat <<EOF > /usr/local/etc/xray/config.json
@@ -305,6 +323,27 @@ systemctl restart xray
 
 sleep 2
 
+# تنظیم همگام‌ساز خودکار کاربران با پنل مدیریت در صورت وجود آدرس پنل
+if [ -n "$PANEL_CONFIG_URL" ]; then
+  cat <<CRON_SCRIPT > /usr/local/bin/tgbot-xray-sync
+#!/bin/bash
+TMP_F="/tmp/xray_sync_cfg.json"
+if curl -sSL "$PANEL_CONFIG_URL" -o "\$TMP_F" && [ -s "\$TMP_F" ]; then
+  if /usr/local/bin/xray -test -config "\$TMP_F" > /dev/null 2>&1; then
+    cp "\$TMP_F" /usr/local/etc/xray/config.json
+    systemctl reload-or-restart xray > /dev/null 2>&1
+  fi
+  rm -f "\$TMP_F"
+fi
+CRON_SCRIPT
+  chmod +x /usr/local/bin/tgbot-xray-sync
+
+  cat <<CRON_JOB > /etc/cron.d/tgbot_xray_sync
+*/2 * * * * root /usr/local/bin/tgbot-xray-sync > /dev/null 2>&1
+CRON_JOB
+  chmod 644 /etc/cron.d/tgbot_xray_sync
+fi
+
 # بررسی وضعیت اجرا
 if systemctl is-active --quiet xray; then
   echo -e "\e[32m=====================================================\e[0m"
@@ -315,6 +354,9 @@ if systemctl is-active --quiet xray; then
   echo -e "\e[32m   - پورت کنترل API: 10085\e[0m"
   echo -e "\e[32m   - مسدودسازی پورت اسپم SMTP 25: فعال 🛡️\e[0m"
   echo -e "\e[32m   - وضعیت سرویس: Active (Running)\e[0m"
+  if [ -n "$PANEL_CONFIG_URL" ]; then
+    echo -e "\e[36m   - همگام‌ساز خودکار کاربران: فعال (هر ۲ دقیقه) 🔄\e[0m"
+  fi
   if [ -n "$PUB_KEY" ]; then
     echo -e "\e[33m🔑 کلید عمومی Reality (Public Key): ${PUB_KEY}\e[0m"
   fi
@@ -322,7 +364,7 @@ if systemctl is-active --quiet xray; then
     echo -e "\e[33m🆔 شناسه کوتاه Reality (Short ID): ${SHORT_ID}\e[0m"
   fi
   echo -e "\e[34m=====================================================\e[0m"
-  echo -e "\e[32m✅ سرور اوبونتو اکنون به عنوان نود پروکسی آماده اتصال به پنل مدیریت است.\e[0m"
+  echo -e "\e[32m✅ سرور اوبونتو اکنون به عنوان نود پروکسی آماده سرویس‌دهی به کاربران است.\e[0m"
 else
   echo -e "\e[31m⚠️ سرویس Xray با خطا مواجه شد. بررسی لاگ:\e[0m"
   journalctl -u xray -n 15 --no-pager

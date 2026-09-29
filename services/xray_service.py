@@ -876,6 +876,8 @@ class XrayService:
         """ری‌استارت کردن سرویس Xray از طریق systemctl"""
         if os.name == "nt":
             return False, "سرویس‌های systemd تنها در سیستم‌عامل‌های لینوکس در دسترس هستند."
+        if not shutil.which("systemctl"):
+            return False, "ابزار systemctl در این محیط یافت نشد (احتمالاً محیط کانتینری Docker/Railway است)."
         try:
             res = subprocess.run(["systemctl", "restart", "xray"], capture_output=True, text=True, timeout=8)
             if res.returncode == 0:

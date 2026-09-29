@@ -893,10 +893,18 @@
                     </div>
                 </div>
 
-                <label class="form-label fw-bold text-dark small mb-2">دستور اجرای مستقیم با یک کلیک در ترمینال سرور (One-Click Command):</label>
+                <label class="form-label fw-bold text-dark small mb-2">دستور اجرای مستقیم با یک کلیک در ترمینال سرور (One-Click Install):</label>
                 <div class="position-relative mb-3">
                     <pre class="bg-dark text-white p-3 rounded-3 font-monospace small mb-0 overflow-auto" id="installCmdText" style="direction: ltr; text-align: left; max-height: 120px;">curl -sSL "{{ request.host_url }}admin/api/xray/install_script?token={{ installer_token }}" | sudo bash</pre>
                     <button type="button" class="btn btn-sm btn-primary position-absolute top-0 end-0 m-2 rounded-pill px-3" onclick="copyInstallScriptCmd(this)">
+                        <i class="fas fa-copy me-1"></i> کپی دستور
+                    </button>
+                </div>
+
+                <label class="form-label fw-bold text-dark small mb-2">دستور همگام‌سازی فوری کاربران در سرور اوبونتو (Quick Sync Users):</label>
+                <div class="position-relative mb-3">
+                    <pre class="bg-dark text-white p-3 rounded-3 font-monospace small mb-0 overflow-auto" id="syncCmdText" style="direction: ltr; text-align: left; max-height: 120px;">curl -sSL "{{ request.host_url }}admin/api/xray/node_config?token={{ installer_token }}" -o /usr/local/etc/xray/config.json && systemctl reload-or-restart xray</pre>
+                    <button type="button" class="btn btn-sm btn-outline-info position-absolute top-0 end-0 m-2 rounded-pill px-3" onclick="copySyncCmd(this)">
                         <i class="fas fa-copy me-1"></i> کپی دستور
                     </button>
                 </div>
@@ -997,13 +1005,13 @@
                 body: JSON.stringify(payload)
             });
             const data = await resp.json();
-            if (data.status === 'success') {
+            if (data.success || data.status === 'success') {
                 const modalEl = document.getElementById('xrayDedicatedDomainModal');
                 const modal = bootstrap.Modal.getInstance(modalEl);
                 if (modal) modal.hide();
                 window.location.reload();
             } else {
-                alert('خطا در ذخیره دامنه: ' + (data.message || 'خطای نامشخص'));
+                alert('خطا در ذخیره دامنه: ' + (data.message || data.error || 'خطای نامشخص'));
             }
         } catch (e) {
             alert('خطای ارتباط با سرور: ' + e.message);
@@ -1018,8 +1026,8 @@
                 body: JSON.stringify({is_active: isActive})
             });
             const data = await resp.json();
-            if (data.status !== 'success') {
-                alert('خطا در تغییر وضعیت دامنه: ' + (data.message || 'خطا'));
+            if (!data.success && data.status !== 'success') {
+                alert('خطا در تغییر وضعیت دامنه: ' + (data.message || data.error || 'خطا'));
             }
         } catch (e) {
             alert('خطای ارتباط با سرور: ' + e.message);
@@ -1031,11 +1039,11 @@
         try {
             const resp = await fetch(`/admin/api/xray/domains/${domainId}`, {method: 'DELETE'});
             const data = await resp.json();
-            if (data.status === 'success') {
+            if (data.success || data.status === 'success') {
                 const row = document.getElementById(`dom-row-${domainId}`);
                 if (row) row.remove();
             } else {
-                alert('خطا در حذف دامنه: ' + (data.message || 'خطا'));
+                alert('خطا در حذف دامنه: ' + (data.message || data.error || 'خطا'));
             }
         } catch (e) {
             alert('خطای ارتباط با سرور: ' + e.message);
@@ -1062,7 +1070,7 @@
                 body: JSON.stringify(payload)
             });
             const data = await resp.json();
-            if (data.status === 'success') {
+            if (data.success || data.status === 'success') {
                 alert('تنظیمات ماتریس پروتکل‌ها با موفقیت ذخیره شد.');
             } else {
                 alert('خطا در ذخیره ماتریس: ' + (data.message || 'خطا'));
@@ -1101,7 +1109,7 @@
                 body: JSON.stringify(payload)
             });
             const data = await resp.json();
-            if (data.status === 'success') {
+            if (data.success || data.status === 'success') {
                 alert('تنظیمات روتینگ و تانل WARP با موفقیت ذخیره شد.');
             } else {
                 alert('خطا در ذخیره تنظیمات: ' + (data.message || 'خطا'));
@@ -1173,6 +1181,18 @@
         setTimeout(() => {
             btn.innerHTML = orig;
             btn.classList.replace('btn-success', 'btn-primary');
+        }, 2500);
+    }
+
+    function copySyncCmd(btn) {
+        const text = document.getElementById('syncCmdText').innerText.trim();
+        navigator.clipboard.writeText(text);
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i> کپی شد!';
+        btn.classList.replace('btn-outline-info', 'btn-success');
+        setTimeout(() => {
+            btn.innerHTML = orig;
+            btn.classList.replace('btn-success', 'btn-outline-info');
         }, 2500);
     }
 
@@ -1257,7 +1277,9 @@
             reality_sni: document.getElementById('reality_modal_sni').value.trim(),
             reality_pub_key: document.getElementById('reality_modal_pub_key').value.trim(),
             reality_short_id: document.getElementById('reality_modal_short_id').value.trim(),
-            reality_port: parseInt(document.getElementById('reality_modal_port').value.trim()) || 443
+            reality_port: parseInt(document.getElementById('reality_modal_port').value.trim()) || 443,
+            xray_core_enabled: '1',
+            xray_reality_enabled: '1'
         };
 
         try {
@@ -1267,11 +1289,11 @@
                 body: JSON.stringify(payload)
             });
             const data = await resp.json();
-            if (data.success) {
+            if (data.success || data.status === 'success') {
                 alert('تنظیمات پروتکل Reality با موفقیت ذخیره شد.');
                 window.location.reload();
             } else {
-                alert('خطا: ' + (data.message || 'خطا در ذخیره'));
+                alert('خطا: ' + (data.message || data.error || 'خطا در ذخیره'));
                 btn.disabled = false;
                 btn.innerHTML = origText;
             }
