@@ -2615,7 +2615,7 @@
                             {% if usub.get('gift_traffic_gb') and usub.get('traffic_display') %}
                                 {{ usub.get('remaining_days', usub.get('duration', 0)) }} روز • <span class="text-warning">{{ usub.get('traffic_display') }}</span>
                             {% else %}
-                                {{ usub.get('remaining_days', usub.get('duration', 0)) }} روز • {{ usub.get('traffic_limit', 0) }} گیگ
+                                {{ usub.get('remaining_days', usub.get('duration', 0)) }} روز • {{ usub.get('traffic_limit') or usub.get('data_limit') or 0 }} گیگ
                             {% endif %}
                         </div>
                     </a>

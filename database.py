@@ -2875,7 +2875,7 @@ class Database:
                         """, (telegram_id, now, now))
 
                 # ۲. ثبت یا بروزرسانی در جدول subscriptions
-                cursor.execute("SELECT id FROM subscriptions WHERE hidify_uuid = ?", (uuid,))
+                cursor.execute("SELECT id FROM subscriptions WHERE LOWER(TRIM(hidify_uuid)) = LOWER(TRIM(?))", (str(uuid).strip(),))
                 existing_sub = cursor.fetchone()
 
                 plan_name = f"{usage_limit} گیگ {package_days} روزه" if usage_limit > 0 else f"{package_days} روزه"
@@ -2916,8 +2916,8 @@ class Database:
                             last_online = COALESCE(?, last_online),
                             updated_at = ?,
                             last_lifecycle_event_at = COALESCE(last_lifecycle_event_at, created_at)
-                        WHERE hidify_uuid = ?
-                    """, (current_usage, usage_limit, package_days, start_date, expiry_time, status, name_clean, extracted_reseller_id, is_online_val, last_online_val, now, uuid))
+                        WHERE LOWER(TRIM(hidify_uuid)) = LOWER(TRIM(?))
+                    """, (current_usage, usage_limit, package_days, start_date, expiry_time, status, name_clean, extracted_reseller_id, is_online_val, last_online_val, now, str(uuid).strip()))
 
                     # ثبت هوشمند اسنپ‌شات مصرف ساعتی
                     if existing_sub and dict(existing_sub).get("id") and current_usage > 0:

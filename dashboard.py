@@ -3243,10 +3243,10 @@ _last_online_sync_time = 0
 _online_sync_lock = threading.Lock()
 _is_hiddify_syncing = False
 
-def _do_execute_hiddify_sync():
+def _do_execute_hiddify_sync(timeout_seconds: float = 25.0):
     """عملیات واقعی دریافت کاربران از هیدیفای و ذخیره در دیتابیس"""
     try:
-        users = hidify_sync_request("GET", "/admin/user/")
+        users = hidify_sync_request("GET", "/admin/user/", timeout_seconds=timeout_seconds)
         if isinstance(users, list) and users:
             db.sync_from_hidify(users)
 
@@ -3257,7 +3257,7 @@ def _do_execute_hiddify_sync():
                 r_uuid = r.get("hiddify_admin_uuid")
                 if r_uuid and str(r_uuid).strip():
                     try:
-                        r_users = hidify_sync_request("GET", "/admin/user/", api_key=str(r_uuid).strip())
+                        r_users = hidify_sync_request("GET", "/admin/user/", api_key=str(r_uuid).strip(), timeout_seconds=timeout_seconds)
                         if isinstance(r_users, list) and r_users:
                             db.sync_from_hidify(r_users)
                     except Exception:
@@ -3272,6 +3272,45 @@ def _do_execute_hiddify_sync():
         process_subscription_queue()
     except Exception as e:
         logger.error(f"Error in _do_execute_hiddify_sync: {e}")
+
+
+def sync_specific_subscriptions_live(sub_list: list, max_count: int = 15):
+    """
+    همگام‌سازی فوری و بلادرنگ برای لیست خاصی از اشتراک‌ها (مثلاً نتایج جستجو یا صفحه جاری)
+    دقیقاً مشابه روشی که در پورتال مشتری به کار گرفته شده است تا حجم مصرفی و وضعیت آنلاین همیشه ۱۰۰٪ دقیق و همگام با هیدیفای باشد.
+    """
+    if not sub_list:
+        return
+    items = sub_list[:max_count]
+    users_to_sync = []
+
+    def _fetch_single_user(item):
+        uuid_val = item.get("hidify_uuid")
+        if not uuid_val or str(uuid_val).strip() in ("", "None", "null"):
+            return None
+        clean_uuid = str(uuid_val).strip()
+        r_id = item.get("reseller_id")
+        api_key = db.get_reseller_hiddify_key(r_id) if r_id else None
+        try:
+            u_data = hidify_sync_request("GET", f"/admin/user/{clean_uuid}/", api_key=api_key, timeout_seconds=3.0)
+            if isinstance(u_data, dict) and u_data.get("uuid"):
+                return u_data
+        except Exception as ex:
+            logger.debug(f"Targeted sync error for {clean_uuid}: {ex}")
+        return None
+
+    workers = min(6, max(1, len(items)))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+        results = executor.map(_fetch_single_user, items)
+        for res in results:
+            if res:
+                users_to_sync.append(res)
+
+    if users_to_sync:
+        try:
+            db.sync_from_hidify(users_to_sync)
+        except Exception as e:
+            logger.error(f"Error saving targeted live sync: {e}")
 
 def sync_hiddify_online_users(force: bool = False, async_mode: bool = True):
     """
@@ -7756,6 +7795,14 @@ def subscriptions():
         query = f"SELECT * FROM subscriptions {where_clause} ORDER BY {order_clause} LIMIT ? OFFSET ?"
         sub_list = conn.execute(query, params + [per_page, offset]).fetchall()
 
+    # همگام‌سازی بلادرنگ مصرف و آنلاین بودن برای موارد جستجو شده یا تعداد محدود در صفحه جاری (دقیقاً مشابه پورتال)
+    if sub_list and (search or len(sub_list) <= 10):
+        try:
+            sync_specific_subscriptions_live([dict(s) for s in sub_list], max_count=10)
+            sub_list = conn.execute(query, params if (per_page == 0 or per_page >= 100000) else (params + [per_page, offset])).fetchall()
+        except Exception as e_live:
+            logger.warning(f"Error in live targeted search sync: {e_live}")
+
     conn.close()
 
     tickets_map = db.get_customers_ticket_status_map()
@@ -11467,6 +11514,62 @@ def api_reseller_toggle_delinquent(sub_id: int):
     reseller_id = session.get("reseller_id")
     res = db.toggle_subscription_delinquent(sub_id, reseller_id=reseller_id, hidify_update_func=hidify_sync_update_user)
     return jsonify(res)
+
+
+@app.route("/api/subscriptions/sync-live", methods=["POST"])
+@app.route("/api/reseller/subscriptions/sync-live", methods=["POST"])
+def api_subscriptions_sync_live():
+    """وب‌سرویس همگام‌سازی بلادرنگ کلیه اشتراک‌ها با سرور هیدیفای به صورت دستی و آنی"""
+    if not session.get("logged_in"):
+        return jsonify({"success": False, "error": "احراز هویت لازم است"}), 401
+    try:
+        _do_execute_hiddify_sync(timeout_seconds=25.0)
+        return jsonify({"success": True, "message": "همگام‌سازی کامل با سرور هیدیفای با موفقیت انجام شد."})
+    except Exception as e:
+        logger.error(f"Error in api_subscriptions_sync_live: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/subscription/<int:sub_id>/sync-live", methods=["POST"])
+@app.route("/api/reseller/subscription/<int:sub_id>/sync-live", methods=["POST"])
+def api_subscription_sync_single_live(sub_id: int):
+    """وب‌سرویس همگام‌سازی بلادرنگ یک اشتراک خاص با سرور هیدیفای"""
+    if not session.get("logged_in"):
+        return jsonify({"success": False, "error": "احراز هویت لازم است"}), 401
+    sub = db.get_subscription(sub_id)
+    if not sub:
+        return jsonify({"success": False, "error": "اشتراک مورد نظر یافت نشد."}), 404
+    uuid_val = sub.get("hidify_uuid")
+    if not uuid_val or str(uuid_val).strip() in ("", "None", "null"):
+        return jsonify({"success": False, "error": "این اشتراک فاقد شناسه اختصاصی هیدیفای (UUID) است."}), 400
+    
+    clean_uuid = str(uuid_val).strip()
+    r_id = sub.get("reseller_id")
+    api_key = db.get_reseller_hiddify_key(r_id) if r_id else None
+    
+    try:
+        user_data = hidify_sync_request("GET", f"/admin/user/{clean_uuid}/", api_key=api_key, timeout_seconds=4.0)
+        if isinstance(user_data, dict) and user_data.get("uuid"):
+            db.sync_from_hidify([user_data])
+            updated_sub = db.get_subscription(sub_id)
+            used_gb = round(float(updated_sub.get("data_used") or 0), 2)
+            limit_gb = round(float(updated_sub.get("data_limit") or 0), 1)
+            is_online = bool(updated_sub.get("is_online"))
+            status_val = updated_sub.get("status", "active")
+            return jsonify({
+                "success": True,
+                "data_used": used_gb,
+                "data_limit": limit_gb,
+                "is_online": is_online,
+                "status": status_val,
+                "message": f"اشتراک «{updated_sub.get('account_name')}» با موفقیت از هیدیفای بروز شد: مصرف {used_gb} GB از {limit_gb} GB"
+            })
+        else:
+            err = user_data.get("error") if isinstance(user_data, dict) else "پاسخ نامعتبر از سرور هیدیفای"
+            return jsonify({"success": False, "error": err}), 400
+    except Exception as e:
+        logger.error(f"Error in api_subscription_sync_single_live for {sub_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -16531,8 +16634,14 @@ def reseller_users():
     if page > total_pages:
         page = total_pages
     start_idx = (page - 1) * per_page
-    end_idx = min(start_idx + per_page, total_count)
     paginated_subs = subs[start_idx:end_idx]
+
+    # همگام‌سازی بلادرنگ مصرف و آنلاین بودن برای موارد جستجو شده یا تعداد محدود در صفحه جاری نماینده (دقیقاً مشابه پورتال)
+    if paginated_subs and (search_query or len(paginated_subs) <= 10):
+        try:
+            sync_specific_subscriptions_live(paginated_subs, max_count=10)
+        except Exception as e_res_live:
+            logger.warning(f"Error in live targeted sync in reseller_users: {e_res_live}")
 
     # محاسبه استرداد صرفاً برای کاربران همین صفحه جهت بهینه‌سازی سرعت
     for item in paginated_subs:
@@ -27346,6 +27455,21 @@ def run_dashboard(host=None, port=None, debug=False):
         threading.Thread(target=_run_periodic_debt_restriction_worker, daemon=True, name="DebtRestrictionWorker").start()
     except Exception as ed:
         logger.error(f"Error starting debt restriction worker thread: {ed}")
+
+    # همگام‌سازی منظم و پیوسته مصرف مشترکین و وضعیت آنلاین از هیدیفای (هر ۲ دقیقه)
+    def _run_periodic_hiddify_sync_worker():
+        time.sleep(15)  # تاخیر اولیه جهت اتصال کامل دیتابیس و شبکه
+        while True:
+            try:
+                _do_execute_hiddify_sync(timeout_seconds=25.0)
+            except Exception as ex:
+                logger.error(f"Error in periodic hiddify sync worker: {ex}")
+            time.sleep(120)  # هر ۲ دقیقه یکبار
+
+    try:
+        threading.Thread(target=_run_periodic_hiddify_sync_worker, daemon=True, name="HiddifyUsageSyncWorker").start()
+    except Exception as eh:
+        logger.error(f"Error starting Hiddify sync worker thread: {eh}")
 
     app.run(host=host, port=port, debug=debug, use_reloader=False)
 
