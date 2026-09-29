@@ -16709,6 +16709,7 @@ def reseller_users():
     if page > total_pages:
         page = total_pages
     start_idx = (page - 1) * per_page
+    end_idx = min(start_idx + per_page, total_count)
     paginated_subs = subs[start_idx:end_idx]
 
     # همگام‌سازی بلادرنگ مصرف و آنلاین بودن برای موارد جستجو شده یا تعداد محدود در صفحه جاری نماینده (دقیقاً مشابه پورتال)
@@ -16758,7 +16759,7 @@ def reseller_users():
         accounts=db.get_financial_accounts_summary("reseller", reseller_id).get("accounts", []),
         default_account=db.get_customer_default_account("reseller", reseller_id),
         custom_sms_templates=db.get_custom_sms_templates(reseller_id),
-        reseller=db.get_reseller(reseller_id)
+        reseller=db.get_reseller(reseller_id) or {}
     )
 
 

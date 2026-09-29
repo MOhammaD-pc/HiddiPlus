@@ -246,6 +246,28 @@ class TestMultiTenantIsolation(unittest.TestCase):
         admin_bal = self.db.get_user_wallet_balance(tg_id, reseller_id=0)
         self.assertEqual(admin_bal, 0, "کیف پول مدیریت نباید برای حذف اشتراک نماینده شارژ شود")
 
+    def test_reseller_users_pagination_and_rendering(self):
+        """تست عدم بروز خطای NameError در صفحه‌بندی کاربران نماینده و شریک (/reseller/users)"""
+        import dashboard
+        client = dashboard.app.test_client()
+
+        with client.session_transaction() as sess:
+            sess["logged_in"] = True
+            sess["role"] = "reseller"
+            sess["reseller_id"] = 1
+
+        # تست بارگذاری پیش‌فرض
+        res1 = client.get("/reseller/users")
+        self.assertEqual(res1.status_code, 200)
+
+        # تست بارگذاری با صفحه‌بندی
+        res2 = client.get("/reseller/users?page=1&per_page=10")
+        self.assertEqual(res2.status_code, 200)
+
+        # تست بارگذاری با حالت همه (all)
+        res3 = client.get("/reseller/users?per_page=all")
+        self.assertEqual(res3.status_code, 200)
+
 
 if __name__ == "__main__":
     unittest.main()
