@@ -12,11 +12,13 @@
 
 import os
 import sys
+import time
 import json
 import shutil
 import base64
 import secrets
 import logging
+import threading
 import subprocess
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
@@ -39,6 +41,12 @@ class XrayService:
         self.db = db_instance or default_db
         self._binary_path: Optional[str] = None
         self._detect_binary()
+        # متغیرهای وضعیت ورکر مانیتورینگ مصرف ترافیک
+        self._worker_thread: Optional[threading.Thread] = None
+        self._worker_running: bool = False
+        self._worker_interval: int = 60
+        self._last_sync_time: float = 0.0
+        self._last_sync_stats: Dict[str, Any] = {}
 
     def _detect_binary(self) -> Optional[str]:
         """یافتن مسیر فایل اجرایی Xray روی سرور"""
@@ -1007,6 +1015,13 @@ class XrayService:
                         self.remove_user_from_core(email)
                         blocked_count += 1
                         logger.info(f"User {email} (Sub ID {actual_id}) exceeded data limit ({new_used}/{data_limit_gb} GB) and was removed from Xray core.")
+                        try:
+                            tg_id = sub_row["telegram_id"] if "telegram_id" in sub_row.keys() else None
+                            acc_n = sub_row["account_name"] if "account_name" in sub_row.keys() else "کاربر گرامی"
+                            if tg_id and int(tg_id) > 0:
+                                self._notify_user_limit_exceeded(int(tg_id), str(acc_n), new_used, data_limit_gb)
+                        except Exception as e_nt:
+                            logger.warning(f"Could not prepare limit notification: {e_nt}")
 
             conn.commit()
         except Exception as e:
@@ -1016,8 +1031,98 @@ class XrayService:
 
         return {"synced": synced_count, "blocked": blocked_count, "total_users": len(stats)}
 
+    def _notify_user_limit_exceeded(self, telegram_id: int, account_name: str, used_gb: float, limit_gb: float) -> None:
+        """ارسال اعلان اتمام حجم اشتراک به کاربر در تلگرام به صورت غیراستاتیک و ایمن"""
+        try:
+            from bot import bot
+            import asyncio
+            msg = (
+                f"⚠️ **هشدار اتمام حجم اشتراک**\n\n"
+                f"👤 نام اکانت: `{account_name}`\n"
+                f"📊 مصرف نهایی: **{used_gb:.2f} گیگابایت** از سقف **{limit_gb:.2f} گیگابایت**\n\n"
+                f"⛔️ حجم مجاز بسته شما به پایان رسید و اتصال به صورت خودکار قطع گردید.\n"
+                f"🔄 جهت تمدید اشتراک و ادامه اتصال، از منوی ربات گزینه «🔄 تمدید اشتراک» را لمس فرمایید."
+            )
+
+            def _async_send():
+                try:
+                    asyncio.run(bot.send_message(chat_id=telegram_id, text=msg, parse_mode="Markdown"))
+                except Exception as ex:
+                    logger.warning(f"Could not deliver telegram limit notification to {telegram_id}: {ex}")
+
+            threading.Thread(target=_async_send, daemon=True).start()
+        except Exception as e:
+            logger.warning(f"Error setting up limit notification for {telegram_id}: {e}")
+
+    def start_traffic_worker(self, interval_seconds: int = 60) -> bool:
+        """شروع مانیتورینگ دوره‌ای و خودکار مصرف ترافیک کاربران هسته Xray در پس‌زمینه"""
+        if self._worker_running and self._worker_thread and self._worker_thread.is_alive():
+            logger.info("Xray traffic sync worker is already running.")
+            return True
+
+        self._worker_interval = max(10, interval_seconds)
+        self._worker_running = True
+        self._worker_thread = threading.Thread(
+            target=self._traffic_worker_loop,
+            daemon=True,
+            name="XrayTrafficSyncWorker"
+        )
+        self._worker_thread.start()
+        logger.info(f"Started Xray traffic sync daemon (interval: {self._worker_interval}s)")
+        return True
+
+    def stop_traffic_worker(self) -> bool:
+        """توقف ورکر پس‌زمینه مانیتورینگ ترافیک"""
+        self._worker_running = False
+        logger.info("Stopping Xray traffic sync daemon...")
+        return True
+
+    def _traffic_worker_loop(self) -> None:
+        """حلقه اجرایی ورکر پس‌زمینه"""
+        time.sleep(5)
+        while self._worker_running:
+            try:
+                if self.is_enabled() and self.is_running():
+                    res = self.sync_traffic_with_database()
+                    self._last_sync_time = time.time()
+                    self._last_sync_stats = res
+                    if res.get("synced", 0) > 0 or res.get("blocked", 0) > 0:
+                        logger.info(f"[XrayDaemon] Synced {res.get('synced', 0)} users, blocked {res.get('blocked', 0)} users.")
+            except Exception as e:
+                logger.error(f"Error in Xray traffic worker tick: {e}")
+
+            for _ in range(self._worker_interval):
+                if not self._worker_running:
+                    break
+                time.sleep(1)
+
+    def get_daemon_status(self) -> Dict[str, Any]:
+        """استعلام وضعیت کارکرد ورکر پس‌زمینه جهت نمایش در پنل مدیریت"""
+        running = bool(self._worker_running and self._worker_thread and self._worker_thread.is_alive())
+        now = time.time()
+        time_ago_sec = int(now - self._last_sync_time) if self._last_sync_time > 0 else None
+        
+        last_sync_str = "هنوز انجام نشده"
+        if self._last_sync_time > 0:
+            if time_ago_sec < 60:
+                last_sync_str = f"{time_ago_sec} ثانیه قبل"
+            else:
+                last_sync_str = f"{time_ago_sec // 60} دقیقه قبل"
+
+        return {
+            "is_running": running,
+            "interval_seconds": self._worker_interval,
+            "last_sync_time": self._last_sync_time,
+            "last_sync_human": last_sync_str,
+            "last_stats": self._last_sync_stats
+        }
+
 
 # نمونه یکتای ماژول
 xray_service = XrayService()
 get_unified_subscription_url = xray_service.get_unified_subscription_url
 parse_config_details = xray_service.parse_config_details
+start_traffic_worker = xray_service.start_traffic_worker
+stop_traffic_worker = xray_service.stop_traffic_worker
+get_daemon_status = xray_service.get_daemon_status
+

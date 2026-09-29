@@ -80,21 +80,22 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 CONFIG_GENERATED=false
 if [ -f "${PROJECT_ROOT}/services/xray_service.py" ]; then
-  echo -e "\e[36m🔄 فراخوانی سرویس TGBot جهت تولید فایل پیکربندی دقیق با کاربران فعال...\e[0m"
-  if cd "$PROJECT_ROOT" && python3 -c "from services.xray_service import xray_service; xray_service.write_config_file('/usr/local/etc/xray/config.json')" > /dev/null 2>&1; then
+  echo -e "\e[36m🔄 فراخوانی سرویس TGBot جهت تولید فایل پیکربندی دقیق با کاربران فعال و فعال‌سازی هسته...\e[0m"
+  if cd "$PROJECT_ROOT" && python3 -c "from services.xray_service import xray_service; xray_service.write_config_file('/usr/local/etc/xray/config.json'); from database import db; db.set_setting('xray_core_enabled', '1')" > /dev/null 2>&1; then
     CONFIG_GENERATED=true
-    echo -e "\e[32m✅ فایل کانفیگ بر اساس کاربران فعال دیتابیس TGBot تولید گردید.\e[0m"
+    echo -e "\e[32m✅ فایل کانفیگ بر اساس کاربران فعال دیتابیس TGBot تولید و هسته داخلی فعال گردید.\e[0m"
   fi
 fi
 
 # اگر کانفیگ هنوز ایجاد نشده، کانفیگ پایه و استاندارد ایجاد کن
 if [ "$CONFIG_GENERATED" = false ] && [ ! -f /usr/local/etc/xray/config.json ]; then
-  echo -e "\e[33m📝 ایجاد پیکربندی اولیه استاندارد VLESS Reality...\e[0m"
+  echo -e "\e[33m📝 ایجاد پیکربندی اولیه استاندارد VLESS Reality و Shadowsocks...\e[0m"
   # تولید کلیدهای Reality
   KEYPAIR=$(/usr/local/bin/xray x25519)
   PRIV_KEY=$(echo "$KEYPAIR" | grep "Private key" | awk '{print $3}')
   PUB_KEY=$(echo "$KEYPAIR" | grep "Public key" | awk '{print $3}')
   SHORT_ID=$(openssl rand -hex 4)
+  SS_PASS=$(openssl rand -base64 16)
 
   cat <<EOF > /usr/local/etc/xray/config.json
 {
@@ -176,6 +177,16 @@ if [ "$CONFIG_GENERATED" = false ] && [ ! -f /usr/local/etc/xray/config.json ]; 
         "enabled": true,
         "destOverride": ["http", "tls"]
       }
+    },
+    {
+      "tag": "inbound-ss",
+      "port": 1080,
+      "protocol": "shadowsocks",
+      "settings": {
+        "method": "aes-256-gcm",
+        "password": "${SS_PASS}",
+        "network": "tcp,udp"
+      }
     }
   ],
   "outbounds": [
@@ -195,6 +206,11 @@ if [ "$CONFIG_GENERATED" = false ] && [ ! -f /usr/local/etc/xray/config.json ]; 
         "type": "field",
         "inboundTag": ["api"],
         "outboundTag": "api"
+      },
+      {
+        "type": "field",
+        "port": "25",
+        "outboundTag": "block"
       },
       {
         "type": "field",
@@ -232,9 +248,10 @@ EOF
 
 # باز کردن پورت‌ها در UFW اگر فعال باشد
 if which ufw > /dev/null 2>&1; then
-  echo -e "\e[36m🔓 باز کردن پورت‌های لازم در فایروال (443, 8443, 80)...\e[0m"
+  echo -e "\e[36m🔓 باز کردن پورت‌های لازم در فایروال (443, 8443, 1080, 80)...\e[0m"
   ufw allow 443/tcp > /dev/null 2>&1 || true
   ufw allow 8443/tcp > /dev/null 2>&1 || true
+  ufw allow 1080/tcp > /dev/null 2>&1 || true
   ufw allow 80/tcp > /dev/null 2>&1 || true
 fi
 
@@ -251,10 +268,12 @@ if systemctl is-active --quiet xray; then
   echo -e "\e[32m🎉 هسته Xray-core با موفقیت نصب و راه‌اندازی شد!\e[0m"
   echo -e "\e[32m   - پورت Reality Direct: 443\e[0m"
   echo -e "\e[32m   - پورت WebSocket CDN: 8443\e[0m"
+  echo -e "\e[32m   - پورت Shadowsocks 2022: 1080\e[0m"
   echo -e "\e[32m   - پورت کنترل API: 10085\e[0m"
+  echo -e "\e[32m   - مسدودسازی پورت اسپم SMTP 25: فعال 🛡️\e[0m"
   echo -e "\e[32m   - وضعیت سرویس: Active (Running)\e[0m"
   echo -e "\e[34m=====================================================\e[0m"
-  echo -e "\e[33m💡 اکنون در پنل وب TGBot وارد تب تنظیمات > هسته Xray شوید و گزینه فعال‌سازی را روشن نمایید.\e[0m"
+  echo -e "\e[32m✅ پروژه TGBot اکنون مستقیماً به هسته Xray متصل بوده و پایش ترافیک فعال است.\e[0m"
 else
   echo -e "\e[31m⚠️ سرویس Xray با خطا مواجه شد. بررسی لاگ:\e[0m"
   journalctl -u xray -n 15 --no-pager

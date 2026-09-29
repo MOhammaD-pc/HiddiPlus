@@ -68,8 +68,11 @@
             <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="restartXrayService(this)">
                 <i class="fas fa-rotate me-1 text-primary"></i> راه‌اندازی مجدد هسته
             </button>
-            <button type="button" class="btn btn-outline-info btn-sm rounded-pill px-3" onclick="copyInstallScript(this)">
-                <i class="fas fa-terminal me-1 text-info"></i> اسکریپت نصب روی سرور
+            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="triggerManualTrafficSync(this)">
+                <i class="fas fa-bolt me-1 text-warning"></i> همگام‌سازی ترافیک
+            </button>
+            <button type="button" class="btn btn-outline-info btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#installScriptModal">
+                <i class="fas fa-terminal me-1 text-info"></i> اسکریپت نصب روی سرور 🚀
             </button>
             <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm" onclick="openLivePreviewModal()">
                 <i class="fas fa-eye me-1"></i> پیش‌نمایش زنده خروجی کلاینت
@@ -140,6 +143,43 @@
                 <div class="text-muted small">
                     عبور ایمن چت‌جی‌پی‌تی و یوتیوب
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نوار وضعیت ورکر پس‌زمینه همگام‌سازی ترافیک (Traffic Sync Daemon) -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-body-tertiary">
+        <div class="card-body p-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-2.5 rounded-circle bg-primary-subtle text-primary">
+                    <i class="fas fa-arrows-rotate fs-5 {% if xray_daemon and xray_daemon.is_running %}fa-spin{% endif %}" id="daemonSpinnerIcon" style="--fa-animation-duration: 4s;"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold small text-dark">سرویس پس‌زمینه پایش خودکار مصرف ترافیک (Traffic Sync Daemon)</span>
+                        <span id="daemonStatusBadge" class="badge {% if xray_daemon and xray_daemon.is_running %}bg-success-subtle text-success border border-success-subtle{% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %} rounded-pill">
+                            {% if xray_daemon and xray_daemon.is_running %}فعال (هر {{ xray_daemon.interval_seconds|default(60) }} ثانیه){% else %}غیرفعال{% endif %}
+                        </span>
+                    </div>
+                    <div class="text-muted small mt-1">
+                        آخرین همگام‌سازی: <span id="lastSyncHumanText" class="fw-semibold text-dark">{{ xray_daemon.last_sync_human if xray_daemon else 'هنوز انجام نشده' }}</span>
+                        {% if xray_daemon and xray_daemon.last_stats and xray_daemon.last_stats.synced is defined %}
+                            (کاربران همگام‌شده: <strong>{{ xray_daemon.last_stats.synced }}</strong> | مسدودشده به دلیل اتمام سقف: <strong class="text-danger">{{ xray_daemon.last_stats.blocked }}</strong>)
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="triggerManualTrafficSync(this)">
+                    <i class="fas fa-bolt me-1 text-warning"></i> همگام‌سازی فوری
+                </button>
+                <button type="button" class="btn btn-sm {% if xray_daemon and xray_daemon.is_running %}btn-outline-danger{% else %}btn-outline-success{% endif %} rounded-pill px-3" id="toggleDaemonBtn" onclick="toggleTrafficDaemon(this)">
+                    {% if xray_daemon and xray_daemon.is_running %}
+                        <i class="fas fa-pause me-1"></i> توقف پایش خودکار
+                    {% else %}
+                        <i class="fas fa-play me-1"></i> شروع پایش خودکار
+                    {% endif %}
+                </button>
             </div>
         </div>
     </div>
@@ -793,6 +833,61 @@
     </div>
 </div>
 
+<!-- مودال اسکریپت نصب و راه‌اندازی سریع هسته Xray روی اوبونتو -->
+<div class="modal fade" id="installScriptModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1rem;">
+            <div class="modal-header border-bottom bg-light">
+                <h5 class="modal-title fw-bold text-dark">
+                    <i class="fas fa-terminal text-info me-2"></i> اسکریپت نصب و راه‌اندازی خودکار Xray-core روی اوبونتو
+                </h5>
+                <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info border-0 rounded-3 mb-4 d-flex align-items-start gap-2">
+                    <i class="fas fa-circle-info fs-5 mt-1 text-info"></i>
+                    <div>
+                        <strong>راه‌اندازی فوری بدون نیاز به پنل شخص ثالث:</strong>
+                        <div class="small mt-1">با اجرای دستور زیر در سرور اوبونتو، هسته رسمی Xray-core، سرویس خودکار systemd، باز کردن پورت‌ها در فایروال و اتصال مستقیم به این پنل تنها در چند ثانیه به صورت خودکار انجام خواهد شد.</div>
+                    </div>
+                </div>
+
+                <label class="form-label fw-bold text-dark small mb-2">دستور اجرای مستقیم با یک کلیک در ترمینال سرور (One-Click Command):</label>
+                <div class="position-relative mb-3">
+                    <pre class="bg-dark text-white p-3 rounded-3 font-monospace small mb-0 overflow-auto" id="installCmdText" style="direction: ltr; text-align: left; max-height: 120px;">curl -sSL "{{ request.host_url }}admin/api/xray/install_script?token={{ installer_token }}" | sudo bash</pre>
+                    <button type="button" class="btn btn-sm btn-primary position-absolute top-0 end-0 m-2 rounded-pill px-3" onclick="copyInstallScriptCmd(this)">
+                        <i class="fas fa-copy me-1"></i> کپی دستور
+                    </button>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+                    <div class="text-muted small">
+                        <i class="fas fa-shield-halved text-success me-1"></i> دسترسی امن با توکن انحصاری سرور
+                    </div>
+                    <a href="/admin/api/xray/install_script?token={{ installer_token }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3" download="install_xray_core.sh">
+                        <i class="fas fa-file-arrow-down me-1"></i> دریافت مستقیم فایل install_xray_core.sh
+                    </a>
+                </div>
+
+                <div class="card border rounded-3 p-3 bg-light">
+                    <div class="fw-bold small text-dark mb-2"><i class="fas fa-check-double text-primary me-1"></i> امکاناتی که توسط این اسکریپت به صورت خودکار پیکربندی می‌شوند:</div>
+                    <ul class="text-muted small mb-0 ps-3" style="line-height: 1.8;">
+                        <li>شناسایی خودکار معماری CPU (شامل x86_64 و ARM64) و دانلود آخرین هسته رسمی Xray-core</li>
+                        <li>ایجاد خودکار اینباندهای VLESS Reality (پورت 443)، CDN WebSocket (پورت 8443) و Shadowsocks 2022 (پورت 1080)</li>
+                        <li>مسدودسازی خروجی پورت 25 جهت محافظت سرور در برابر هرزنامه و اسپم (Anti-SPAM)</li>
+                        <li>پیکربندی سرویس دائمی Systemd با شروع خودکار پس از ریبوت و تنظیم file descriptors</li>
+                        <li>تنظیم خودکار قوانین فایروال UFW بدون قطع دسترسی SSH</li>
+                        <li>فعال‌سازی همگام‌ساز خودکار ترافیک در پایگاه داده پنل TGBot</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer border-top bg-light">
+                <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">بستن</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     function openAddDomainModal() {
         document.getElementById('editDomainId').value = '';
@@ -1021,11 +1116,85 @@
     }
 
     function copyInstallScript(btn) {
-        const scriptCmd = 'sudo bash scripts/install_xray_core.sh';
-        navigator.clipboard.writeText(scriptCmd);
+        const modalEl = document.getElementById('installScriptModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    }
+
+    function copyInstallScriptCmd(btn) {
+        const text = document.getElementById('installCmdText').innerText.trim();
+        navigator.clipboard.writeText(text);
         const orig = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-check me-1 text-success"></i> دستور کپی شد!';
-        setTimeout(() => btn.innerHTML = orig, 2500);
+        btn.innerHTML = '<i class="fas fa-check me-1"></i> کپی شد!';
+        btn.classList.replace('btn-primary', 'btn-success');
+        setTimeout(() => {
+            btn.innerHTML = orig;
+            btn.classList.replace('btn-success', 'btn-primary');
+        }, 2500);
+    }
+
+    async function triggerManualTrafficSync(btn) {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> در حال همگام‌سازی...';
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch('/admin/api/xray/sync_traffic', {method: 'POST'});
+            const data = await resp.json();
+            if (data.success && data.data) {
+                const res = data.data;
+                alert(`همگام‌سازی ترافیک با موفقیت انجام شد:\n- کاربران همگام‌شده: ${res.synced || 0}\n- مسدودشده (سقف مجاز): ${res.blocked || 0}\n- کل کاربران هسته: ${res.total_users || 0}`);
+                const badgeEl = document.getElementById('lastSyncHumanText');
+                if (badgeEl) badgeEl.innerText = 'چند لحظه پیش';
+            } else {
+                alert('خطا در همگام‌سازی: ' + (data.message || 'خطای سرور'));
+            }
+        } catch (e) {
+            alert('خطای ارتباط با سرور: ' + e.message);
+        } finally {
+            btn.innerHTML = orig;
+            btn.disabled = false;
+        }
+    }
+
+    async function toggleTrafficDaemon(btn) {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> در حال ارسال...';
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch('/admin/api/xray/toggle_daemon', {method: 'POST'});
+            const data = await resp.json();
+            if (data.success && data.status) {
+                const isRunning = data.status.is_running;
+                const badge = document.getElementById('daemonStatusBadge');
+                const spinner = document.getElementById('daemonSpinnerIcon');
+                
+                if (isRunning) {
+                    badge.className = 'badge bg-success-subtle text-success border border-success-subtle rounded-pill';
+                    badge.innerText = `فعال (هر ${data.status.interval_seconds || 60} ثانیه)`;
+                    btn.className = 'btn btn-sm btn-outline-danger rounded-pill px-3';
+                    btn.innerHTML = '<i class="fas fa-pause me-1"></i> توقف پایش خودکار';
+                    if (spinner) spinner.classList.add('fa-spin');
+                } else {
+                    badge.className = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill';
+                    badge.innerText = 'غیرفعال';
+                    btn.className = 'btn btn-sm btn-outline-success rounded-pill px-3';
+                    btn.innerHTML = '<i class="fas fa-play me-1"></i> شروع پایش خودکار';
+                    if (spinner) spinner.classList.remove('fa-spin');
+                }
+            } else {
+                alert('خطا: ' + (data.message || 'نامشخص'));
+                btn.innerHTML = orig;
+            }
+        } catch (e) {
+            alert('خطای ارتباط با سرور: ' + e.message);
+            btn.innerHTML = orig;
+        } finally {
+            btn.disabled = false;
+        }
     }
 
     function editRealityParams() {

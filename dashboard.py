@@ -15244,11 +15244,21 @@ def admin_xray_core():
     if status.get("matrix_cdn_vmess_ws"): active_inbounds += 1
     if status.get("matrix_direct_shadowsocks"): active_inbounds += 1
 
+    import secrets
+    installer_token = db.get_setting("xray_installer_token")
+    if not installer_token:
+        installer_token = secrets.token_hex(16)
+        db.set_setting("xray_installer_token", installer_token)
+
+    daemon_status = xray_service.get_daemon_status()
+
     return render_template(
         "xray_core.html",
         xray_config=status,
         active_inbounds_count=active_inbounds,
-        admin_role=session.get("admin_role")
+        admin_role=session.get("admin_role"),
+        installer_token=installer_token,
+        xray_daemon=daemon_status
     )
 
 
@@ -15304,6 +15314,11 @@ def admin_api_xray_save_settings():
         if xray_enabled:
             xray_service.restart_service()
 
+    if xray_enabled:
+        xray_service.start_traffic_worker()
+    else:
+        xray_service.stop_traffic_worker()
+
     if request.is_json:
         return jsonify({"success": True, "message": "تنظیمات هسته Xray با موفقیت ذخیره گردید."})
     flash("تنظیمات هسته Xray با موفقیت به‌روزرسانی شد.", "success")
@@ -15354,6 +15369,66 @@ def admin_api_xray_sync_traffic():
     """استعلام و همگام‌سازی بلادرنگ ترافیک مصرفی کاربران از هسته Xray"""
     res = xray_service.sync_traffic_with_database()
     return jsonify({"success": True, "data": res})
+
+
+@app.route("/admin/api/xray/install_script", methods=["GET"])
+def admin_api_xray_install_script():
+    """دانلود یا اجرای مستقیم اسکریپت نصب و راه‌اندازی سریع هسته Xray روی اوبونتو"""
+    import secrets
+    token = request.args.get("token", "").strip()
+    valid_token = db.get_setting("xray_installer_token")
+
+    # احراز هویت: داشتن نشست معتبر ادمین یا توکن امنیتی اختصاصی
+    is_admin_session = session.get("logged_in") and session.get("role") == "admin"
+    is_valid_token = bool(valid_token and token and secrets.compare_digest(token, valid_token))
+
+    if not (is_admin_session or is_valid_token):
+        return jsonify({"error": "Unauthorized. Please provide valid ?token= or login as admin."}), 401
+
+    script_path = Path(__file__).resolve().parent / "scripts" / "install_xray_core.sh"
+    if not script_path.exists():
+        return jsonify({"error": "Script file not found on server."}), 404
+
+    try:
+        with open(script_path, "r", encoding="utf-8") as f:
+            script_content = f.read()
+    except Exception as e:
+        return jsonify({"error": f"Failed reading script: {e}"}), 500
+
+    return Response(
+        script_content,
+        mimetype="text/plain; charset=utf-8",
+        headers={
+            "Content-Disposition": "inline; filename=install_xray_core.sh",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+        }
+    )
+
+
+@app.route("/admin/api/xray/daemon_status", methods=["GET"])
+@admin_required
+def admin_api_xray_daemon_status():
+    """دریافت وضعیت اجرای ورکر پس‌زمینه همگام‌سازی ترافیک"""
+    return jsonify({"success": True, "status": xray_service.get_daemon_status()})
+
+
+@app.route("/admin/api/xray/toggle_daemon", methods=["POST"])
+@super_admin_required
+def admin_api_xray_toggle_daemon():
+    """روشن یا خاموش کردن ورکر پس‌زمینه همگام‌سازی ترافیک"""
+    data = request.get_json(silent=True) or {}
+    enable = data.get("enable")
+    status = xray_service.get_daemon_status()
+    if enable is None:
+        enable = not status.get("is_running", False)
+
+    if enable:
+        interval = int(data.get("interval", 60))
+        xray_service.start_traffic_worker(interval_seconds=interval)
+        return jsonify({"success": True, "message": "ورکر همگام‌سازی خودکار ترافیک فعال شد.", "status": xray_service.get_daemon_status()})
+    else:
+        xray_service.stop_traffic_worker()
+        return jsonify({"success": True, "message": "ورکر همگام‌سازی ترافیک متوقف شد.", "status": xray_service.get_daemon_status()})
 
 
 # ─── API های مدیریت چنددامنه‌ای و ماتریس پروتکل‌ها (Multi-Domain & Matrix API) ───
@@ -27470,6 +27545,14 @@ def run_dashboard(host=None, port=None, debug=False):
         threading.Thread(target=_run_periodic_hiddify_sync_worker, daemon=True, name="HiddifyUsageSyncWorker").start()
     except Exception as eh:
         logger.error(f"Error starting Hiddify sync worker thread: {eh}")
+
+    # راه‌اندازی ورکر پس‌زمینه همگام‌سازی خودکار ترافیک هسته Xray (در صورت فعال بودن)
+    try:
+        if xray_service.is_enabled():
+            xray_service.start_traffic_worker(interval_seconds=60)
+            logger.info("Xray background traffic sync worker started on dashboard initialization.")
+    except Exception as exr:
+        logger.error(f"Error starting Xray traffic worker on dashboard startup: {exr}")
 
     app.run(host=host, port=port, debug=debug, use_reloader=False)
 

@@ -429,6 +429,86 @@ class TestXrayService(unittest.TestCase):
             conn.commit()
             conn.close()
 
+    def test_xray_traffic_worker_lifecycle(self):
+        """تست چرخه حیات، شروع و توقف ورکر پس‌زمینه همگام‌سازی ترافیک هسته"""
+        status_init = self.service.get_daemon_status()
+        self.assertIn("is_running", status_init)
+        self.assertIn("interval_seconds", status_init)
+
+        # شروع ورکر
+        res_start = self.service.start_traffic_worker(interval_seconds=15)
+        self.assertTrue(res_start)
+        status_running = self.service.get_daemon_status()
+        self.assertTrue(status_running["is_running"])
+        self.assertEqual(status_running["interval_seconds"], 15)
+
+        # توقف ورکر
+        res_stop = self.service.stop_traffic_worker()
+        self.assertTrue(res_stop)
+        status_stopped = self.service.get_daemon_status()
+        self.assertFalse(status_stopped["is_running"])
+
+    def test_admin_api_xray_install_script_endpoint(self):
+        """تست دسترسی و احراز هویت اندپوینت دریافت اسکریپت نصب خودکار اوبونتو"""
+        test_token = "secure_test_installer_token_123"
+        self.db.set_setting("xray_installer_token", test_token)
+
+        # ۱) دسترسی غیرمجاز بدون توکن و بدون نشست ادمین
+        res_unauth = self.client.get("/admin/api/xray/install_script")
+        self.assertEqual(res_unauth.status_code, 401)
+
+        # ۲) دسترسی غیرمجاز با توکن نامعتبر
+        res_bad_token = self.client.get("/admin/api/xray/install_script?token=invalid_token")
+        self.assertEqual(res_bad_token.status_code, 401)
+
+        # ۳) دسترسی مجاز با توکن صحیح
+        res_auth_token = self.client.get(f"/admin/api/xray/install_script?token={test_token}")
+        self.assertEqual(res_auth_token.status_code, 200)
+        self.assertIn("text/plain", res_auth_token.content_type)
+        script_text = res_auth_token.data.decode("utf-8")
+        self.assertIn("Xray-core", script_text)
+        self.assertIn("ufw allow 1080/tcp", script_text)
+        self.assertIn("systemctl enable xray", script_text)
+
+        # ۴) دسترسی مجاز از طریق سشن ادمین در مرورگر (بدون ارسال توکن در URL)
+        with self.client.session_transaction() as sess:
+            sess["logged_in"] = True
+            sess["role"] = "admin"
+            sess["admin_role"] = "super_admin"
+
+        res_auth_sess = self.client.get("/admin/api/xray/install_script")
+        self.assertEqual(res_auth_sess.status_code, 200)
+        self.assertIn("Xray-core", res_auth_sess.data.decode("utf-8"))
+
+    def test_admin_api_xray_daemon_endpoints(self):
+        """تست روت‌های API دریافت وضعیت و کنترل ورکر ترافیک"""
+        with self.client.session_transaction() as sess:
+            sess["logged_in"] = True
+            sess["role"] = "admin"
+            sess["admin_role"] = "super_admin"
+
+        # وضعیت فعلی ورکر
+        res_status = self.client.get("/admin/api/xray/daemon_status")
+        self.assertEqual(res_status.status_code, 200)
+        json_status = json.loads(res_status.data)
+        self.assertTrue(json_status["success"])
+        self.assertIn("is_running", json_status["status"])
+
+        # تغییر وضعیت ورکر (فعال‌سازی)
+        res_toggle_on = self.client.post("/admin/api/xray/toggle_daemon", json={"enable": True, "interval": 45})
+        self.assertEqual(res_toggle_on.status_code, 200)
+        json_on = json.loads(res_toggle_on.data)
+        self.assertTrue(json_on["success"])
+        self.assertTrue(json_on["status"]["is_running"])
+        self.assertEqual(json_on["status"]["interval_seconds"], 45)
+
+        # تغییر وضعیت ورکر (توقف)
+        res_toggle_off = self.client.post("/admin/api/xray/toggle_daemon", json={"enable": False})
+        self.assertEqual(res_toggle_off.status_code, 200)
+        json_off = json.loads(res_toggle_off.data)
+        self.assertTrue(json_off["success"])
+        self.assertFalse(json_off["status"]["is_running"])
+
 
 if __name__ == "__main__":
     unittest.main()
