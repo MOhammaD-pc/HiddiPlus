@@ -295,7 +295,7 @@ fi
 # آزمایش اعتبار فایل کانفیگ قبل از اجرای سرویس
 if [ -f /usr/local/etc/xray/config.json ]; then
   echo -e "\e[36m🧪 بررسی صحت فایل پیکربندی Xray...\e[0m"
-  /usr/local/bin/xray test -config /usr/local/etc/xray/config.json || true
+  /usr/local/bin/xray -test -config /usr/local/etc/xray/config.json || true
 fi
 
 # فعال‌سازی و راه‌اندازی سرویس

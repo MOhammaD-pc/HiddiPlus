@@ -833,6 +833,47 @@
     </div>
 </div>
 
+<!-- مودال تنظیمات کلیدها و SNI پروتکل Reality -->
+<div class="modal fade" id="realityParamsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1rem;">
+            <div class="modal-header border-bottom bg-light">
+                <h5 class="modal-title fw-bold text-dark">
+                    <i class="fas fa-bolt text-primary me-2"></i> تنظیمات پروتکل VLESS Reality
+                </h5>
+                <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <form id="realityParamsForm" onsubmit="saveRealityParams(event)">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">سایت شبیه‌سازی و استتار TLS (SNI Dest)</label>
+                        <input type="text" class="form-control font-monospace" id="reality_modal_sni" value="{{ xray_config.reality_sni|default('www.yahoo.com') }}" required style="direction: ltr;">
+                        <div class="form-text small text-muted">دامنه خارجی مجاز بدون فیلتر جهت هندشیک (مثال: www.yahoo.com یا speedtest.net)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">کلید عمومی Reality (Public Key)</label>
+                        <input type="text" class="form-control font-monospace small" id="reality_modal_pub_key" value="{{ xray_config.reality_public_key|default('') }}" placeholder="کلید عمومی تولیدشده روی سرور اوبونتو" style="direction: ltr;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">شناسه کوتاه (Short ID)</label>
+                        <input type="text" class="form-control font-monospace small" id="reality_modal_short_id" value="{{ xray_config.reality_short_id|default('') }}" placeholder="مثال: 2dfb9f7a" style="direction: ltr;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">پورت اتصال Reality</label>
+                        <input type="number" class="form-control font-monospace" id="reality_modal_port" value="{{ xray_config.reality_port|default(443) }}" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4" id="saveRealitySubmitBtn">
+                        <i class="fas fa-save me-1"></i> ذخیره تنظیمات Reality
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- مودال اسکریپت نصب و راه‌اندازی سریع هسته Xray روی اوبونتو -->
 <div class="modal fade" id="installScriptModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -1198,13 +1239,46 @@
     }
 
     function editRealityParams() {
-        const sni = prompt('مقدار SNI مجاز برای شبیه‌سازی Reality را وارد کنید:', '{{ xray_config.reality_sni|default("www.yahoo.com") }}');
-        if (sni && sni.trim()) {
-            fetch('/admin/api/xray/settings', {
+        const modalEl = document.getElementById('realityParamsModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    }
+
+    async function saveRealityParams(e) {
+        e.preventDefault();
+        const btn = document.getElementById('saveRealitySubmitBtn');
+        const origText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> در حال ذخیره...';
+
+        const payload = {
+            reality_sni: document.getElementById('reality_modal_sni').value.trim(),
+            reality_pub_key: document.getElementById('reality_modal_pub_key').value.trim(),
+            reality_short_id: document.getElementById('reality_modal_short_id').value.trim(),
+            reality_port: parseInt(document.getElementById('reality_modal_port').value.trim()) || 443
+        };
+
+        try {
+            const resp = await fetch('/admin/api/xray/settings', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({xray_reality_sni: sni.trim()})
-            }).then(() => window.location.reload());
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (data.success) {
+                alert('تنظیمات پروتکل Reality با موفقیت ذخیره شد.');
+                window.location.reload();
+            } else {
+                alert('خطا: ' + (data.message || 'خطا در ذخیره'));
+                btn.disabled = false;
+                btn.innerHTML = origText;
+            }
+        } catch (err) {
+            alert('خطای ارتباط با سرور: ' + err.message);
+            btn.disabled = false;
+            btn.innerHTML = origText;
         }
     }
 
