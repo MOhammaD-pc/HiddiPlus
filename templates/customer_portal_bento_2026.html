@@ -549,18 +549,33 @@
                                 <h2 class="h4 mb-0 fw-bold">{{ (sub.account_name if sub else None) or "کاربر گرامی" }}</h2>
                             </div>
                             <div class="text-end">
-                                {% if sub and (sub.status == 'expired' or sub.status == 'debt') %}
+                                {% if sub and (sub.status == 'expired' or sub.status == 'debt' or sub.is_expired) %}
                                 <span class="badge bg-danger rounded-pill px-3 py-2">منقضی شده</span>
+                                <div class="small text-secondary mt-1" style="font-size: 0.75rem;">انقضا: {{ (sub.expire_date_shamsi if sub else None) or 'منقضی' }}</div>
+                                {% elif sub and (not sub.is_started or not sub.expire_date_shamsi or sub.expire_date_shamsi == '---') %}
+                                <span class="badge rounded-pill px-3 py-2" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">
+                                    شروع با اولین اتصال
+                                </span>
+                                <div class="small text-secondary mt-1" style="font-size: 0.75rem;">اعتبار: {{ (sub.duration or 30)|persian_digits }} روز پس از اتصال</div>
                                 {% else %}
                                 <span class="badge rounded-pill px-3 py-2" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
                                     {{ (days_left|persian_digits) if (days_left is defined and days_left is not none) else '۰' }} روز تا تمدید
                                 </span>
-                                {% endif %}
                                 <div class="small text-secondary mt-1" style="font-size: 0.75rem;">انقضا: {{ (sub.expire_date_shamsi if sub else None) or '---' }}</div>
+                                {% endif %}
                             </div>
                         </div>
 
                         <!-- گیج دایره‌ای ترافیک و ارقام آماری (با viewBox و overflow بهینه جهت جلوگیری از باگ بریدگی سایه) -->
+                        {% set safe_sub = sub if sub is mapping else {} %}
+                        {% set used_gb = (safe_sub.get('data_used') or 0) | float %}
+                        {% set total_gb = (safe_sub.get('data_limit') or safe_sub.get('traffic_limit') or 0) | float %}
+                        {% set pct = ((used_gb / total_gb * 100) | round(1)) if total_gb > 0 else (safe_sub.get('usage_pct') or (traffic_analytics.percent if (traffic_analytics and traffic_analytics.percent is defined) else 0)) %}
+                        {% if pct > 100 %}{% set pct = 100 %}{% endif %}
+                        {% if pct == pct|int %}{% set pct = pct|int %}{% endif %}
+                        {% set remain_val = (total_gb - used_gb) | round(2) if total_gb >= used_gb else (safe_sub.get('remaining_gb') or 0) %}
+                        {% set circumference = 314.159 %}
+                        {% set offset = circumference - (pct / 100 * circumference) %}
                         <div class="row align-items-center g-4 my-2">
                             <div class="col-sm-5 d-flex justify-content-center">
                                 <div class="traffic-gauge-wrapper">
@@ -572,10 +587,6 @@
                                             </linearGradient>
                                         </defs>
                                         <circle class="gauge-bg" cx="60" cy="60" r="50" fill="none" stroke-width="10" />
-                                        <!-- محاسبه stroke-dashoffset بر اساس درصد -->
-                                        {% set pct = traffic_analytics.percent if traffic_analytics and traffic_analytics.percent else 30 %}
-                                        {% set circumference = 314.159 %}
-                                        {% set offset = circumference - (pct / 100 * circumference) %}
                                         <circle class="gauge-progress" cx="60" cy="60" r="50" fill="none" stroke-width="10" stroke-dasharray="314.159" stroke-dashoffset="{{ offset }}" />
                                     </svg>
                                     <div class="traffic-gauge-content">
@@ -590,19 +601,19 @@
                                     <div class="col-6">
                                         <div class="p-3 rounded-3" style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle);">
                                             <div class="small text-secondary mb-1">باقی‌مانده:</div>
-                                            <div class="h5 mb-0 fw-bold text-primary" style="color: var(--hiddi-brand) !important;">{{ (remain_gb|persian_digits) if (remain_gb is defined and remain_gb is not none) else '۰' }} <span class="small font-monospace">GB</span></div>
+                                            <div class="h5 mb-0 fw-bold text-primary" style="color: var(--hiddi-brand) !important;">{{ (remain_val|persian_digits) }} <span class="small font-monospace">GB</span></div>
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="p-3 rounded-3" style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle);">
                                             <div class="small text-secondary mb-1">کل حجم بسته:</div>
-                                            <div class="h5 mb-0 fw-bold">{{ (sub.traffic_limit|persian_digits) if (sub and sub.traffic_limit) else '۰' }} <span class="small font-monospace">GB</span></div>
+                                            <div class="h5 mb-0 fw-bold">{{ (total_gb|persian_digits) }} <span class="small font-monospace">GB</span></div>
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="p-3 rounded-3" style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle);">
                                             <div class="small text-secondary mb-1">مصرف شده:</div>
-                                            <div class="fw-bold">{{ (sub.data_used|persian_digits) if (sub and sub.data_used) else '۰' }} <span class="small font-monospace">GB</span></div>
+                                            <div class="fw-bold">{{ (used_gb|persian_digits) }} <span class="small font-monospace">GB</span></div>
                                         </div>
                                     </div>
                                     <div class="col-6">
@@ -644,14 +655,18 @@
                     <div class="hiddi-wallet-card">
                         <!-- هدر کارت -->
                         <div class="wallet-card-header">
-                            <div class="wallet-card-brand">
-                                <div class="wallet-chip-icon" title="HiddiPay Smart Chip"></div>
-                                <div>
+                            <div class="wallet-card-brand" style="min-width: 0; flex: 1;">
+                                <div class="wallet-chip-icon flex-shrink-0" title="HiddiPay Smart Chip"></div>
+                                <div style="min-width: 0;">
                                     <div class="wallet-card-brand-title">کیف پول هیدی‌پلاس</div>
-                                    <div class="wallet-card-number font-monospace">{{ customer_ref_code or "HP-9920" }}</div>
+                                    {% set display_ref = customer_ref_code or "HP-9920" %}
+                                    {% if display_ref|length > 16 %}
+                                        {% set display_ref = "HP-" ~ display_ref[:4]|upper ~ "•••" ~ display_ref[-4:]|upper %}
+                                    {% endif %}
+                                    <div class="wallet-card-number font-monospace text-truncate" title="{{ customer_ref_code }}">{{ display_ref }}</div>
                                 </div>
                             </div>
-                            <div class="wallet-status-badge">
+                            <div class="wallet-status-badge flex-shrink-0">
                                 <span class="wallet-status-dot"></span>
                                 <span>آماده استفاده</span>
                             </div>
@@ -661,15 +676,24 @@
                         <div class="wallet-card-balance-block">
                             <div class="wallet-balance-label">
                                 <span>موجودی قابل استفاده:</span>
-                                <span class="badge" style="background: rgba(255,255,255,0.15); font-size: 0.68rem; font-weight: 700; border: 1px solid rgba(255,255,255,0.2);">VIP Gold</span>
+                                {% set tier_title = loyalty_tier_info.title if (loyalty_tier_info and loyalty_tier_info.title) else (sub.loyalty_title if (sub and sub.loyalty_title) else 'عادی') %}
+                                {% set tier_color = loyalty_tier_info.color if (loyalty_tier_info and loyalty_tier_info.color) else '#cbd5e1' %}
+                                <span class="badge" style="background: rgba(255,255,255,0.18); color: #fff; font-size: 0.72rem; font-weight: 700; border: 1px solid {{ tier_color }};">
+                                    {{ tier_title }}
+                                </span>
                             </div>
                             <div class="wallet-balance-amount">
-                                <span class="wallet-balance-val" id="walletBalanceDisplay">{{ (user_wallet.formatted_balance if (user_wallet is defined and user_wallet and user_wallet.formatted_balance) else "۰ تومان") }}</span>
+                                {% set wallet_val = (user_wallet.balance if user_wallet is mapping else user_wallet) or 0 %}
+                                <span class="wallet-balance-val" id="walletBalanceDisplay">{{ (wallet_val|format_price if wallet_val else '۰')|persian_digits }} تومان</span>
                             </div>
                             <div class="wallet-card-perks">
                                 <div class="wallet-card-perk-item">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fcd34d" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                                    <span>۵,۰۰۰ تومان هدیه تمدید خودکار</span>
+                                    {% if loyalty_tier_info and loyalty_tier_info.get('cashback_percent', 0) > 0 %}
+                                    <span>{{ (loyalty_tier_info.cashback_percent)|persian_digits }}٪ پاداش کش‌بک خرید و تمدید خودکار</span>
+                                    {% else %}
+                                    <span>شارژ آنی، تمدید خودکار و هدیه وفاداری</span>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -2649,48 +2673,59 @@
                     </button>
                 </div>
                 <div class="modal-body py-4 px-4">
-                    <div class="text-center mb-4 p-3 rounded-4" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 182, 212, 0.05) 100%); border: 1px solid rgba(16, 185, 129, 0.2);">
-                        <span class="small text-secondary">موجودی فعلی قابل استفاده:</span>
-                        <div class="h3 fw-bold text-success mt-1 mb-0" id="modalCurrentWalletBalance">{{ (user_wallet.formatted_balance if (user_wallet is defined and user_wallet and user_wallet.formatted_balance) else "۰ تومان") }}</div>
-                    </div>
-
-                    <!-- مبالغ سریع پیش‌فرض -->
-                    <label class="small fw-bold text-secondary mb-2 d-block">انتخاب مبلغ شارژ سریع:</label>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6 col-sm-3">
-                            <button type="button" class="btn-deposit-chip w-100 py-2" onclick="selectDepositPreset(20000, this)">۲۰,۰۰۰</button>
+                    <form id="walletDepositForm" method="POST" action="/customer/wallet/deposit/{{ token }}">
+                        <div class="text-center mb-4 p-3 rounded-4" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 182, 212, 0.05) 100%); border: 1px solid rgba(16, 185, 129, 0.2);">
+                            <span class="small text-secondary">موجودی فعلی قابل استفاده:</span>
+                            {% set wallet_val = (user_wallet.balance if user_wallet is mapping else user_wallet) or 0 %}
+                            <div class="h3 fw-bold text-success mt-1 mb-0" id="modalCurrentWalletBalance">{{ (wallet_val|format_price if wallet_val else '۰')|persian_digits }} تومان</div>
                         </div>
-                        <div class="col-6 col-sm-3">
-                            <button type="button" class="btn-deposit-chip w-100 py-2 active" onclick="selectDepositPreset(50000, this)">۵۰,۰۰۰</button>
-                        </div>
-                        <div class="col-6 col-sm-3">
-                            <button type="button" class="btn-deposit-chip w-100 py-2" onclick="selectDepositPreset(100000, this)">۱۰۰,۰۰۰</button>
-                        </div>
-                        <div class="col-6 col-sm-3">
-                            <button type="button" class="btn-deposit-chip w-100 py-2" onclick="selectDepositPreset(200000, this)">۲۰۰,۰۰۰</button>
-                        </div>
-                    </div>
 
-                    <!-- مبلغ دلخواه -->
-                    <div class="mb-3">
-                        <label class="small fw-bold text-secondary mb-1">یا مبلغ دلخواه (تومان):</label>
-                        <input type="number" class="form-control form-control-hiddi text-center font-monospace fw-bold fs-5" id="customDepositAmount" placeholder="۵۰,۰۰۰" value="50000" style="border-radius: 14px;">
-                    </div>
+                        <!-- مبالغ سریع پیش‌فرض -->
+                        <label class="small fw-bold text-secondary mb-2 d-block">انتخاب مبلغ شارژ سریع:</label>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6 col-sm-3">
+                                <button type="button" class="btn-deposit-chip w-100 py-2" onclick="selectDepositPreset(20000, this)">۲۰,۰۰۰</button>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <button type="button" class="btn-deposit-chip w-100 py-2 active" onclick="selectDepositPreset(50000, this)">۵۰,۰۰۰</button>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <button type="button" class="btn-deposit-chip w-100 py-2" onclick="selectDepositPreset(100000, this)">۱۰۰,۰۰۰</button>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <button type="button" class="btn-deposit-chip w-100 py-2" onclick="selectDepositPreset(200000, this)">۲۰۰,۰۰۰</button>
+                            </div>
+                        </div>
 
-                    <!-- روش واریز -->
-                    <div class="mb-4">
-                        <label class="small fw-bold text-secondary mb-1">روش پرداخت:</label>
-                        <select class="form-select form-control-hiddi" id="depositPaymentMethod" style="border-radius: 14px;">
-                            <option value="c2c">کارت به کارت خودکار هوشمند (سریع‌ترین)</option>
-                            <option value="gateway">درگاه پرداخت شتابی شاپرک</option>
-                            <option value="crypto">ارز دیجیتال تتر (USDT - Tron TRC20)</option>
-                        </select>
-                    </div>
+                        <!-- مبلغ دلخواه -->
+                        <div class="mb-3">
+                            <label class="small fw-bold text-secondary mb-1">یا مبلغ دلخواه (تومان):</label>
+                            <input type="number" name="amount" class="form-control form-control-hiddi text-center font-monospace fw-bold fs-5" id="customDepositAmount" placeholder="۵۰,۰۰۰" value="50000" min="10000" step="5000" style="border-radius: 14px;" required>
+                        </div>
 
-                    <button type="button" class="btn btn-hiddi-primary w-100 py-3" style="border-radius: 14px; font-weight: 800;" onclick="confirmWalletDeposit()">
-                        <i class="fas fa-check-circle me-1"></i>
-                        <span>تایید و پرداخت فاکتور</span>
-                    </button>
+                        <!-- روش واریز -->
+                        <div class="mb-4">
+                            <label class="small fw-bold text-secondary mb-1">روش پرداخت:</label>
+                            <select class="form-select form-control-hiddi" name="payment_method" id="depositPaymentMethod" style="border-radius: 14px;">
+                                {% if portal_payment_methods %}
+                                    {% for pm in portal_payment_methods %}
+                                        {% if pm.id != 'wallet' %}
+                                            <option value="{{ pm.id }}" {% if loop.first %}selected{% endif %}>{{ pm.title or pm.name }} ({{ pm.badge or 'فعال' }})</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="card_to_card" selected>کارت به کارت خودکار هوشمند (شتاب)</option>
+                                    <option value="online_gateway">درگاه پرداخت اینترنتی شاپرک</option>
+                                    <option value="crypto">ارز دیجیتال تتر (USDT)</option>
+                                {% endif %}
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-hiddi-primary w-100 py-3" style="border-radius: 14px; font-weight: 800;">
+                            <i class="fas fa-check-circle me-1"></i>
+                            <span>تایید و پرداخت فاکتور</span>
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -2726,14 +2761,14 @@
                                 <i class="fas fa-layer-group"></i>
                             </div>
                             <span class="bento-metric-label">کل دوره‌ها</span>
-                            <span class="bento-metric-value">{{ (sub_history|length if sub_history else 1)|persian_digits }} <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary);">دوره</span></span>
+                            <span class="bento-metric-value">{{ (sub_history|length if sub_history else (1 if sub else 0))|persian_digits }} <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary);">دوره</span></span>
                         </div>
                         <div class="bento-metric-col">
                             <div class="bento-metric-icon" style="background: rgba(6, 182, 212, 0.12); color: #06b6d4;">
                                 <i class="fas fa-wallet"></i>
                             </div>
                             <span class="bento-metric-label">مجموع پرداختی‌ها</span>
-                            <span class="bento-metric-value">{{ (total_paid|persian_digits if total_paid else '۳۸۰,۰۰۰') }} <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary);">تومان</span></span>
+                            <span class="bento-metric-value">{{ (total_paid|format_price if total_paid else '۰')|persian_digits }} <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary);">تومان</span></span>
                         </div>
                         <div class="bento-metric-col">
                             <div class="bento-metric-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
@@ -2741,8 +2776,16 @@
                             </div>
                             <span class="bento-metric-label">وضعیت اشتراک</span>
                             <div class="radar-status-pill mt-1">
+                                {% if sub and (sub.status == 'expired' or sub.status == 'debt' or sub.is_expired) %}
+                                <span class="radar-dot" style="background: #ef4444; box-shadow: 0 0 6px #ef4444;"></span>
+                                <span style="color: #ef4444;">منقضی شده</span>
+                                {% elif sub and not sub.is_started %}
+                                <span class="radar-dot" style="background: #3b82f6; box-shadow: 0 0 6px #3b82f6;"></span>
+                                <span style="color: #3b82f6;">شروع با اتصال</span>
+                                {% else %}
                                 <span class="radar-dot"></span>
                                 <span>فعال و متصل</span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -2752,12 +2795,12 @@
                         <button class="seg-tab-btn active" id="history-tx-tab" data-bs-toggle="pill" data-bs-target="#historyTabTransactions" type="button" role="tab">
                             <i class="fas fa-receipt"></i>
                             <span>تراکنش‌ها و پرداخت‌ها</span>
-                            <span class="badge-count">{{ (tx_history|length if tx_history else 3)|persian_digits }}</span>
+                            <span class="badge-count">{{ (tx_history|length)|persian_digits }}</span>
                         </button>
                         <button class="seg-tab-btn" id="history-periods-tab" data-bs-toggle="pill" data-bs-target="#historyTabPeriods" type="button" role="tab">
                             <i class="fas fa-hourglass-half"></i>
                             <span>سوابق دوره‌ها و مصرف</span>
-                            <span class="badge-count">{{ (sub_history|length if sub_history else 1)|persian_digits }}</span>
+                            <span class="badge-count">{{ (sub_history|length if sub_history else (1 if sub else 0))|persian_digits }}</span>
                         </button>
                     </div>
 
@@ -2767,96 +2810,53 @@
                         <div class="tab-pane fade show active" id="historyTabTransactions" role="tabpanel">
                             {% if tx_history and tx_history|length > 0 %}
                             {% for tx in tx_history %}
+                            {% set is_dep = tx.is_deposit or (tx.gateway == 'deposit') or ('شارژ' in (tx.plan_name or '')) or ('افزایش' in (tx.plan_name or '')) %}
+                            {% set is_rew = tx.is_reward or (tx.gateway in ['referral', 'reward', 'bonus']) or ('پاداش' in (tx.plan_name or '')) or ('هدیه' in (tx.plan_name or '')) %}
+                            {% set is_debt = tx.is_debt_settlement or ('تسویه' in (tx.plan_name or '')) %}
+                            {% set is_wal = (tx.gateway == 'wallet') %}
+                            
+                            {% set sq_class = 'squircle-emerald' if is_dep else ('squircle-amber' if is_rew else ('squircle-purple' if is_debt else ('squircle-cyan' if is_wal else 'squircle-sapphire'))) %}
+                            {% set icon_class = 'fa-arrow-down' if is_dep else ('fa-gift' if is_rew else ('fa-handshake' if is_debt else ('fa-coins' if is_wal else 'fa-bolt'))) %}
+                            
                             <div class="fintech-tx-row">
                                 <div class="fintech-tx-lead">
-                                    <div class="fintech-icon-squircle {% if tx.is_deposit %}squircle-emerald{% elif tx.is_reward %}squircle-amber{% else %}squircle-sapphire{% endif %}">
-                                        <i class="fas {% if tx.is_deposit %}fa-arrow-down{% elif tx.is_reward %}fa-gift{% else %}fa-bolt{% endif %}"></i>
+                                    <div class="fintech-icon-squircle {{ sq_class }}">
+                                        <i class="fas {{ icon_class }}"></i>
                                     </div>
                                     <div>
-                                        <div class="fintech-tx-title">{{ tx.title or "پرداخت فاکتور اشتراک" }}</div>
+                                        <div class="fintech-tx-title">{{ tx.plan_name or tx.title or ("شارژ کیف پول" if is_dep else ("پرداخت اشتراک")) }}</div>
                                         <div class="fintech-tx-meta">
-                                            <span class="fintech-order-tag" onclick="copyText('{{ tx.order_id }}', 'شناسه سفارش کپی شد')">#{{ tx.order_id }} <i class="far fa-copy ms-1" style="font-size: 0.65rem;"></i></span>
-                                            <span>&bull; {{ tx.gateway_name or 'کارت به کارت خودکار' }}</span>
-                                            <span>&bull; {{ tx.created_at }}</span>
+                                            <span class="fintech-order-tag" onclick="copyText('{{ tx.order_id }}', 'شناسه سفارش کپی شد')" title="کلیک جهت کپی شناسه">#{{ tx.order_id }} <i class="far fa-copy ms-1" style="font-size: 0.65rem;"></i></span>
+                                            <span>&bull; {{ tx.gateway_name or tx.gateway or 'کارت به کارت' }}</span>
+                                            <span>&bull; {{ (tx.created_at_shamsi or (tx.created_at|string)[:16])|persian_digits }}</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="fintech-tx-trail">
-                                    <span class="fintech-amount-val {% if tx.is_deposit or tx.is_reward %}positive{% else %}neutral{% endif %}">{{ tx.amount|persian_digits }} تومان</span>
+                                    <span class="fintech-amount-val {% if is_dep or is_rew %}positive{% else %}neutral{% endif %}">{{ ("+ " if (is_dep or is_rew) else "") ~ ((tx.amount|format_price if tx.amount else '۰')|persian_digits) }} تومان</span>
+                                    {% if tx.status in ('approved', 'completed', 'paid') %}
                                     <span class="fintech-status-chip squircle-emerald" style="padding: 2px 8px; border-radius: 10px;">
-                                        <i class="fas fa-check-circle" style="font-size: 0.65rem;"></i> تایید آنی
+                                        <i class="fas fa-check-circle" style="font-size: 0.65rem;"></i> تایید شده
                                     </span>
+                                    {% elif tx.status == 'pending' %}
+                                    <span class="fintech-status-chip squircle-amber" style="padding: 2px 8px; border-radius: 10px;">
+                                        <i class="fas fa-clock" style="font-size: 0.65rem;"></i> در انتظار
+                                    </span>
+                                    {% else %}
+                                    <span class="fintech-status-chip" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 2px 8px; border-radius: 10px;">
+                                        <i class="fas fa-times-circle" style="font-size: 0.65rem;"></i> ناموفق
+                                    </span>
+                                    {% endif %}
                                 </div>
                             </div>
                             {% endfor %}
                             {% else %}
-                            <!-- تراکنش ۱: تمدید پلن -->
-                            <div class="fintech-tx-row">
-                                <div class="fintech-tx-lead">
-                                    <div class="fintech-icon-squircle squircle-sapphire">
-                                        <i class="fas fa-bolt"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fintech-tx-title">تمدید اشتراک ۱ ماهه طلایی</div>
-                                        <div class="fintech-tx-meta">
-                                            <span class="fintech-order-tag" onclick="copyText('TX-99824', 'شناسه سفارش کپی شد')">#TX-99824 <i class="far fa-copy ms-1" style="font-size: 0.65rem;"></i></span>
-                                            <span>&bull; کارت به کارت خودکار</span>
-                                            <span>&bull; ۱۵ اردیبهشت ۱۴۰۳</span>
-                                        </div>
-                                    </div>
+                            <div class="text-center py-5 text-secondary">
+                                <div class="fintech-icon-squircle mx-auto mb-3" style="width: 54px; height: 54px; opacity: 0.7; background: var(--bg-card-subtle);">
+                                    <i class="fas fa-receipt fa-lg"></i>
                                 </div>
-                                <div class="fintech-tx-trail">
-                                    <span class="fintech-amount-val neutral">۱۹۰,۰۰۰ تومان</span>
-                                    <span class="fintech-status-chip squircle-emerald" style="padding: 2px 8px; border-radius: 10px;">
-                                        <i class="fas fa-check-circle" style="font-size: 0.65rem;"></i> تایید آنی
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- تراکنش ۲: شارژ کیف پول -->
-                            <div class="fintech-tx-row">
-                                <div class="fintech-tx-lead">
-                                    <div class="fintech-icon-squircle squircle-emerald">
-                                        <i class="fas fa-arrow-down"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fintech-tx-title">شارژ و افزایش موجودی کیف پول</div>
-                                        <div class="fintech-tx-meta">
-                                            <span class="fintech-order-tag" onclick="copyText('TX-98711', 'شناسه تراکنش کپی شد')">#TX-98711 <i class="far fa-copy ms-1" style="font-size: 0.65rem;"></i></span>
-                                            <span>&bull; درگاه بانکی شاپرک</span>
-                                            <span>&bull; ۱۰ اردیبهشت ۱۴۰۳</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="fintech-tx-trail">
-                                    <span class="fintech-amount-val positive">+ ۵۰,۰۰۰ تومان</span>
-                                    <span class="fintech-status-chip squircle-emerald" style="padding: 2px 8px; border-radius: 10px;">
-                                        <i class="fas fa-check-circle" style="font-size: 0.65rem;"></i> شارژ آنی
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- تراکنش ۳: پاداش معرف -->
-                            <div class="fintech-tx-row">
-                                <div class="fintech-tx-lead">
-                                    <div class="fintech-icon-squircle squircle-amber">
-                                        <i class="fas fa-gift"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fintech-tx-title">پاداش معرفی دوست (کمیسیون ۱۰٪)</div>
-                                        <div class="fintech-tx-meta">
-                                            <span class="fintech-order-tag" onclick="copyText('REF-10492', 'کد ارجاع کپی شد')">#REF-10492 <i class="far fa-copy ms-1" style="font-size: 0.65rem;"></i></span>
-                                            <span>&bull; باشگاه مشتریان و جوایز</span>
-                                            <span>&bull; ۳ اردیبهشت ۱۴۰۳</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="fintech-tx-trail">
-                                    <span class="fintech-amount-val positive" style="color: #f59e0b;">+ ۱۹,۰۰۰ تومان</span>
-                                    <span class="fintech-status-chip squircle-amber" style="padding: 2px 8px; border-radius: 10px;">
-                                        <i class="fas fa-coins" style="font-size: 0.65rem;"></i> واریز پاداش
-                                    </span>
-                                </div>
+                                <div class="fw-bold mb-1 text-body">هنوز تراکنشی ثبت نشده است</div>
+                                <div class="small text-secondary">تمامی تراکنش‌ها، افزایش موجودی و فاکتورهای شما در این بخش ثبت خواهند شد.</div>
                             </div>
                             {% endif %}
                         </div>
@@ -2869,7 +2869,7 @@
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <div class="d-flex align-items-center gap-2">
                                         <span class="badge" style="background: rgba(24, 87, 242, 0.15); color: #1857f2; border: 1px solid rgba(24, 87, 242, 0.3); font-size: 0.72rem; font-weight: 800; border-radius: 8px;">دوره {{ loop.index|persian_digits }}</span>
-                                        <h6 class="mb-0 fw-bold" style="font-size: 0.95rem;">{{ item.plan_name or "اشتراک ۱ ماهه طلایی" }}</h6>
+                                        <h6 class="mb-0 fw-bold" style="font-size: 0.95rem;">{{ item.plan_name or "بسته مصرفی" }}</h6>
                                     </div>
                                     <div class="radar-status-pill">
                                         <span class="radar-dot"></span>
@@ -2877,36 +2877,45 @@
                                     </div>
                                 </div>
                                 <div class="period-progress-track">
-                                    {% set used = item.used_gb or 26.4 %}
-                                    {% set total = item.total_gb or 50 %}
-                                    {% set p_pct = (used / total * 100)|round|int %}
+                                    {% set used = (item.used_gb or 0)|float %}
+                                    {% set total = (item.total_gb or 0)|float %}
+                                    {% set p_pct = ((used / total * 100)|round|int) if total > 0 else 0 %}
                                     <div class="period-progress-fill" style="width: {{ p_pct }}%;"></div>
                                 </div>
                                 <div class="d-flex flex-wrap align-items-center justify-content-between small text-secondary gap-2 mt-2" style="font-size: 0.76rem;">
-                                    <div><i class="far fa-calendar-alt me-1 text-primary"></i> اعتبار دوره: {{ item.start_date }} تا {{ item.expire_date }}</div>
-                                    <div><i class="fas fa-chart-pie me-1 text-warning"></i> مصرف: <strong class="text-body font-monospace">{{ item.used_gb|persian_digits }} GB</strong> از {{ item.total_gb|persian_digits }} GB (<span class="text-primary font-monospace">{{ p_pct|persian_digits }}٪</span>)</div>
+                                    <div><i class="far fa-calendar-alt me-1 text-primary"></i> اعتبار دوره: {{ (item.start_date or '-')|persian_digits }} تا {{ (item.expire_date or '-')|persian_digits }}</div>
+                                    <div><i class="fas fa-chart-pie me-1 text-warning"></i> مصرف: <strong class="text-body font-monospace">{{ (used|round(2))|persian_digits }} GB</strong> از {{ (total|round(2))|persian_digits }} GB (<span class="text-primary font-monospace">{{ p_pct|persian_digits }}٪</span>)</div>
                                 </div>
                             </div>
                             {% endfor %}
-                            {% else %}
+                            {% elif sub and (sub.account_name or sub.id) %}
+                            {# نمایش اشتراک دوره ۱ جاری به صورت داینامیک #}
                             <div class="period-modern-card active-period">
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <div class="d-flex align-items-center gap-2">
                                         <span class="badge" style="background: rgba(24, 87, 242, 0.15); color: #1857f2; border: 1px solid rgba(24, 87, 242, 0.3); font-size: 0.72rem; font-weight: 800; border-radius: 8px;">دوره ۱ (جاری)</span>
-                                        <h6 class="mb-0 fw-bold" style="font-size: 0.95rem;">اشتراک ۱ ماهه طلایی (۵۰ گیگابایت)</h6>
+                                        <h6 class="mb-0 fw-bold" style="font-size: 0.95rem;">{{ sub.plan_name or "سرویس فعال" }} ({{ (total_gb|persian_digits) }} گیگابایت)</h6>
                                     </div>
                                     <div class="radar-status-pill">
-                                        <span class="radar-dot"></span>
-                                        <span>دوره فعال</span>
+                                        <span class="radar-dot" {% if sub.status == 'expired' or sub.is_expired %}style="background: #ef4444; box-shadow: 0 0 6px #ef4444;"{% endif %}></span>
+                                        <span>{{ "منقضی شده" if (sub.status == 'expired' or sub.is_expired) else ("آماده اتصال" if not sub.is_started else "دوره فعال") }}</span>
                                     </div>
                                 </div>
                                 <div class="period-progress-track">
-                                    <div class="period-progress-fill" style="width: 53%;"></div>
+                                    <div class="period-progress-fill" style="width: {{ pct }}%;"></div>
                                 </div>
                                 <div class="d-flex flex-wrap align-items-center justify-content-between small text-secondary gap-2 mt-2" style="font-size: 0.76rem;">
-                                    <div><i class="far fa-calendar-alt me-1 text-primary"></i> اعتبار دوره: ۱۵ اردیبهشت ۱۴۰۳ تا ۱۵ خرداد ۱۴۰۳</div>
-                                    <div><i class="fas fa-chart-pie me-1 text-warning"></i> مصرف: <strong class="text-body font-monospace">۲۶.۴ GB</strong> از ۵۰ GB (<span class="text-primary font-monospace">۵۳٪</span>)</div>
+                                    <div><i class="far fa-calendar-alt me-1 text-primary"></i> اعتبار دوره: {{ (sub.start_date_shamsi if sub.start_date_shamsi else ('پس از اولین اتصال' if not sub.is_started else '-'))|persian_digits }} تا {{ (sub.expire_date_shamsi if sub.expire_date_shamsi else ('---' if not sub.is_started else '-'))|persian_digits }}</div>
+                                    <div><i class="fas fa-chart-pie me-1 text-warning"></i> مصرف: <strong class="text-body font-monospace">{{ (used_gb|persian_digits) }} GB</strong> از {{ (total_gb|persian_digits) }} GB (<span class="text-primary font-monospace">{{ pct|persian_digits }}٪</span>)</div>
                                 </div>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5 text-secondary">
+                                <div class="fintech-icon-squircle mx-auto mb-3" style="width: 54px; height: 54px; opacity: 0.7; background: var(--bg-card-subtle);">
+                                    <i class="fas fa-hourglass-half fa-lg"></i>
+                                </div>
+                                <div class="fw-bold mb-1 text-body">سابقه‌ای برای دوره‌های گذشته یافت نشد</div>
+                                <div class="small text-secondary">اطلاعات ترافیک و اعتبار دوره‌های مصرف شما در این بخش نگهداری می‌شوند.</div>
                             </div>
                             {% endif %}
                         </div>
@@ -3242,45 +3251,13 @@
             }
         }
 
-        function selectDepositPreset(amount) {
+        function selectDepositPreset(amount, btn) {
             const input = document.getElementById('customDepositAmount');
             if (input) input.value = amount;
-        }
-
-        let currentWalletBalanceNum = 50000;
-        function confirmWalletDeposit() {
-            const amtInput = document.getElementById('customDepositAmount');
-            const amount = parseInt(amtInput ? amtInput.value : 50000) || 50000;
-            currentWalletBalanceNum += amount;
-            const formatted = currentWalletBalanceNum.toLocaleString('fa-IR') + ' تومان';
-
-            // بروزرسانی موجودی روی کارت با انیمیشن
-            const disp = document.getElementById('walletBalanceDisplay');
-            if (disp) {
-                disp.textContent = formatted;
-                disp.style.transition = 'transform 0.3s ease, color 0.3s ease';
-                disp.style.transform = 'scale(1.12)';
-                disp.style.color = '#38bdf8';
-                setTimeout(() => {
-                    disp.style.transform = 'scale(1)';
-                    disp.style.color = '#ffffff';
-                }, 500);
+            if (btn) {
+                document.querySelectorAll('.btn-deposit-chip').forEach(el => el.classList.remove('active'));
+                btn.classList.add('active');
             }
-
-            const modalCurr = document.getElementById('modalCurrentWalletBalance');
-            if (modalCurr) modalCurr.textContent = formatted;
-
-            const clubBal = document.getElementById('clubModalWalletBal');
-            if (clubBal) clubBal.textContent = formatted;
-
-            // بستن مدال و نمایش توست موفقیت
-            const modalEl = document.getElementById('walletDepositModal');
-            if (modalEl) {
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-            }
-
-            showToast(`مبلغ ${amount.toLocaleString('fa-IR')} تومان با موفقیت به کیف پول اضافه شد`);
         }
 
         // ۱۰. توابع سامانه تیکتینگ رسمی پشتیبانی (Official Support Ticketing System)

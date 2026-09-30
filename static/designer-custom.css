@@ -1085,6 +1085,10 @@ body {
     font-size: 0.72rem;
     color: rgba(255, 255, 255, 0.6) !important;
     direction: ltr;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .wallet-status-badge {
@@ -1098,6 +1102,8 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .wallet-status-dot {

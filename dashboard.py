@@ -6390,12 +6390,36 @@ def fulfill_approved_transaction(order_id: str, ref_id: str = None, payer_info: 
         comm = tx.get("account_comment") or ""
         if "instant_act:0" in comm or "queue_renewal" in comm:
             instant_activation = False
+    is_wallet_deposit = (
+        tx.get("plan_id") == "wallet_deposit" or
+        (smart_inv and smart_inv.get("plan_id") == "wallet_deposit") or
+        "شارژ کیف پول" in str(pname) or
+        "افزایش موجودی" in str(pname)
+    )
 
     if is_debt_settlement and renew_sub_id:
         target_sub = db.get_subscription(renew_sub_id)
         if target_sub:
             db.clear_subscription_debt(renew_sub_id, reseller_id=target_sub.get("reseller_id"), settled_by=f"درگاه خودکار ({processed_by})")
             logger.info(f"Debt settled for sub #{renew_sub_id} via approved transaction {order_id}")
+    elif is_wallet_deposit:
+        target_tg_id = user_id
+        if not target_tg_id or int(target_tg_id) <= 0:
+            if tx.get("renew_sub_id"):
+                s_row = db.get_subscription(tx["renew_sub_id"])
+                if s_row and s_row.get("telegram_id"):
+                    target_tg_id = int(s_row["telegram_id"])
+        if target_tg_id and int(target_tg_id) > 0:
+            db.add_wallet_balance(
+                telegram_id=int(target_tg_id),
+                amount=int(amount),
+                description=f"افزایش موجودی کیف پول از پورتال مشتری (سفارش {order_id})",
+                ref_id=str(ref_id or order_id),
+                reseller_id=r_id
+            )
+        if smart_inv:
+            db.mark_smart_invoice_paid(order_id, tracking_code=str(ref_id or order_id))
+        logger.info(f"Wallet deposit fulfilled for user {target_tg_id} amount {amount} via tx {order_id}")
     elif is_renewal and renew_sub_id:
         target_sub = db.get_subscription(renew_sub_id)
         if not target_sub and user_id:
@@ -6655,6 +6679,9 @@ def fulfill_approved_transaction(order_id: str, ref_id: str = None, payer_info: 
             logger.info(f"Campaign sold count incremented for {matched_plan_id}")
     except Exception as e_camp:
         logger.error(f"Error updating campaign sold count: {e_camp}")
+
+    if is_wallet_deposit:
+        return {"success": True, "type": "wallet_deposit"}
 
     return {"success": True, "type": "subscription", "uuid": user_uuid}
 
@@ -24825,7 +24852,11 @@ def _handle_customer_portal_view(token: str = None, telegram_id: int = None, res
     portal_payment_methods = get_portal_payment_methods(sub=sub, reseller_id=reseller_id, user_id=telegram_id)
     c2c_method = next((m for m in portal_payment_methods if m["id"] == "card_to_card"), None)
     is_auto_confirm_active = c2c_method.get("is_auto_confirm", False) if c2c_method else False
-    user_wallet = db.get_user_wallet_balance(telegram_id, reseller_id=reseller_id) if telegram_id else 0
+    user_wallet_bal = db.get_user_wallet_balance(telegram_id, reseller_id=reseller_id) if telegram_id else 0
+    user_wallet = {
+        "balance": user_wallet_bal,
+        "formatted_balance": f"{user_wallet_bal:,} تومان"
+    }
 
     if reseller_id:
         gw_cfg = db.get_reseller_gateway(reseller_id)
@@ -25033,6 +25064,7 @@ def _handle_customer_portal_view(token: str = None, telegram_id: int = None, res
         support_username=support_username,
         support_phone=support_phone,
         days_left=days_left,
+        remain_gb=(safe_sub.get("remaining_gb") if safe_sub else 0),
         plans=plans,
         invoice=invoice,
         sub_url=sub_url,
@@ -25819,6 +25851,222 @@ def customer_create_invoice(token: str):
 
     flash(f"فاکتور تمدید برای «{plan_name}» صادر شد. لطفاً دقیقاً مبلغ مشخص شده را واریز نمایید.", "info")
     return redirect(url_for("customer_portal", token=token))
+
+
+@app.route("/customer/wallet/deposit/<token>", methods=["POST"])
+def customer_wallet_deposit(token: str):
+    """
+    ایجاد فاکتور و پرداخت افزایش موجودی کیف پول کاربر از طریق پورتال مشتری و مینی‌اپ
+    پشتیبانی کامل از روش‌های پرداخت داینامیک: کارت به کارت، درگاه آنلاین، کریپتو
+    """
+    conn = db.get_connection()
+    sub_row = conn.execute("SELECT * FROM subscriptions WHERE hidify_uuid=? OR id=?", (token, token)).fetchone()
+    conn.close()
+
+    if not sub_row:
+        flash("اشتراک یا شناسه مشتری یافت نشد.", "danger")
+        return redirect(url_for("customer_portal", token=token))
+
+    sub = dict(sub_row)
+    sub_id = sub["id"]
+    reseller_id = sub.get("reseller_id") or 0
+    user_id = sub.get("telegram_id") or 0
+    account_name = sub.get("account_name") or f"sub_{sub_id}"
+
+    try:
+        amount = int(request.form.get("amount") or 50000)
+    except (ValueError, TypeError):
+        amount = 50000
+
+    if amount < 10000:
+        flash("حداقل مبلغ جهت افزایش موجودی کیف پول ۱۰,۰۰۰ تومان می‌باشد.", "warning")
+        return redirect(url_for("customer_portal", token=token))
+
+    payment_method = request.form.get("payment_method", "card_to_card").strip()
+    now_iso = get_now_iso()
+    plan_name = f"شارژ کیف پول ({amount:,} تومان)"
+
+    # ۱. پرداخت آنلاین از طریق درگاه بانکی
+    if payment_method == "online_gateway":
+        if reseller_id:
+            gw_cfg = db.get_reseller_gateway(reseller_id)
+            if not gw_cfg.get("enabled") or not gw_cfg.get("key"):
+                gw_cfg = db.get_admin_gateway()
+        else:
+            gw_cfg = db.get_admin_gateway()
+
+        if not gw_cfg.get("enabled") or not gw_cfg.get("key"):
+            flash("درگاه پرداخت آنلاین در دسترس نیست. لطفاً از روش کارت به کارت استفاده فرمایید.", "warning")
+            return redirect(url_for("customer_portal", token=token))
+
+        gw_type = gw_cfg.get("type", "zarinpal")
+        gw_key = gw_cfg.get("key")
+        sandbox = gw_cfg.get("sandbox", False)
+        order_id = f"CP_WAL_ONL_{int(datetime.now().timestamp())}_{sub_id}"
+
+        r_info = db.get_reseller(reseller_id) or {} if reseller_id else {}
+        domain = r_info.get("custom_domain") or db.get_setting("custom_domain") or os.getenv("PANEL_DOMAIN", "http://localhost:5000")
+        if not str(domain).startswith("http"):
+            domain = f"https://{domain}"
+        callback_url = f"{str(domain).rstrip('/')}/payment/callback/{order_id}?token={token}"
+
+        conn = db.get_connection()
+        conn.execute("""
+            INSERT OR REPLACE INTO transactions (
+                order_id, user_id, username, plan_name, amount, status, gateway, 
+                tracking_code, reseller_id, is_renewal, renew_sub_id, 
+                account_name, account_comment, source, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, 'pending', ?, '', ?, 0, ?, ?, 'plan_id:wallet_deposit', 'portal_wallet_deposit', ?, ?)
+        """, (order_id, user_id, account_name, plan_name, amount, f"{gw_type}_portal", reseller_id, sub_id, account_name, now_iso, now_iso))
+        conn.commit()
+        conn.close()
+
+        try:
+            if gw_type == "zarinpal":
+                from payment import ZarinPal
+                zp = ZarinPal(merchant_id=gw_key, sandbox=sandbox)
+                res = zp.create_payment(amount=amount, description=f"شارژ کیف پول {account_name}", callback_url=callback_url)
+                if res.get("success"):
+                    db.update_transaction(order_id, tracking_code=res.get("authority", ""))
+                    return redirect(res.get("payment_url"))
+                else:
+                    flash(f"خطا در ایجاد تراکنش زرین‌پال: {res.get('error')}", "danger")
+                    return redirect(url_for("customer_portal", token=token))
+            elif gw_type == "idpay":
+                from payment import IDPay
+                idp = IDPay(api_key=gw_key, sandbox=sandbox)
+                res = idp.create_payment(amount=amount, name=account_name, description=f"شارژ کیف پول {account_name}", callback_url=callback_url, order_id=order_id)
+                if res.get("success"):
+                    db.update_transaction(order_id, tracking_code=res.get("payment_id", ""))
+                    return redirect(res.get("payment_url"))
+                else:
+                    flash(f"خطا در ایجاد تراکنش آیدی‌پی: {res.get('error')}", "danger")
+                    return redirect(url_for("customer_portal", token=token))
+            elif gw_type == "blupal":
+                from payment import BluPal
+                bp = BluPal(api_key=gw_key, sandbox=sandbox)
+                res = bp.create_payment(amount=amount, order_id=order_id, description=f"شارژ کیف پول {account_name}")
+                if res.get("success"):
+                    invoice_id = res.get("invoice_id")
+                    db.update_transaction(order_id, tracking_code=str(invoice_id or order_id))
+                    pay_target = res.get("payment_url") or res.get("payment_link")
+                    if pay_target:
+                        return redirect(pay_target)
+                    else:
+                        flash("آدرس درگاه پرداخت توسط بلوپال ارسال نشد.", "danger")
+                        return redirect(url_for("customer_portal", token=token))
+                else:
+                    flash(f"خطا در ایجاد فاکتور بلوپال: {res.get('error')}", "danger")
+                    return redirect(url_for("customer_portal", token=token))
+            else:
+                flash("درگاه انتخاب شده پشتیبانی نمی‌شود.", "warning")
+                return redirect(url_for("customer_portal", token=token))
+        except Exception as e_gw:
+            logger.error(f"Wallet deposit gateway exception: {e_gw}")
+            flash(f"خطا در اتصال به درگاه پرداخت: {str(e_gw)}", "danger")
+            return redirect(url_for("customer_portal", token=token))
+
+    # ۲. پرداخت ارزی کریپتو
+    elif payment_method == "crypto":
+        if reseller_id:
+            crypto_cfg = db.get_reseller_crypto_config(reseller_id)
+        else:
+            from payment import CryptoPaymentGateway
+            crypto_cfg = CryptoPaymentGateway.get_crypto_config(db)
+
+        wallet_addr = crypto_cfg.get("wallet_address", "").strip()
+        if not crypto_cfg.get("enabled") or not wallet_addr:
+            flash("درگاه پرداخت کریپتو فعال نیست. لطفاً از کارت به کارت استفاده فرمایید.", "warning")
+            return redirect(url_for("customer_portal", token=token))
+
+        usdt_rate = crypto_cfg.get("usdt_rate") or 90000
+        usdt_amount = round(float(amount) / float(usdt_rate), 2)
+        order_id = f"CP_WAL_CRY_{int(datetime.now().timestamp())}_{sub_id}"
+
+        target_card = {
+            "card_number": wallet_addr,
+            "card_holder": f"{usdt_amount} USDT ({crypto_cfg.get('network', 'TRC20 / TON')})",
+            "bank_name": "ارز دیجیتال (تتر)"
+        }
+
+        invoice = db.create_smart_invoice(
+            sub_id=sub_id,
+            plan_id="wallet_deposit",
+            reseller_id=reseller_id,
+            base_amount=amount,
+            target_card=target_card,
+            digits=0,
+            timeout_minutes=120,
+            instant_activation=True
+        )
+
+        conn = db.get_connection()
+        conn.execute("""
+            INSERT OR REPLACE INTO transactions (
+                order_id, user_id, username, plan_name, amount, status, gateway, 
+                tracking_code, reseller_id, is_renewal, renew_sub_id, 
+                account_name, account_comment, source, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, 'pending', 'crypto', ?, ?, 0, ?, ?, 'plan_id:wallet_deposit', 'portal_wallet_deposit', ?, ?)
+        """, (order_id, user_id, account_name, plan_name, amount, f"تتر: {usdt_amount} USDT", reseller_id, sub_id, account_name, now_iso, now_iso))
+        conn.commit()
+        conn.close()
+
+        flash(f"فاکتور پرداخت ارزی صادر شد. لطفاً مبلغ {usdt_amount} تتر (USDT) را به آدرس مشخص شده واریز نمایید.", "info")
+        return redirect(url_for("customer_portal", token=token))
+
+    # ۳. کارت به کارت خودکار هوشمند (پیش‌فرض)
+    else:
+        target_card = None
+        sms_cfg = {}
+        if reseller_id:
+            target_card = db.get_best_active_card(owner_type="reseller", reseller_id=reseller_id, incoming_amount=amount)
+            if target_card:
+                sms_cfg = db.get_reseller_bank_sms_config(reseller_id)
+            else:
+                target_card = db.get_best_active_card(owner_type="admin", incoming_amount=amount)
+                if target_card:
+                    sms_cfg = db.get_admin_bank_sms_config()
+        else:
+            target_card = db.get_best_active_card(owner_type="admin", incoming_amount=amount)
+            if target_card:
+                sms_cfg = db.get_admin_bank_sms_config()
+
+        if not target_card:
+            flash("هیچ کارت بانکی فعالی در سامانه تعریف نشده است. لطفاً با پشتیبانی تماس بگیرید.", "warning")
+            return redirect(url_for("customer_portal", token=token))
+
+        digits = sms_cfg.get("digits", 3) if isinstance(sms_cfg, dict) else 3
+        timeout = sms_cfg.get("timeout", 15) if isinstance(sms_cfg, dict) else 15
+
+        invoice = db.create_smart_invoice(
+            sub_id=sub_id,
+            plan_id="wallet_deposit",
+            reseller_id=reseller_id,
+            base_amount=amount,
+            target_card=target_card,
+            digits=digits,
+            timeout_minutes=timeout,
+            instant_activation=True
+        )
+
+        order_id = invoice["order_id"]
+        conn = db.get_connection()
+        conn.execute("""
+            INSERT OR REPLACE INTO transactions (
+                order_id, user_id, username, plan_name, amount, status, gateway, 
+                tracking_code, reseller_id, is_renewal, renew_sub_id, 
+                account_name, account_comment, source, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, 'pending', 'bank_sms', ?, ?, 0, ?, ?, 'plan_id:wallet_deposit', 'portal_wallet_deposit', ?, ?)
+        """, (
+            order_id, user_id, account_name, plan_name, invoice["final_amount"],
+            f"کارت {target_card.get('card_number', '')}", reseller_id, sub_id,
+            account_name, now_iso, now_iso
+        ))
+        conn.commit()
+        conn.close()
+
+        flash(f"پیش‌فاکتور افزایش موجودی کیف پول به مبلغ {invoice['final_amount']:,} تومان صادر شد. لطفاً مبلغ دقیق را به کارت مشخص شده واریز نمایید.", "info")
+        return redirect(url_for("customer_portal", token=token))
 
 
 @app.route("/portal/buy-new-plan", methods=["POST"])

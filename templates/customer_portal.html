@@ -61,6 +61,7 @@
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="/static/fonts/vazirmatn.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/misc/Farsi-Digits/Vazirmatn-FD-font-face.css" rel="stylesheet" type="text/css" />
     <style>
         {% if palette_css %}
@@ -104,7 +105,7 @@
         }
 
         body {
-            font-family: 'Vazirmatn FD', Tahoma, sans-serif;
+            font-family: 'Vazirmatn FD', 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--body-bg);
             color: var(--text-main);
             min-height: 100vh;
@@ -3595,42 +3596,67 @@
         <div class="text-center text-secondary small py-3">سابقه دوره‌ای برای این اشتراک ثبت نشده است.</div>
         {% endif %}
 
-        <h6 class="fw-bold mb-3 text-white pt-3 border-top border-secondary border-opacity-25"><i class="fas fa-receipt text-success me-2"></i>تراکنش‌ها و پرداخت‌ها</h6>
+        <h6 class="fw-bold mb-3 text-white pt-3 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between">
+            <span><i class="fas fa-receipt text-success me-2"></i>تراکنش‌ها و گردش حساب</span>
+            {% if tx_history %}
+            <span class="badge rounded-pill" style="background: rgba(37, 99, 235, 0.15); color: #3b82f6; border: 1px solid rgba(37, 99, 235, 0.3); font-size: 0.72rem;">{{ (tx_history|length)|persian_digits }} تراکنش</span>
+            {% endif %}
+        </h6>
         {% if tx_history %}
-        <div class="table-responsive">
-            <table class="table table-sm table-dark table-hover mb-0 align-middle small" style="background: transparent;">
-                <thead>
-                    <tr class="text-secondary border-bottom border-secondary border-opacity-25">
-                        <th>شناسه</th>
-                        <th>مبلغ (تومان)</th>
-                        <th>درگاه</th>
-                        <th>وضعیت</th>
-                        <th>تاریخ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for tx in tx_history %}
-                    <tr class="border-bottom border-secondary border-opacity-10">
-                        <td class="font-monospace">{{ tx.get('order_id') or tx.get('id') }}</td>
-                        <td class="font-monospace text-success fw-bold">{{ "{:,}".format(tx.get('amount') or 0) }}</td>
-                        <td>{{ tx.get('gateway') or 'کارت به کارت' }}</td>
-                        <td>
-                            {% if tx.get('status') in ('approved', 'completed', 'paid') %}
-                            <span class="badge bg-success small">موفق</span>
-                            {% elif tx.get('status') == 'pending' %}
-                            <span class="badge bg-warning text-dark small">معلق</span>
-                            {% else %}
-                            <span class="badge bg-danger small">ناموفق</span>
-                            {% endif %}
-                        </td>
-                        <td class="small text-secondary font-monospace">{{ (tx.get('created_at') or '')[:16] }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="d-flex flex-column gap-2">
+            {% for tx in tx_history %}
+            {% set is_dep = tx.is_deposit or (tx.gateway == 'deposit') or ('شارژ' in (tx.plan_name or '')) or ('افزایش' in (tx.plan_name or '')) %}
+            {% set is_rew = tx.is_reward or (tx.gateway in ['referral', 'reward', 'bonus']) or ('پاداش' in (tx.plan_name or '')) or ('هدیه' in (tx.plan_name or '')) %}
+            {% set is_debt = tx.is_debt_settlement or ('تسویه' in (tx.plan_name or '')) %}
+            {% set is_wal = (tx.gateway == 'wallet') %}
+
+            {% set border_col = 'rgba(16, 185, 129, 0.3)' if is_dep else ('rgba(245, 158, 11, 0.3)' if is_rew else ('rgba(139, 92, 246, 0.3)' if is_debt else ('rgba(6, 182, 212, 0.3)' if is_wal else 'rgba(37, 99, 235, 0.3)'))) %}
+            {% set bg_col = 'rgba(16, 185, 129, 0.12)' if is_dep else ('rgba(245, 158, 11, 0.12)' if is_rew else ('rgba(139, 92, 246, 0.12)' if is_debt else ('rgba(6, 182, 212, 0.12)' if is_wal else 'rgba(37, 99, 235, 0.12)'))) %}
+            {% set icon_col = '#10b981' if is_dep else ('#f59e0b' if is_rew else ('#a855f7' if is_debt else ('#06b6d4' if is_wal else '#3b82f6'))) %}
+            {% set icon_class = 'fa-arrow-down' if is_dep else ('fa-gift' if is_rew else ('fa-handshake' if is_debt else ('fa-coins' if is_wal else 'fa-bolt'))) %}
+
+            <div class="p-3 rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-2 shadow-sm" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; background: {{ bg_col }}; border: 1px solid {{ border_col }}; color: {{ icon_col }};">
+                        <i class="fas {{ icon_class }}"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold small text-white">{{ tx.plan_name or tx.title or ("شارژ کیف پول" if is_dep else "پرداخت اشتراک") }}</div>
+                        <div class="d-flex align-items-center flex-wrap gap-2 text-secondary small mt-1" style="font-size: 0.73rem;">
+                            <span class="badge font-monospace" onclick="copyText('{{ tx.order_id or tx.id }}', 'شناسه سفارش کپی شد')" style="background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15); color: #94a3b8; cursor: pointer; padding: 2px 7px; border-radius: 6px;" title="کلیک جهت کپی">
+                                #{{ tx.order_id or tx.id }} <i class="far fa-copy ms-1" style="font-size: 0.65rem;"></i>
+                            </span>
+                            <span>&bull; {{ tx.gateway_name or tx.gateway or 'کارت به کارت' }}</span>
+                            <span>&bull; {{ (tx.created_at_shamsi or (tx.created_at|string)[:16])|persian_digits }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-3 ms-auto ms-sm-0">
+                    <span class="fw-bold font-monospace" style="color: {{ '#10b981' if (is_dep or is_rew) else '#ffffff' }}; font-size: 0.95rem;">
+                        {{ ("+ " if (is_dep or is_rew) else "") ~ ((tx.amount|format_price if tx.amount else '۰')|persian_digits) }} تومان
+                    </span>
+                    {% if tx.status in ('approved', 'completed', 'paid') %}
+                    <span class="badge rounded-pill" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 10px; font-size: 0.72rem;">
+                        <i class="fas fa-check-circle me-1"></i> موفق
+                    </span>
+                    {% elif tx.status == 'pending' %}
+                    <span class="badge rounded-pill" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); padding: 4px 10px; font-size: 0.72rem;">
+                        <i class="fas fa-clock me-1"></i> معلق
+                    </span>
+                    {% else %}
+                    <span class="badge rounded-pill" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 4px 10px; font-size: 0.72rem;">
+                        <i class="fas fa-times-circle me-1"></i> ناموفق
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
         </div>
         {% else %}
-        <div class="text-center text-secondary small py-3">تراکنشی برای این اشتراک ثبت نشده است.</div>
+        <div class="text-center text-secondary small py-4" style="background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.08);">
+            <i class="fas fa-receipt mb-2 d-block fa-2x opacity-50"></i>
+            تراکنشی برای این اشتراک ثبت نشده است.
+        </div>
         {% endif %}
     </div>
     {% endmacro %}
