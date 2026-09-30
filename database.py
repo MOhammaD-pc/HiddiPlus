@@ -486,6 +486,55 @@ class Database:
             )
         """)
 
+        # جدول کمپین‌های فروش و جشنواره‌ها (Sales Campaigns & Seasonal Festivals)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sales_campaigns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner_type TEXT NOT NULL DEFAULT 'admin', -- 'admin' or 'reseller'
+                owner_id INTEGER DEFAULT 0, -- 0 for admin, reseller_id for reseller
+                title TEXT NOT NULL,
+                badge_text TEXT,
+                subtitle TEXT,
+                discount_code TEXT,
+                discount_percent INTEGER DEFAULT 0,
+                start_at TEXT,
+                end_at TEXT,
+                cta_text TEXT DEFAULT 'خرید و تمدید',
+                cta_link TEXT DEFAULT '#plansSection',
+                position TEXT DEFAULT 'below_hero',
+                banner_style TEXT DEFAULT 'autumn_glow',
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT,
+                updated_at TEXT
+            )
+        """)
+        try:
+            cursor.execute("SELECT COUNT(*) as count FROM sales_campaigns WHERE owner_type='admin'")
+            sc_count = cursor.fetchone()["count"]
+            if sc_count == 0:
+                from datetime import datetime, timedelta
+                now_dt = datetime.now()
+                end_dt = now_dt + timedelta(days=7, hours=4, minutes=30)
+                cursor.execute("""
+                    INSERT INTO sales_campaigns (
+                        owner_type, owner_id, title, badge_text, subtitle,
+                        discount_code, discount_percent, start_at, end_at,
+                        cta_text, cta_link, position, banner_style, is_active,
+                        created_at, updated_at
+                    ) VALUES (
+                        'admin', 0, 'جشنواره پاییزه', '۲۰٪ تخفیف تمدید',
+                        'تخفیف ویژه اشتراک‌های اختصاصی هیدی‌پلاس',
+                        'AUTUMN2026', 20, ?, ?,
+                        'خرید و تمدید', '#plansSection', 'below_hero', 'autumn_glow', 1,
+                        ?, ?
+                    )
+                """, (now_dt.strftime("%Y-%m-%d %H:%M"), end_dt.strftime("%Y-%m-%d %H:%M"),
+                      now_dt.strftime("%Y-%m-%d %H:%M:%S"), now_dt.strftime("%Y-%m-%d %H:%M:%S")))
+                conn.commit()
+        except Exception as _e_sc_seed:
+            logger.debug(f"Error seeding initial sales campaign: {_e_sc_seed}")
+
+
         # جدول همکاران و نمایندگان فروش (Resellers)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS resellers (
@@ -9718,6 +9767,178 @@ class Database:
         else:
             filtered = [b for b in banners if b.get("id") != banner_id]
         return self.save_portal_customer_banners(filtered)
+
+    # ─── سیستم جامع مدیریت کمپین‌های فروش و جشنواره‌ها (Sales Campaigns) ───
+    def get_all_sales_campaigns(self, owner_type: str = 'admin', owner_id: int = 0) -> List[Dict[str, Any]]:
+        """دریافت تمامی کمپین‌های فروش برای مدیر یا نماینده به تفکیک و ایزوله"""
+        conn = self.get_connection()
+        try:
+            cursor = conn.execute(
+                """
+                SELECT * FROM sales_campaigns 
+                WHERE owner_type = ? AND owner_id = ?
+                ORDER BY id DESC
+                """,
+                (str(owner_type), int(owner_id or 0))
+            )
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+        except Exception as e:
+            logger.error(f"Error fetching sales campaigns for {owner_type}:{owner_id}: {e}")
+            return []
+        finally:
+            conn.close()
+
+    def get_active_sales_campaign(self, owner_type: str = 'admin', owner_id: int = 0) -> Optional[Dict[str, Any]]:
+        """دریافت کمپین فعال جاری با بررسی تاریخ انقضا جهت نمایش در پرتال مشتریان"""
+        conn = self.get_connection()
+        try:
+            cursor = conn.execute(
+                """
+                SELECT * FROM sales_campaigns 
+                WHERE owner_type = ? AND owner_id = ? AND is_active = 1
+                ORDER BY id DESC
+                """,
+                (str(owner_type), int(owner_id or 0))
+            )
+            rows = cursor.fetchall()
+            now_iso = datetime.now().isoformat()
+            for r in rows:
+                c = dict(r)
+                end_at = c.get("end_at")
+                if end_at and str(end_at).strip():
+                    try:
+                        end_clean = str(end_at).strip().replace(" ", "T")
+                        if len(end_clean) == 16:
+                            end_clean += ":00"
+                        if end_clean < now_iso[:19]:
+                            continue
+                    except Exception:
+                        pass
+                return c
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching active sales campaign: {e}")
+            return None
+        finally:
+            conn.close()
+
+    def get_sales_campaign_by_id(self, campaign_id: int, owner_type: Optional[str] = None, owner_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """دریافت یک کمپین خاص با اعتبارسنجی مالکیت"""
+        conn = self.get_connection()
+        try:
+            if owner_type is not None:
+                cursor = conn.execute(
+                    "SELECT * FROM sales_campaigns WHERE id = ? AND owner_type = ? AND owner_id = ?",
+                    (int(campaign_id), str(owner_type), int(owner_id or 0))
+                )
+            else:
+                cursor = conn.execute("SELECT * FROM sales_campaigns WHERE id = ?", (int(campaign_id),))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error fetching sales campaign {campaign_id}: {e}")
+            return None
+        finally:
+            conn.close()
+
+    def save_sales_campaign(self, data: Dict[str, Any]) -> int:
+        """ثبت یا ویرایش کمپین فروش با تمام مشخصات"""
+        conn = self.get_connection()
+        try:
+            cid = data.get("id")
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            owner_type = str(data.get("owner_type") or "admin")
+            owner_id = int(data.get("owner_id") or 0)
+            title = str(data.get("title") or "").strip()
+            badge_text = str(data.get("badge_text") or "").strip()
+            subtitle = str(data.get("subtitle") or "").strip()
+            discount_code = str(data.get("discount_code") or "").strip().upper()
+            discount_percent = int(data.get("discount_percent") or 0)
+            start_at = str(data.get("start_at") or "").strip()
+            end_at = str(data.get("end_at") or "").strip()
+            cta_text = str(data.get("cta_text") or "خرید و تمدید").strip()
+            cta_link = str(data.get("cta_link") or "#plansSection").strip()
+            position = str(data.get("position") or "below_hero").strip()
+            banner_style = str(data.get("banner_style") or "autumn_glow").strip()
+            is_active = 1 if data.get("is_active") in (1, "1", True, "on") else 0
+
+            if cid and int(cid) > 0:
+                conn.execute(
+                    """
+                    UPDATE sales_campaigns SET
+                        title = ?, badge_text = ?, subtitle = ?, discount_code = ?,
+                        discount_percent = ?, start_at = ?, end_at = ?, cta_text = ?,
+                        cta_link = ?, position = ?, banner_style = ?, is_active = ?,
+                        updated_at = ?
+                    WHERE id = ? AND owner_type = ? AND owner_id = ?
+                    """,
+                    (title, badge_text, subtitle, discount_code, discount_percent,
+                     start_at, end_at, cta_text, cta_link, position, banner_style,
+                     is_active, now_str, int(cid), owner_type, owner_id)
+                )
+                conn.commit()
+                return int(cid)
+            else:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO sales_campaigns (
+                        owner_type, owner_id, title, badge_text, subtitle,
+                        discount_code, discount_percent, start_at, end_at,
+                        cta_text, cta_link, position, banner_style, is_active,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (owner_type, owner_id, title, badge_text, subtitle,
+                     discount_code, discount_percent, start_at, end_at,
+                     cta_text, cta_link, position, banner_style, is_active,
+                     now_str, now_str)
+                )
+                conn.commit()
+                return cursor.lastrowid
+        except Exception as e:
+            logger.error(f"Error saving sales campaign: {e}")
+            raise e
+        finally:
+            conn.close()
+
+    def toggle_sales_campaign(self, campaign_id: int, owner_type: str = 'admin', owner_id: int = 0) -> bool:
+        """فعال / غیرفعال‌سازی وضعیت کمپین فروش"""
+        conn = self.get_connection()
+        try:
+            conn.execute(
+                """
+                UPDATE sales_campaigns 
+                SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END,
+                    updated_at = datetime('now')
+                WHERE id = ? AND owner_type = ? AND owner_id = ?
+                """,
+                (int(campaign_id), str(owner_type), int(owner_id or 0))
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error toggling sales campaign {campaign_id}: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def delete_sales_campaign(self, campaign_id: int, owner_type: str = 'admin', owner_id: int = 0) -> bool:
+        """حذف قطعی کمپین فروش با بررسی مالکیت"""
+        conn = self.get_connection()
+        try:
+            conn.execute(
+                "DELETE FROM sales_campaigns WHERE id = ? AND owner_type = ? AND owner_id = ?",
+                (int(campaign_id), str(owner_type), int(owner_id or 0))
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting sales campaign {campaign_id}: {e}")
+            return False
+        finally:
+            conn.close()
+
 
     def get_chat_settings(self) -> dict:
         """دریافت تنظیمات جامع گفتگوی آنلاین پورتال مشتری، استایل دکمه و هوش مصنوعی"""

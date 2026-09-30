@@ -1,0 +1,616 @@
+{% extends "base.html" %}
+
+{% block title %}کمپین‌های فروش و جشنواره‌ها{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-2 px-md-4">
+    <!-- هدر صفحه -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1.5 rounded-pill small">
+                    <i class="fas fa-fire-flame-curved me-1"></i>سیستم بازاریابی هوشمند
+                </span>
+                {% if is_reseller %}
+                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2 py-1 rounded-pill small">
+                    پنل نمایندگی
+                </span>
+                {% else %}
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 rounded-pill small">
+                    پنل مدیریت کل
+                </span>
+                {% endif %}
+            </div>
+            <h3 class="fw-bold mb-1 text-white">کمپین‌های فروش و جشنواره‌ها</h3>
+            <p class="text-secondary small mb-0">
+                مدیریت بنرهای مناسبتی، کدهای تخفیف جشنواره و تایمرهای معکوس زنده در پرتال مشتریان (کاملاً ایزوله)
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-warning text-dark fw-bold px-3 py-2 rounded-pill shadow-sm d-inline-flex align-items-center gap-1.5" onclick="openNewCampaignModal()">
+                <i class="fas fa-plus"></i>
+                <span>ایجاد کمپین جدید</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- فلش الرت‌ها -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show rounded-4 mb-4 shadow-sm" role="alert">
+                    <i class="fas fa-info-circle me-1"></i> {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- پیش‌نمایش زنده کمپین فعال جاری (Live Preview Card) -->
+    {% set active_camp = None %}
+    {% for c in campaigns %}
+        {% if c.is_active and not active_camp %}
+            {% set active_camp = c %}
+        {% endif %}
+    {% endfor %}
+
+    {% if active_camp %}
+    <div class="card border-0 rounded-4 p-3 p-md-4 mb-4 shadow-lg position-relative overflow-hidden" 
+         style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(24, 87, 242, 0.08) 100%); border: 1.5px solid rgba(245, 158, 11, 0.3) !important;">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 px-2.5 py-1 rounded-pill small">
+                    <i class="fas fa-circle-dot me-1 fa-beat" style="--fa-animation-duration: 1.5s;"></i>کمپین هم‌اکنون فعال در پرتال
+                </span>
+                <span class="text-secondary small font-monospace">موقعیت: {{ 'زیر مشخصات اشتراک' if active_camp.position == 'below_hero' else ('بالای هدر' if active_camp.position == 'top_header' else ('بالای پلن‌ها' if active_camp.position == 'above_plans' else 'پایین فوتر')) }}</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-3" onclick='editCampaign({{ active_camp|tojson }})'>
+                    <i class="fas fa-edit me-1"></i>ویرایش سریع
+                </button>
+            </div>
+        </div>
+
+        <!-- شبیه‌ساز بنر در پرتال مشتری -->
+        <div class="p-3 rounded-4" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(10px);">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="badge bg-warning text-dark fw-bold px-3 py-1.5 rounded-pill" style="font-size: 0.85rem;">{{ active_camp.title }}</span>
+                    <div>
+                        <div class="text-white fw-bold mb-0" style="font-size: 0.95rem;">
+                            <span class="text-warning">{{ active_camp.badge_text or '' }}</span>
+                            <span class="text-light ms-1">{{ active_camp.subtitle or '' }}</span>
+                        </div>
+                        <small class="text-secondary" style="font-size: 0.76rem;">پایان مهلت: {{ active_camp.end_at or 'بدون محدودیت زمانی' }}</small>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    {% if active_camp.discount_code %}
+                    <div class="badge bg-black bg-opacity-60 text-warning font-monospace px-3 py-2 rounded-3 border border-warning border-opacity-30 d-inline-flex align-items-center gap-2">
+                        <span>کد: <strong>{{ active_camp.discount_code }}</strong></span>
+                        <i class="fas fa-copy text-secondary" style="cursor: pointer;" onclick="navigator.clipboard.writeText('{{ active_camp.discount_code }}'); alert('کد تخفیف کپی شد!');"></i>
+                    </div>
+                    {% endif %}
+                    <span class="badge bg-primary px-3 py-2 rounded-pill font-monospace">
+                        {{ active_camp.cta_text or 'خرید و تمدید' }} <i class="fas fa-arrow-left ms-1"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- جدول تمام کمپین‌ها -->
+    <div class="card border-0 rounded-4 shadow-sm" style="background: var(--bg-card, #1e293b); border: 1px solid var(--border-color, rgba(255,255,255,0.08)) !important;">
+        <div class="card-header bg-transparent border-0 pt-3 pb-2 px-3 px-md-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <h5 class="fw-bold mb-0 text-white fs-6">
+                <i class="fas fa-list text-warning me-2"></i>لیست کلیه کمپین‌ها و جشنواره‌ها
+            </h5>
+            <span class="badge bg-secondary bg-opacity-25 text-light px-2.5 py-1 rounded-pill small">
+                {{ campaigns|length }} کمپین ثبت‌شده
+            </span>
+        </div>
+
+        <div class="card-body p-0">
+            {% if campaigns and campaigns|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-white" style="border-color: rgba(255,255,255,0.06);">
+                    <thead class="text-secondary small" style="background: rgba(0,0,0,0.2);">
+                        <tr>
+                            <th class="ps-3 ps-md-4 py-3">عنوان و بج مناسبت</th>
+                            <th class="py-3">متن و پیام کمپین</th>
+                            <th class="py-3">کد تخفیف</th>
+                            <th class="py-3">مهلت کمپین (تایمر)</th>
+                            <th class="py-3">موقعیت و قالب</th>
+                            <th class="py-3 text-center">وضعیت</th>
+                            <th class="pe-3 pe-md-4 py-3 text-end">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in campaigns %}
+                        <tr>
+                            <td class="ps-3 ps-md-4 py-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0" 
+                                         style="width: 36px; height: 36px; background: {% if c.banner_style == 'royal_sapphire' %}rgba(24,87,242,0.15); color: #38bdf8;{% elif c.banner_style == 'emerald_growth' %}rgba(16,185,129,0.15); color: #10b981;{% elif c.banner_style == 'cyber_ruby' %}rgba(244,63,94,0.15); color: #f43f5e;{% else %}rgba(245,158,11,0.15); color: #f59e0b;{% endif %}">
+                                        <i class="fas fa-fire"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="d-block text-white mb-0" style="font-size: 0.92rem;">{{ c.title }}</strong>
+                                        {% if c.badge_text %}
+                                        <span class="badge bg-warning bg-opacity-20 text-warning border border-warning border-opacity-30 rounded-pill small" style="font-size: 0.7rem;">
+                                            {{ c.badge_text }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <div class="text-secondary small text-truncate" style="max-width: 260px;" title="{{ c.subtitle }}">
+                                    {{ c.subtitle or '—' }}
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                {% if c.discount_code %}
+                                <div class="d-inline-flex align-items-center gap-1.5 px-2.5 py-1 rounded-2 bg-black bg-opacity-30 border border-secondary border-opacity-25 font-monospace text-warning small">
+                                    <span>{{ c.discount_code }}</span>
+                                    {% if c.discount_percent and c.discount_percent > 0 %}
+                                    <span class="badge bg-danger rounded-pill px-1.5 py-0" style="font-size: 0.65rem;">{{ c.discount_percent }}%</span>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <span class="text-muted small">ندارد</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3">
+                                <div class="small font-monospace">
+                                    {% if c.end_at %}
+                                    <div class="text-light"><i class="fas fa-hourglass-half text-warning me-1"></i>تا: {{ c.end_at }}</div>
+                                    {% if c.start_at %}
+                                    <small class="text-muted">از: {{ c.start_at }}</small>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="badge bg-info bg-opacity-20 text-info">همیشگی / نامحدود</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                <div class="small">
+                                    <span class="badge bg-secondary bg-opacity-25 text-light mb-1 d-inline-block">
+                                        {% if c.position == 'top_header' %}بالای هدر
+                                        {% elif c.position == 'above_plans' %}بالای بسته‌ها
+                                        {% elif c.position == 'bottom_footer' %}پایین فوتر
+                                        {% else %}زیر مشخصات{% endif %}
+                                    </span>
+                                    <span class="text-secondary d-block" style="font-size: 0.72rem;">
+                                        تم: {{ 'پاییزه' if c.banner_style == 'autumn_glow' else ('یاقوت' if c.banner_style == 'royal_sapphire' else ('زمرد' if c.banner_style == 'emerald_growth' else 'سایبر')) }}
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="py-3 text-center">
+                                <form action="{{ base_url_prefix }}/campaigns/{{ c.id }}/toggle" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm p-0 border-0 bg-transparent" title="کلیک برای تغییر وضعیت">
+                                        {% if c.is_active %}
+                                        <span class="badge bg-success-subtle text-success border border-success border-opacity-30 rounded-pill px-2.5 py-1">
+                                            <i class="fas fa-check-circle me-1"></i>فعال
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary border-opacity-30 rounded-pill px-2.5 py-1">
+                                            <i class="fas fa-pause me-1"></i>متوقف
+                                        </span>
+                                        {% endif %}
+                                    </button>
+                                </form>
+                            </td>
+                            <td class="pe-3 pe-md-4 py-3 text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-info rounded-pill px-2.5 py-1 me-1" onclick='editCampaign({{ c|tojson }})' title="ویرایش">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <form action="{{ base_url_prefix }}/campaigns/{{ c.id }}/delete" method="POST" class="d-inline" onsubmit="return confirm('آیا از حذف این کمپین اطمینان دارید؟');">
+                                        <button type="submit" class="btn btn-outline-danger rounded-pill px-2.5 py-1" title="حذف">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 px-3">
+                <div class="rounded-circle p-3 d-inline-flex align-items-center justify-content-center text-warning mb-3" style="width: 64px; height: 64px; background: rgba(245, 158, 11, 0.1);">
+                    <i class="fas fa-bullhorn fs-2"></i>
+                </div>
+                <h6 class="text-white fw-bold mb-1">هیچ کمپین فعالی ثبت نشده است</h6>
+                <p class="text-secondary small mb-3">با ایجاد اولین کمپین، بنر مناسبتی با تایمر معکوس و کد تخفیف در پرتال مشتریان نمایش داده می‌شود.</p>
+                <button type="button" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-pill" onclick="openNewCampaignModal()">
+                    <i class="fas fa-plus me-1"></i>ایجاد اولین کمپین فروش
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- ۱. مودال ایجاد / ویرایش کمپین فروش (Campaign Modal)                 -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="campaignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 rounded-4 text-white shadow-lg" style="background: #0f172a; border: 1.5px solid rgba(255,255,255,0.12) !important;">
+            <form action="{{ base_url_prefix }}/campaigns" method="POST" id="campaignForm">
+                <input type="hidden" name="id" id="campaignId" value="">
+
+                <div class="modal-header border-secondary border-opacity-25 pb-3">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div class="rounded-circle p-2 d-flex align-items-center justify-content-center text-warning" style="width: 40px; height: 40px; background: rgba(245, 158, 11, 0.15);">
+                            <i class="fas fa-fire-flame-curved fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0 fs-6" id="campaignModalTitle">تعریف کمپین فروش و بنر جشنواره</h5>
+                            <small class="text-secondary">تنظیم بنر، کد تخفیف و تایمر معکوس زنده در پرتال مشتری</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-3 p-md-4">
+                    <div class="row g-3">
+                        <!-- فیلد ۱: عنوان کمپین -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-white mb-1">
+                                <i class="fas fa-heading text-warning me-1"></i>عنوان کمپین (مناسبت): <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" id="campTitle" name="title" placeholder="مثال: جشنواره پاییزه یا عید نوروز" required>
+                            <div class="form-text text-secondary small">در برچسب بالای بنر به صورت درخشان درج می‌شود.</div>
+                        </div>
+
+                        <!-- فیلد ۲: بج تخفیف یا شعار -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-white mb-1">
+                                <i class="fas fa-tag text-info me-1"></i>بج تخفیف یا شعار تیتر:
+                            </label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" id="campBadgeText" name="badge_text" placeholder="مثال: ۲۰٪ تخفیف تمدید یا تخفیف طلایی">
+                            <div class="form-text text-secondary small">متن شاخص و پررنگ داخل نوار پیام بنر.</div>
+                        </div>
+
+                        <!-- فیلد ۳: متن توضیحات پیام بنر -->
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-white mb-1">
+                                <i class="fas fa-comment-alt text-success me-1"></i>متن توضیحی بنر:
+                            </label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" id="campSubtitle" name="subtitle" placeholder="مثال: تخفیف ویژه اشتراک‌های اختصاصی هیدی‌پلاس با تضمین کیفیت">
+                        </div>
+
+                        <!-- ══ بخش ویژه کدهای تخفیف با رویکرد دوگانه (انتخاب یا ساخت آنی) ══ -->
+                        <div class="col-12">
+                            <div class="p-3 rounded-3" style="background: rgba(24, 87, 242, 0.08); border: 1.5px dashed rgba(24, 87, 242, 0.35);">
+                                <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                    <label class="form-label small fw-bold text-info mb-0">
+                                        <i class="fas fa-ticket text-warning me-1"></i>کد تخفیف کمپین:
+                                    </label>
+                                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1.5" onclick="openQuickDiscountModal()">
+                                        <i class="fas fa-plus-circle"></i>
+                                        <span>ساخت کد تخفیف جدید 🚀</span>
+                                    </button>
+                                </div>
+
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-sm-7">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fas fa-barcode"></i></span>
+                                            <input type="text" class="form-control bg-dark text-white border-secondary font-monospace text-uppercase text-center" 
+                                                   id="campDiscountCode" name="discount_code" placeholder="کد را وارد کرده یا از لیست انتخاب کنید" list="existingDiscountCodesList" style="letter-spacing: 1px;">
+                                            <datalist id="existingDiscountCodesList">
+                                                {% for d in discount_codes %}
+                                                <option value="{{ d.code }}">{{ d.code }} ({{ d.discount_percent }}% تخفیف)</option>
+                                                {% endfor %}
+                                            </datalist>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-5">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-dark border-secondary text-secondary" style="font-size: 0.75rem;">درصد نمایشی:</span>
+                                            <input type="number" class="form-control bg-dark text-white border-secondary text-center font-monospace" id="campDiscountPercent" name="discount_percent" min="0" max="100" placeholder="مثلا: 20">
+                                            <span class="input-group-text bg-dark border-secondary text-secondary">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-text text-secondary small mt-1">
+                                    می‌توانید کدهای موجود در سیستم را وارد کنید یا با زدن دکمه «ساخت کد تخفیف جدید»، کدی تازه بسازید تا خودکار در سیستم ذخیره و انتخاب شود.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- فیلد ۴: تاریخ شروع -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-white mb-1">
+                                <i class="fas fa-calendar-plus text-success me-1"></i>تاریخ و ساعت شروع:
+                            </label>
+                            <input type="datetime-local" class="form-control bg-dark text-white border-secondary font-monospace" id="campStartAt" name="start_at">
+                        </div>
+
+                        <!-- فیلد ۵: تاریخ پایان (جهت تایمر معکوس) -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-white mb-1">
+                                <i class="fas fa-stopwatch text-danger me-1"></i>تاریخ و ساعت پایان (تایمر معکوس زنده): <span class="text-danger">*</span>
+                            </label>
+                            <input type="datetime-local" class="form-control bg-dark text-white border-secondary font-monospace" id="campEndAt" name="end_at" required>
+                            <div class="form-text text-secondary small">ساعت و دقیقه انقضای جشنواره جهت شمارش معکوس زنده.</div>
+                        </div>
+
+                        <!-- فیلد ۶: موقعیت نمایش در پرتال -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-white mb-1">
+                                <i class="fas fa-layer-group text-primary me-1"></i>موقعیت قرارگیری بنر در پرتال:
+                            </label>
+                            <select class="form-select bg-dark text-white border-secondary" id="campPosition" name="position">
+                                <option value="below_hero">زیر کارت مشخصات اشتراک (پیشنهادی و استاندارد)</option>
+                                <option value="top_header">بالای هدر صفحه (بسیار شاخص و سراسری)</option>
+                                <option value="above_plans">دقیقاً بالای جدول پلن‌ها و بسته‌ها</option>
+                                <option value="bottom_footer">پایین صفحه قبل از فوتر</option>
+                            </select>
+                        </div>
+
+                        <!-- فیلد ۷: تم رنگی بنر -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-white mb-1">
+                                <i class="fas fa-palette text-warning me-1"></i>استایل تم گرافیکی بنر:
+                            </label>
+                            <select class="form-select bg-dark text-white border-secondary" id="campBannerStyle" name="banner_style">
+                                <option value="autumn_glow">پاییزه لوکس (طلایی، نارنجی و آمبر)</option>
+                                <option value="royal_sapphire">یاقوت کبود (آبی کبالت و فیروزه‌ای)</option>
+                                <option value="emerald_growth">زمرد درخشان (سبز نعنایی و متالیک)</option>
+                                <option value="cyber_ruby">سایبرپانک (قرمز نئونی و بنفش)</option>
+                            </select>
+                        </div>
+
+                        <!-- فیلد ۸: متن دکمه اقدام (CTA) -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-white mb-1">
+                                <i class="fas fa-mouse-pointer text-info me-1"></i>عنوان دکمه اقدام:
+                            </label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" id="campCtaText" name="cta_text" value="خرید و تمدید">
+                        </div>
+
+                        <!-- فیلد ۹: لینک دکمه اقدام -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-white mb-1">
+                                <i class="fas fa-link text-info me-1"></i>لینک هدایت دکمه اقدام:
+                            </label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary font-monospace" id="campCtaLink" name="cta_link" value="#plansSection">
+                        </div>
+
+                        <!-- سوییچ وضعیت فعال/غیرفعال -->
+                        <div class="col-12 mt-3">
+                            <div class="form-check form-switch d-flex align-items-center gap-3 p-0">
+                                <label class="form-check-label fw-bold text-white" for="campIsActive">
+                                    <i class="fas fa-power-off text-success me-1"></i>فعال‌سازی فوری کمپین در پرتال مشتریان
+                                </label>
+                                <input class="form-check-input ms-0" type="checkbox" role="switch" id="campIsActive" name="is_active" value="1" checked style="width: 2.6em; height: 1.4em;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-secondary border-opacity-25 pt-3">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-warning text-dark fw-bold rounded-pill px-4">
+                        <i class="fas fa-save me-1"></i>ذخیره و انتشار کمپین
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- ۲. مودال پاپ‌آپ ساخت سریع کد تخفیف (Quick Create Discount Modal)    -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="quickDiscountModal" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 text-white shadow-lg" style="background: #1e293b; border: 1.5px solid rgba(245, 158, 11, 0.4) !important;">
+            <div class="modal-header border-secondary border-opacity-25 pb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle p-2 d-flex align-items-center justify-content-center text-warning" style="width: 38px; height: 38px; background: rgba(245, 158, 11, 0.15);">
+                        <i class="fas fa-ticket-alt"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 fs-6">ساخت آنی کد تخفیف جدید</h5>
+                        <small class="text-secondary">ثبت خودکار در بخش کدهای تخفیف و اتصال به کمپین</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-3 p-md-4">
+                <div class="alert alert-warning border-warning border-opacity-25 bg-warning bg-opacity-10 text-white rounded-3 small mb-3">
+                    <i class="fas fa-info-circle me-1"></i>کد ایجاد شده مستقیماً در لیست کدهای تخفیف ذخیره و در فیلد کمپین جایگزین خواهد شد.
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-white mb-1">کد تخفیف (لاتین): <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control bg-dark text-white border-secondary font-monospace text-uppercase text-center fw-bold" id="quickCodeInput" placeholder="مثال: FESTIVAL20" style="letter-spacing: 2px;">
+                        <button type="button" class="btn btn-outline-info" onclick="generateRandomDiscountCode()" title="تولید کد تصادفی">
+                            <i class="fas fa-dice"></i> تصادفی
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-white mb-1">درصد تخفیف (%):</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control bg-dark text-white border-secondary text-center font-monospace" id="quickPercentInput" min="0" max="100" placeholder="20" value="20">
+                            <span class="input-group-text bg-dark border-secondary text-secondary">%</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-white mb-1">مبلغ ثابت (تومان):</label>
+                        <input type="number" class="form-control bg-dark text-white border-secondary text-center font-monospace" id="quickAmountInput" min="0" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-white mb-1">حداکثر دفعات استفاده:</label>
+                        <input type="number" class="form-control bg-dark text-white border-secondary text-center font-monospace" id="quickMaxUsesInput" min="0" placeholder="0 = نامحدود" value="0">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-white mb-1">مدت اعتبار (روز):</label>
+                        <input type="number" class="form-control bg-dark text-white border-secondary text-center font-monospace" id="quickValidDaysInput" min="1" placeholder="مثلاً: 7" value="7">
+                    </div>
+                </div>
+
+                <div id="quickDiscountError" class="alert alert-danger rounded-3 small d-none mb-0"></div>
+            </div>
+
+            <div class="modal-footer border-secondary border-opacity-25 pt-2">
+                <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">انصراف</button>
+                <button type="button" class="btn btn-sm btn-success rounded-pill px-4 fw-bold" id="btnSubmitQuickDiscount" onclick="submitQuickDiscount()">
+                    <i class="fas fa-check me-1"></i>تایید و افزودن به کمپین
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openNewCampaignModal() {
+    document.getElementById('campaignForm').reset();
+    document.getElementById('campaignId').value = '';
+    document.getElementById('campaignModalTitle').textContent = 'تعریف کمپین فروش و بنر جشنواره';
+    document.getElementById('campIsActive').checked = true;
+
+    // پیش‌فرض زمان پایان: ۷ روز بعد
+    const now = new Date();
+    const startStr = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const end = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
+    const endStr = new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+    document.getElementById('campStartAt').value = startStr;
+    document.getElementById('campEndAt').value = endStr;
+
+    const modal = new bootstrap.Modal(document.getElementById('campaignModal'));
+    modal.show();
+}
+
+function editCampaign(camp) {
+    if (!camp) return;
+    document.getElementById('campaignId').value = camp.id || '';
+    document.getElementById('campTitle').value = camp.title || '';
+    document.getElementById('campBadgeText').value = camp.badge_text || '';
+    document.getElementById('campSubtitle').value = camp.subtitle || '';
+    document.getElementById('campDiscountCode').value = camp.discount_code || '';
+    document.getElementById('campDiscountPercent').value = camp.discount_percent || '';
+    document.getElementById('campStartAt').value = (camp.start_at || '').replace(' ', 'T').slice(0, 16);
+    document.getElementById('campEndAt').value = (camp.end_at || '').replace(' ', 'T').slice(0, 16);
+    document.getElementById('campPosition').value = camp.position || 'below_hero';
+    document.getElementById('campBannerStyle').value = camp.banner_style || 'autumn_glow';
+    document.getElementById('campCtaText').value = camp.cta_text || 'خرید و تمدید';
+    document.getElementById('campCtaLink').value = camp.cta_link || '#plansSection';
+    document.getElementById('campIsActive').checked = Boolean(camp.is_active);
+
+    document.getElementById('campaignModalTitle').textContent = 'ویرایش کمپین: ' + (camp.title || '');
+
+    const modal = new bootstrap.Modal(document.getElementById('campaignModal'));
+    modal.show();
+}
+
+function openQuickDiscountModal() {
+    document.getElementById('quickCodeInput').value = '';
+    document.getElementById('quickPercentInput').value = '20';
+    document.getElementById('quickAmountInput').value = '';
+    document.getElementById('quickMaxUsesInput').value = '0';
+    document.getElementById('quickValidDaysInput').value = '7';
+    document.getElementById('quickDiscountError').classList.add('d-none');
+
+    generateRandomDiscountCode();
+
+    const quickModal = new bootstrap.Modal(document.getElementById('quickDiscountModal'));
+    quickModal.show();
+}
+
+function generateRandomDiscountCode() {
+    const prefixes = ['OFF', 'DISC', 'FEST', 'GIFT', 'WIN'];
+    const pfx = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const num = Math.floor(1000 + Math.random() * 9000);
+    document.getElementById('quickCodeInput').value = pfx + '-' + num;
+}
+
+function submitQuickDiscount() {
+    const code = document.getElementById('quickCodeInput').value.trim().toUpperCase();
+    const percent = parseInt(document.getElementById('quickPercentInput').value) || 0;
+    const amount = parseInt(document.getElementById('quickAmountInput').value) || 0;
+    const maxUses = parseInt(document.getElementById('quickMaxUsesInput').value) || 0;
+    const validDays = parseInt(document.getElementById('quickValidDaysInput').value) || 7;
+    const errDiv = document.getElementById('quickDiscountError');
+    const btn = document.getElementById('btnSubmitQuickDiscount');
+
+    if (!code) {
+        errDiv.textContent = 'لطفاً کد تخفیف را وارد فرمایید.';
+        errDiv.classList.remove('d-none');
+        return;
+    }
+    if (percent <= 0 && amount <= 0) {
+        errDiv.textContent = 'درصد یا مبلغ تخفیف باید مشخص باشد.';
+        errDiv.classList.remove('d-none');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>در حال ثبت...';
+
+    const endpoint = "{{ base_url_prefix }}/api/discounts/quick-create";
+    fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            code: code,
+            discount_percent: percent,
+            discount_amount: amount,
+            max_uses: maxUses,
+            valid_days: validDays
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>تایید و افزودن به کمپین';
+        if (data.success) {
+            // جایگذاری در فیلد کمپین
+            document.getElementById('campDiscountCode').value = data.code;
+            if (data.discount_percent > 0) {
+                document.getElementById('campDiscountPercent').value = data.discount_percent;
+            }
+            // افزودن به datalist
+            const dl = document.getElementById('existingDiscountCodesList');
+            if (dl) {
+                const opt = document.createElement('option');
+                opt.value = data.code;
+                opt.textContent = `${data.code} (${data.discount_percent}% تخفیف جدید)`;
+                dl.appendChild(opt);
+            }
+            // بستن مودال سریع
+            const quickModalEl = document.getElementById('quickDiscountModal');
+            const quickModal = bootstrap.Modal.getInstance(quickModalEl);
+            if (quickModal) quickModal.hide();
+        } else {
+            errDiv.textContent = data.error || 'خطا در ثبت کد تخفیف.';
+            errDiv.classList.remove('d-none');
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>تایید و افزودن به کمپین';
+        errDiv.textContent = 'خطا در ارتباط با سرور: ' + err;
+        errDiv.classList.remove('d-none');
+    });
+}
+</script>
+{% endblock %}

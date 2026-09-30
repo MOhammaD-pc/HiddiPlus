@@ -14016,6 +14016,135 @@ def admin_discount_delete(code):
     return redirect(url_for("admin_discounts_page"))
 
 
+# ─── روت‌های مدیریت کمپین‌های فروش و جشنواره‌ها (Admin Sales Campaigns) ───
+@app.route("/admin/campaigns", methods=["GET", "POST"])
+@app.route("/campaigns", methods=["GET", "POST"])
+@permission_required("discounts")
+def admin_campaigns_page():
+    """مشاهده، تعریف و مدیریت کمپین‌های فروش جشنواره‌ای مدیر کل"""
+    if request.method == "POST":
+        cid = request.form.get("id")
+        title = request.form.get("title", "").strip()
+        badge_text = request.form.get("badge_text", "").strip()
+        subtitle = request.form.get("subtitle", "").strip()
+        discount_code = request.form.get("discount_code", "").strip().upper()
+        try:
+            discount_percent = int(request.form.get("discount_percent") or 0)
+        except (ValueError, TypeError):
+            discount_percent = 0
+        start_at = request.form.get("start_at", "").strip()
+        end_at = request.form.get("end_at", "").strip()
+        cta_text = request.form.get("cta_text", "خرید و تمدید").strip()
+        cta_link = request.form.get("cta_link", "#plansSection").strip()
+        position = request.form.get("position", "below_hero").strip()
+        banner_style = request.form.get("banner_style", "autumn_glow").strip()
+        is_active = 1 if request.form.get("is_active") in ("1", "on", "true") else 0
+
+        if not title:
+            flash("عنوان کمپین الزامی است.", "warning")
+            return redirect(url_for("admin_campaigns_page"))
+
+        try:
+            db.save_sales_campaign({
+                "id": cid,
+                "owner_type": "admin",
+                "owner_id": 0,
+                "title": title,
+                "badge_text": badge_text,
+                "subtitle": subtitle,
+                "discount_code": discount_code,
+                "discount_percent": discount_percent,
+                "start_at": start_at,
+                "end_at": end_at,
+                "cta_text": cta_text,
+                "cta_link": cta_link,
+                "position": position,
+                "banner_style": banner_style,
+                "is_active": is_active
+            })
+            flash(f"کمپین فروش «{title}» با موفقیت ذخیره شد.", "success")
+        except Exception as e:
+            flash(f"خطا در ذخیره کمپین: {e}", "danger")
+        return redirect(url_for("admin_campaigns_page"))
+
+    campaigns = db.get_all_sales_campaigns(owner_type="admin", owner_id=0)
+    discount_codes = db.get_all_discount_codes()
+    raw_plans = db.get_active_plans()
+    return render_template(
+        "sales_campaigns.html",
+        campaigns=campaigns,
+        discount_codes=discount_codes,
+        plans=raw_plans,
+        is_reseller=False,
+        base_url_prefix="/admin"
+    )
+
+@app.route("/admin/campaigns/<int:cid>/toggle", methods=["POST"])
+@permission_required("discounts")
+def admin_campaign_toggle(cid):
+    """تغییر وضعیت فعال/غیرفعال کمپین مدیر"""
+    db.toggle_sales_campaign(cid, owner_type="admin", owner_id=0)
+    flash("وضعیت کمپین تغییر یافت.", "info")
+    return redirect(url_for("admin_campaigns_page"))
+
+@app.route("/admin/campaigns/<int:cid>/delete", methods=["POST"])
+@permission_required("discounts")
+def admin_campaign_delete(cid):
+    """حذف کمپین مدیر"""
+    db.delete_sales_campaign(cid, owner_type="admin", owner_id=0)
+    flash("کمپین مورد نظر حذف شد.", "info")
+    return redirect(url_for("admin_campaigns_page"))
+
+@app.route("/admin/api/discounts/quick-create", methods=["POST"])
+@permission_required("discounts")
+def admin_quick_create_discount():
+    """ساخت سریع کد تخفیف از داخل پنجره کمپین و افزودن آنی به سیستم"""
+    data = request.get_json(silent=True) or request.form
+    code = (data.get("code") or "").strip().upper()
+    try:
+        percent = int(data.get("discount_percent") or 0)
+    except (ValueError, TypeError):
+        percent = 0
+    try:
+        amount = int(data.get("discount_amount") or 0)
+    except (ValueError, TypeError):
+        amount = 0
+    try:
+        max_uses = int(data.get("max_uses") or 0)
+    except (ValueError, TypeError):
+        max_uses = 0
+    valid_days = data.get("valid_days")
+    allowed_plans = data.get("allowed_plans") or ""
+
+    valid_until = None
+    if valid_days and str(valid_days).isdigit() and int(valid_days) > 0:
+        valid_until = (get_now_naive() + timedelta(days=int(valid_days))).isoformat()
+
+    if not code:
+        return jsonify({"success": False, "error": "کد تخفیف الزامی است."}), 400
+    if percent <= 0 and amount <= 0:
+        return jsonify({"success": False, "error": "درصد تخفیف یا مبلغ تخفیف باید مشخص باشد."}), 400
+
+    res = db.create_discount_code(
+        code=code,
+        discount_percent=percent,
+        discount_amount=amount,
+        max_uses=max_uses,
+        valid_until=valid_until,
+        allowed_plans=allowed_plans
+    )
+    if res.get("success"):
+        return jsonify({
+            "success": True,
+            "code": code,
+            "discount_percent": percent,
+            "discount_amount": amount,
+            "message": f"کد تخفیف {code} با موفقیت ثبت شد."
+        })
+    else:
+        return jsonify({"success": False, "error": res.get("error", "خطا در ایجاد کد تخفیف.")}), 400
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # مانیتورینگ سلامت، لاگ‌ها و گزارشات مالی
 # ═══════════════════════════════════════════════════════════════════════
@@ -15732,7 +15861,7 @@ def admin_api_xray_toggle_daemon():
 
 # ─── API های مدیریت چنددامنه‌ای و ماتریس پروتکل‌ها (Multi-Domain & Matrix API) ───
 
-@app.route("/admin/api/xray/domains", methods=["GET"])
+@app.route("/admin/api/xray/domains", methods=["GET"], strict_slashes=False)
 @admin_required
 def admin_api_xray_domains_list():
     """دریافت لیست دامنه‌های پیکربندی‌شده با نقش‌هایشان"""
@@ -15740,7 +15869,7 @@ def admin_api_xray_domains_list():
     return jsonify({"status": "success", "success": True, "domains": domains})
 
 
-@app.route("/admin/api/xray/domains", methods=["POST"])
+@app.route("/admin/api/xray/domains", methods=["POST"], strict_slashes=False)
 @admin_required
 def admin_api_xray_domain_add():
     """افزودن دامنه جدید با نقش CDN، مستقیم، ساب‌اونلی یا رله"""
@@ -15771,7 +15900,7 @@ def admin_api_xray_domain_add():
     return jsonify({"status": status, **res})
 
 
-@app.route("/admin/api/xray/domains/<int:domain_id>", methods=["PUT", "POST"])
+@app.route("/admin/api/xray/domains/<int:domain_id>", methods=["PUT", "POST"], strict_slashes=False)
 @admin_required
 def admin_api_xray_domain_update(domain_id: int):
     """ویرایش تنظیمات یک دامنه"""
@@ -15781,7 +15910,7 @@ def admin_api_xray_domain_update(domain_id: int):
     return jsonify({"status": status, **res})
 
 
-@app.route("/admin/api/xray/domains/<int:domain_id>", methods=["DELETE"])
+@app.route("/admin/api/xray/domains/<int:domain_id>", methods=["DELETE"], strict_slashes=False)
 @admin_required
 def admin_api_xray_domain_delete(domain_id: int):
     """حذف یک دامنه از لیست دامنه‌ها"""
@@ -15793,7 +15922,7 @@ def admin_api_xray_domain_delete(domain_id: int):
     })
 
 
-@app.route("/admin/api/xray/domains/<int:domain_id>/toggle", methods=["POST"])
+@app.route("/admin/api/xray/domains/<int:domain_id>/toggle", methods=["POST"], strict_slashes=False)
 @admin_required
 def admin_api_xray_domain_toggle(domain_id: int):
     """تغییر وضعیت فعال/غیرفعال دامنه"""
@@ -15802,7 +15931,7 @@ def admin_api_xray_domain_toggle(domain_id: int):
     return jsonify({"status": status, **res})
 
 
-@app.route("/admin/api/xray/matrix_settings", methods=["POST"])
+@app.route("/admin/api/xray/matrix_settings", methods=["POST"], strict_slashes=False)
 @admin_required
 def admin_api_xray_save_matrix_settings():
     """ذخیره وضعیت سوئیچ‌های ماتریس پروتکل‌ها (مشابه هیدیفای)"""
@@ -20838,6 +20967,135 @@ def reseller_discount_delete(discount_id):
     return redirect(url_for("reseller_discounts"))
 
 
+# ─── روت‌های کمپین فروش نمایندگان (Reseller Sales Campaigns) ───
+@app.route("/reseller/campaigns", methods=["GET", "POST"])
+@reseller_required
+def reseller_campaigns_page():
+    """مشاهده، تعریف و مدیریت کمپین‌های فروش ایزوله نماینده"""
+    reseller_id = session.get("reseller_id")
+    if request.method == "POST":
+        cid = request.form.get("id")
+        title = request.form.get("title", "").strip()
+        badge_text = request.form.get("badge_text", "").strip()
+        subtitle = request.form.get("subtitle", "").strip()
+        discount_code = request.form.get("discount_code", "").strip().upper()
+        try:
+            discount_percent = int(request.form.get("discount_percent") or 0)
+        except (ValueError, TypeError):
+            discount_percent = 0
+        start_at = request.form.get("start_at", "").strip()
+        end_at = request.form.get("end_at", "").strip()
+        cta_text = request.form.get("cta_text", "خرید و تمدید").strip()
+        cta_link = request.form.get("cta_link", "#plansSection").strip()
+        position = request.form.get("position", "below_hero").strip()
+        banner_style = request.form.get("banner_style", "autumn_glow").strip()
+        is_active = 1 if request.form.get("is_active") in ("1", "on", "true") else 0
+
+        if not title:
+            flash("عنوان کمپین الزامی است.", "warning")
+            return redirect(url_for("reseller_campaigns_page"))
+
+        try:
+            db.save_sales_campaign({
+                "id": cid,
+                "owner_type": "reseller",
+                "owner_id": reseller_id,
+                "title": title,
+                "badge_text": badge_text,
+                "subtitle": subtitle,
+                "discount_code": discount_code,
+                "discount_percent": discount_percent,
+                "start_at": start_at,
+                "end_at": end_at,
+                "cta_text": cta_text,
+                "cta_link": cta_link,
+                "position": position,
+                "banner_style": banner_style,
+                "is_active": is_active
+            })
+            flash(f"کمپین فروش «{title}» با موفقیت ذخیره شد.", "success")
+        except Exception as e:
+            flash(f"خطا در ذخیره کمپین: {e}", "danger")
+        return redirect(url_for("reseller_campaigns_page"))
+
+    campaigns = db.get_all_sales_campaigns(owner_type="reseller", owner_id=reseller_id)
+    discount_codes = db.get_reseller_discount_codes(reseller_id)
+    reseller_plans = db.get_reseller_plans(reseller_id)
+    return render_template(
+        "sales_campaigns.html",
+        campaigns=campaigns,
+        discount_codes=discount_codes,
+        plans=reseller_plans,
+        is_reseller=True,
+        base_url_prefix="/reseller"
+    )
+
+@app.route("/reseller/campaigns/<int:cid>/toggle", methods=["POST"])
+@reseller_required
+def reseller_campaign_toggle(cid):
+    """تغییر وضعیت فعال/غیرفعال کمپین نماینده"""
+    reseller_id = session.get("reseller_id")
+    db.toggle_sales_campaign(cid, owner_type="reseller", owner_id=reseller_id)
+    flash("وضعیت کمپین تغییر یافت.", "info")
+    return redirect(url_for("reseller_campaigns_page"))
+
+@app.route("/reseller/campaigns/<int:cid>/delete", methods=["POST"])
+@reseller_required
+def reseller_campaign_delete(cid):
+    """حذف کمپین نماینده"""
+    reseller_id = session.get("reseller_id")
+    db.delete_sales_campaign(cid, owner_type="reseller", owner_id=reseller_id)
+    flash("کمپین مورد نظر حذف شد.", "info")
+    return redirect(url_for("reseller_campaigns_page"))
+
+@app.route("/reseller/api/discounts/quick-create", methods=["POST"])
+@reseller_required
+def reseller_quick_create_discount():
+    """ساخت سریع کد تخفیف برای نماینده از پنجره کمپین"""
+    reseller_id = session.get("reseller_id")
+    data = request.get_json(silent=True) or request.form
+    code = (data.get("code") or "").strip().upper()
+    try:
+        percent = int(data.get("discount_percent") or 0)
+    except (ValueError, TypeError):
+        percent = 0
+    try:
+        amount = int(data.get("discount_amount") or 0)
+    except (ValueError, TypeError):
+        amount = 0
+    try:
+        max_uses = int(data.get("max_uses") or 0)
+    except (ValueError, TypeError):
+        max_uses = 0
+    valid_until = (data.get("valid_until") or "").strip() or None
+    allowed_plans = data.get("allowed_plans") or ""
+
+    if not code:
+        return jsonify({"success": False, "error": "کد تخفیف الزامی است."}), 400
+    if percent <= 0 and amount <= 0:
+        return jsonify({"success": False, "error": "درصد تخفیف یا مبلغ تخفیف باید مشخص باشد."}), 400
+
+    res = db.create_reseller_discount_code(
+        reseller_id=reseller_id,
+        code=code,
+        discount_percent=percent,
+        discount_amount=amount,
+        max_uses=max_uses,
+        valid_until=valid_until,
+        allowed_plans=allowed_plans
+    )
+    if res.get("success"):
+        return jsonify({
+            "success": True,
+            "code": code,
+            "discount_percent": percent,
+            "discount_amount": amount,
+            "message": f"کد تخفیف {code} با موفقیت برای نماینده ثبت شد."
+        })
+    else:
+        return jsonify({"success": False, "error": res.get("error", "خطا در ایجاد کد تخفیف نماینده.")}), 400
+
+
 # ─── ۵. مدیریت تیم و کارمندان نماینده (Reseller Team & Sub-Admins) ───
 
 @app.route("/reseller/team", methods=["GET", "POST"])
@@ -24678,9 +24936,14 @@ def _handle_customer_portal_view(token: str = None, telegram_id: int = None, res
     profile_completion_pct = min(100, profile_score)
     avatar_presets = avatar_generator.PRESETS
 
+    c_owner_type = 'reseller' if (safe_sub and safe_sub.get('reseller_id')) or (reseller_id and int(reseller_id) > 0) else 'admin'
+    c_owner_id = int(safe_sub.get('reseller_id') if safe_sub and safe_sub.get('reseller_id') else (reseller_id or 0))
+    sales_campaign = db.get_active_sales_campaign(owner_type=c_owner_type, owner_id=c_owner_id)
+
     target_portal_template = "customer_portal_bento_2026.html" if portal_layout == "bento_2026" else "customer_portal.html"
     return render_template(
         target_portal_template,
+        sales_campaign=sales_campaign,
         cust_user=cust_user,
         clean_tg_username=clean_tg_username,
         effective_numeric_tg_id=effective_numeric_tg_id,

@@ -2806,7 +2806,7 @@
 
                 <!-- منوی کشویی فروش و بازاریابی -->
                 {% if not sub_role or sub_role in ['partner', 'manager2'] %}
-                {% set is_marketing_active = request.endpoint in ['reseller_broadcast', 'reseller_discounts', 'reseller_plans', 'reseller_vip_settings', 'reseller_social_tasks_page', 'reseller_lucky_wheel_page', 'reseller_ai_studio', 'reseller_affiliates', 'reseller_delinquent_settings'] %}
+                {% set is_marketing_active = request.endpoint in ['reseller_broadcast', 'reseller_discounts', 'reseller_campaigns_page', 'reseller_plans', 'reseller_vip_settings', 'reseller_social_tasks_page', 'reseller_lucky_wheel_page', 'reseller_ai_studio', 'reseller_affiliates', 'reseller_delinquent_settings'] %}
                 <button class="sidebar-dropdown-toggle {% if is_marketing_active %}has-active{% endif %}" 
                         type="button" 
                         data-bs-toggle="collapse" 
@@ -2826,6 +2826,9 @@
                         </a>
                         <a class="submenu-item {% if request.endpoint == 'reseller_discounts' %}active{% endif %}" href="{{ url_for('reseller_discounts') }}">
                             <i class="fas fa-ticket text-danger"></i> کدهای تخفیف
+                        </a>
+                        <a class="submenu-item {% if request.endpoint == 'reseller_campaigns_page' %}active{% endif %}" href="{{ url_for('reseller_campaigns_page') }}">
+                            <i class="fas fa-fire-flame-curved text-warning"></i> کمپین‌های فروش
                         </a>
                         <a class="submenu-item {% if request.endpoint == 'reseller_plans' %}active{% endif %}" href="{{ url_for('reseller_plans') }}">
                             <i class="fas fa-layer-group text-info"></i> مدیریت بسته‌ها
@@ -2994,7 +2997,7 @@
 
                 <!-- دسته‌بندی ۲: فروش و بازاریابی -->
                 {% if has_permission('plans') or has_permission('discounts') or has_permission('broadcast') or has_permission('users_view') %}
-                {% set is_marketing_group_active = request.endpoint in ['admin_plans_page', 'admin_discounts_page', 'vip_settings', 'admin_social_tasks_page', 'broadcast', 'admin_ai_studio', 'admin_lucky_wheel_page', 'admin_delinquent_settings'] %}
+                {% set is_marketing_group_active = request.endpoint in ['admin_plans_page', 'admin_discounts_page', 'admin_campaigns_page', 'vip_settings', 'admin_social_tasks_page', 'broadcast', 'admin_ai_studio', 'admin_lucky_wheel_page', 'admin_delinquent_settings'] %}
                 <button class="sidebar-dropdown-toggle {% if is_marketing_group_active %}has-active{% endif %}" 
                         type="button" 
                         data-bs-toggle="collapse" 
@@ -3017,6 +3020,9 @@
                         {% if has_permission('discounts') %}
                         <a class="submenu-item {% if request.endpoint == 'admin_discounts_page' %}active{% endif %}" href="{{ url_for('admin_discounts_page') }}">
                             <i class="fas fa-ticket text-danger"></i> کدهای تخفیف
+                        </a>
+                        <a class="submenu-item {% if request.endpoint == 'admin_campaigns_page' %}active{% endif %}" href="{{ url_for('admin_campaigns_page') }}">
+                            <i class="fas fa-fire-flame-curved text-warning"></i> کمپین‌های فروش
                         </a>
                         {% endif %}
                         {% if has_permission('users_view') %}

@@ -814,7 +814,7 @@
                 </h5>
                 <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="بستن"></button>
             </div>
-            <form id="xrayDedicatedDomainForm" onsubmit="handleSaveDedicatedDomain(event)">
+            <form id="xrayDedicatedDomainForm" onsubmit="event.preventDefault(); handleSaveDedicatedDomain(event); return false;">
                 <input type="hidden" id="editDomainId" value="">
                 <div class="modal-body p-4 space-y-3">
                     <div class="mb-3">
@@ -872,7 +872,7 @@
                 </div>
                 <div class="modal-footer border-top bg-light">
                     <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">انصراف</button>
-                    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4" id="saveDomainSubmitBtn">
+                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-4" id="saveDomainSubmitBtn" onclick="handleSaveDedicatedDomain(event)">
                         <i class="fas fa-save me-1"></i> ذخیره دامنه
                     </button>
                 </div>
@@ -1031,7 +1031,16 @@
     }
 
     async function handleSaveDedicatedDomain(event) {
-        event.preventDefault();
+        if (event) {
+            try { event.preventDefault(); } catch (err) {}
+        }
+        const btn = document.getElementById('saveDomainSubmitBtn');
+        const origText = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> در حال ذخیره...';
+        }
+
         const domainId = document.getElementById('editDomainId').value;
         const payload = {
             domain: document.getElementById('dom_name').value.trim(),
@@ -1046,7 +1055,8 @@
 
         if (!payload.domain) {
             alert('لطفاً آدرس دامنه را وارد کنید.');
-            return;
+            if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+            return false;
         }
 
         const url = domainId ? `/admin/api/xray/domains/${domainId}` : '/admin/api/xray/domains';
@@ -1055,7 +1065,7 @@
         try {
             const resp = await fetch(url, {
                 method: method,
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
                 body: JSON.stringify(payload)
             });
             const data = await resp.json();
@@ -1066,10 +1076,13 @@
                 window.location.reload();
             } else {
                 alert('خطا در ذخیره دامنه: ' + (data.message || data.error || 'خطای نامشخص'));
+                if (btn) { btn.disabled = false; btn.innerHTML = origText; }
             }
         } catch (e) {
             alert('خطای ارتباط با سرور: ' + e.message);
+            if (btn) { btn.disabled = false; btn.innerHTML = origText; }
         }
+        return false;
     }
 
     async function toggleDedicatedDomainActive(domainId, isActive) {
