@@ -524,6 +524,19 @@ def get_active_palette_config(db_instance, context: str = "system", reseller_id:
     }
 
 
+def hex_to_rgb(hex_str: str) -> str:
+    hex_str = str(hex_str or "").lstrip("#")
+    if len(hex_str) == 3:
+        hex_str = "".join([c * 2 for c in hex_str])
+    try:
+        r = int(hex_str[0:2], 16)
+        g = int(hex_str[2:4], 16)
+        b = int(hex_str[4:6], 16)
+        return f"{r}, {g}, {b}"
+    except Exception:
+        return "24, 87, 242"
+
+
 def generate_palette_css(palette_config: Dict[str, Any]) -> str:
     """
     تولید کدهای بهینه‌شده CSS برای تزریق مستقیم به هدر قالب‌ها
@@ -600,12 +613,19 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
     l = data.get("light") or PALETTES["vps_aurora"]["light"]
     d = data.get("dark") or PALETTES["vps_aurora"]["dark"]
 
+    brand_rgb = hex_to_rgb(data.get('primary_color', '#1857f2'))
+
     css = f"""
     /* ─── پالت اختصاصی: {data.get('name', 'VPS Aurora')} ─── */
     :root {{
         --palette-primary: {data['primary_color']};
         --palette-primary-hover: {data['primary_hover']};
         --palette-accent: {data['accent_color']};
+        --hiddi-brand: {data['primary_color']};
+        --hiddi-brand-hover: {data['primary_hover']};
+        --hiddi-brand-rgb: {brand_rgb};
+        --hiddi-brand-glow: rgba({brand_rgb}, 0.35);
+        --hiddi-accent: {data['accent_color']};
         --aura-blur: {blur_val};
         --glass-blur: {glass_blur};
         

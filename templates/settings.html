@@ -1853,24 +1853,41 @@ function selectPalette(pid) {
                         </p>
 
                         <div class="row g-3">
-                            <!-- قالب ۱: کلاسیک آبشاری -->
+                            <!-- قالب ۱: بنتو ۲۰۲۶ پرچمدار (پیش‌فرض مدرن سیستم) -->
                             <div class="col-md-6 col-lg-4">
-                                <label class="card h-100 border p-3 cursor-pointer portal-layout-card {% if customer_portal_config.portal_layout == 'classic' or not customer_portal_config.portal_layout %}border-primary shadow-sm bg-white{% else %}bg-light opacity-75{% endif %}" style="cursor: pointer; transition: all 0.2s ease;">
+                                <label class="card h-100 border p-3 cursor-pointer portal-layout-card {% if customer_portal_config.portal_layout == 'bento_2026' or not customer_portal_config.portal_layout %}border-primary shadow-sm bg-white{% else %}bg-light opacity-75{% endif %}" style="cursor: pointer; transition: all 0.2s ease;">
                                     <div class="d-flex align-items-center justify-content-between mb-2">
                                         <div class="d-flex align-items-center gap-2">
-                                            <i class="fas fa-stream text-primary fs-5"></i>
+                                            <i class="fas fa-wand-magic-sparkles text-primary fs-5"></i>
+                                            <strong class="small text-dark">بنتو ۲۰۲۶ پرچمدار</strong>
+                                        </div>
+                                        <input class="form-check-input mt-0" type="radio" name="portal_layout" value="bento_2026" {% if customer_portal_config.portal_layout == 'bento_2026' or not customer_portal_config.portal_layout %}checked{% endif %} onchange="updateLayoutCards(this)">
+                                    </div>
+                                    <span class="badge bg-primary text-white small align-self-start mb-2"><i class="fas fa-crown me-1"></i>پیش‌فرض مدرن ۲۰۲۶</span>
+                                    <p class="small text-muted mb-0" style="font-size: 0.8rem; line-height: 1.5;">
+                                        شاهکار رابط کاربری ۲۰۲۶؛ طراحی بنتو با نورهای متحرک، کارت کیف پول فین‌تک، اسلایدر ابری و استایل لوکس اختصاصی.
+                                    </p>
+                                </label>
+                            </div>
+
+                            <!-- قالب ۲: کلاسیک آبشاری -->
+                            <div class="col-md-6 col-lg-4">
+                                <label class="card h-100 border p-3 cursor-pointer portal-layout-card {% if customer_portal_config.portal_layout == 'classic' %}border-primary shadow-sm bg-white{% else %}bg-light opacity-75{% endif %}" style="cursor: pointer; transition: all 0.2s ease;">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-stream text-secondary fs-5"></i>
                                             <strong class="small text-dark">کلاسیک آبشاری</strong>
                                         </div>
-                                        <input class="form-check-input mt-0" type="radio" name="portal_layout" value="classic" {% if customer_portal_config.portal_layout == 'classic' or not customer_portal_config.portal_layout %}checked{% endif %} onchange="updateLayoutCards(this)">
+                                        <input class="form-check-input mt-0" type="radio" name="portal_layout" value="classic" {% if customer_portal_config.portal_layout == 'classic' %}checked{% endif %} onchange="updateLayoutCards(this)">
                                     </div>
-                                    <span class="badge bg-secondary-subtle text-secondary small align-self-start mb-2">پیش‌فرض سیستم</span>
+                                    <span class="badge bg-secondary-subtle text-secondary small align-self-start mb-2">طرح رسمی و ساده</span>
                                     <p class="small text-muted mb-0" style="font-size: 0.8rem; line-height: 1.5;">
                                         چیدمان عمودی و تک‌ستونه استاندارد با نمایش پشت‌سر‌هم وضعیت اشتراک، مصرف، بسته‌ها و فاکتور.
                                     </p>
                                 </label>
                             </div>
 
-                            <!-- قالب ۲: داشبورد دو ستونه مدرن -->
+                            <!-- قالب ۳: داشبورد دو ستونه مدرن -->
                             <div class="col-md-6 col-lg-4">
                                 <label class="card h-100 border p-3 cursor-pointer portal-layout-card {% if customer_portal_config.portal_layout == 'split_dashboard' %}border-primary shadow-sm bg-white{% else %}bg-light opacity-75{% endif %}" style="cursor: pointer; transition: all 0.2s ease;">
                                     <div class="d-flex align-items-center justify-content-between mb-2">
@@ -1887,7 +1904,7 @@ function selectPalette(pid) {
                                 </label>
                             </div>
 
-                            <!-- قالب ۳: تب‌بندی مینیمال و متمرکز -->
+                            <!-- قالب ۴: تب‌بندی مینیمال و متمرکز -->
                             <div class="col-md-6 col-lg-4">
                                 <label class="card h-100 border p-3 cursor-pointer portal-layout-card {% if customer_portal_config.portal_layout == 'minimal_tabbed' %}border-primary shadow-sm bg-white{% else %}bg-light opacity-75{% endif %}" style="cursor: pointer; transition: all 0.2s ease;">
                                     <div class="d-flex align-items-center justify-content-between mb-2">
@@ -1904,7 +1921,7 @@ function selectPalette(pid) {
                                 </label>
                             </div>
 
-                            <!-- قالب ۴: بنتو گرید ماژولار ۱ -->
+                            <!-- قالب ۵: بنتو گرید ماژولار ۱ -->
                             <div class="col-md-6 col-lg-4">
                                 <label class="card h-100 border p-3 cursor-pointer portal-layout-card {% if customer_portal_config.portal_layout in ['bento_grid', 'bento_grid_1'] %}border-primary shadow-sm bg-white{% else %}bg-light opacity-75{% endif %}" style="cursor: pointer; transition: all 0.2s ease;">
                                     <div class="d-flex align-items-center justify-content-between mb-2">
@@ -1921,36 +1938,19 @@ function selectPalette(pid) {
                                 </label>
                             </div>
 
-                            <!-- قالب ۵: بنتو گرید ماژولار ۲ -->
+                            <!-- قالب ۶: بنتو گرید ماژولار ۲ (داشبورد فشرده متریک و نمودار نئونی) -->
                             <div class="col-md-6 col-lg-4">
-                                <label class="card h-100 border p-3 cursor-pointer portal-layout-card {% if customer_portal_config.portal_layout == 'bento_grid_2' %}border-primary shadow-sm bg-white{% else %}bg-light opacity-75{% endif %}" style="cursor: pointer; transition: all 0.2s ease;">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <i class="fas fa-layer-group text-primary fs-5"></i>
-                                            <strong class="small text-dark">بنتو گرید ماژولار ۲</strong>
-                                        </div>
-                                        <input class="form-check-input mt-0" type="radio" name="portal_layout" value="bento_grid_2" {% if customer_portal_config.portal_layout == 'bento_grid_2' %}checked{% endif %} onchange="updateLayoutCards(this)">
-                                    </div>
-                                    <span class="badge bg-primary-subtle text-primary small align-self-start mb-2">دو ستونه بهینه‌شده</span>
-                                    <p class="small text-muted mb-0" style="font-size: 0.8rem; line-height: 1.5;">
-                                        چیدمان دو ستونه متعادل با پاکسازی برچسب‌های شلوغ، دکمه سریع تحلیل مصرف و وفاداری جمع‌وجور.
-                                    </p>
-                                </label>
-                            </div>
-
-                            <!-- قالب ۶: بنتو گرید ماژولار ۳ -->
-                            <div class="col-md-6 col-lg-4">
-                                <label class="card h-100 border p-3 cursor-pointer portal-layout-card {% if customer_portal_config.portal_layout == 'bento_grid_3' %}border-primary shadow-sm bg-white{% else %}bg-light opacity-75{% endif %}" style="cursor: pointer; transition: all 0.2s ease;">
+                                <label class="card h-100 border p-3 cursor-pointer portal-layout-card {% if customer_portal_config.portal_layout in ['bento_grid_2', 'bento_grid_3'] %}border-primary shadow-sm bg-white{% else %}bg-light opacity-75{% endif %}" style="cursor: pointer; transition: all 0.2s ease;">
                                     <div class="d-flex align-items-center justify-content-between mb-2">
                                         <div class="d-flex align-items-center gap-2">
                                             <i class="fas fa-chart-pie text-info fs-5"></i>
-                                            <strong class="small text-dark">بنتو گرید ماژولار ۳</strong>
+                                            <strong class="small text-dark">بنتو گرید ماژولار ۲</strong>
                                         </div>
-                                        <input class="form-check-input mt-0" type="radio" name="portal_layout" value="bento_grid_3" {% if customer_portal_config.portal_layout == 'bento_grid_3' %}checked{% endif %} onchange="updateLayoutCards(this)">
+                                        <input class="form-check-input mt-0" type="radio" name="portal_layout" value="bento_grid_2" {% if customer_portal_config.portal_layout in ['bento_grid_2', 'bento_grid_3'] %}checked{% endif %} onchange="updateLayoutCards(this)">
                                     </div>
                                     <span class="badge bg-info-subtle text-info small align-self-start mb-2">کانسپت نئونی و گیج دایره‌ای</span>
                                     <p class="small text-muted mb-0" style="font-size: 0.8rem; line-height: 1.5;">
-                                        تایل دوطبقه روز و ترافیک، کارت مرکزی با گیج دایره‌ای ۶۵٪ و نشان Tier، و نمودار موجی نئونی با نوار بارانداز ابزارها.
+                                        تایل دوطبقه روز و ترافیک، کارت مرکزی با گیج دایره‌ای ۶۵٪ و نشان Tier، و نمودار موجی نئونی با نوار ابزارها.
                                     </p>
                                 </label>
                             </div>
@@ -2323,6 +2323,23 @@ function selectPalette(pid) {
                                 </div>
                             </div>
                             <div class="form-text small mt-2">ظاهری بسیار شکیل و لوکس با تم طلایی-کهربایی مناسب برندهای ویژه.</div>
+                        </label>
+                    </div>
+
+                    <!-- استایل ۶: شناور لوکس با پالس راداری هیدی‌پلاس (Hiddi Radar Luxury) -->
+                    <div class="col-md-4 col-sm-6">
+                        <label class="chat-style-card d-block p-3 border rounded-3 bg-white h-100 position-relative cursor-pointer shadow-xs">
+                            <input type="radio" name="chat_button_style" value="hiddi_radar" class="form-check-input position-absolute top-0 end-0 m-3" {% if chat_settings.chat_button_style == 'hiddi_radar' %}checked{% endif %}>
+                            <div class="fw-bold small mb-2 text-dark">۶. شناور لوکس با پالس راداری (Hiddi Radar)</div>
+                            <div class="d-flex align-items-center justify-content-center p-3 rounded-2" style="background: #090d16;">
+                                <div style="display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #1857f2, #00f2fe); color: #ffffff; border: 1.5px solid rgba(255,255,255,0.4); border-radius: 50px; padding: 10px 18px; font-size: 0.82rem; font-weight: bold; box-shadow: 0 8px 24px rgba(24,87,242,0.5); position: relative;">
+                                    <span style="position: absolute; inset: -4px; border: 2px solid #1857f2; border-radius: 50px; opacity: 0.7;"></span>
+                                    <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981;"></span>
+                                    <i class="fas fa-headset"></i>
+                                    <span>پشتیبانی راداری</span>
+                                </div>
+                            </div>
+                            <div class="form-text small mt-2">طراحی شاهکار دیزاینر با هاله نور پویا، انیمیشن رادار تپنده و انطباق با پالت.</div>
                         </label>
                     </div>
 

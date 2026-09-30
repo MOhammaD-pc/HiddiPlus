@@ -14949,7 +14949,7 @@ def settings():
             portal_buy_enabled = "1" if request.form.get("portal_buy_enabled") else "0"
             portal_show_troubleshoot = "1" if request.form.get("portal_show_troubleshoot") else "0"
             portal_clock_check_enabled = "1" if request.form.get("portal_clock_check_enabled") else "0"
-            portal_layout = request.form.get("portal_layout", "classic").strip().lower()
+            portal_layout = request.form.get("portal_layout", "bento_2026").strip().lower()
             portal_plan_style = request.form.get("portal_plan_style", "glass_classic").strip().lower()
             portal_palette = request.form.get("portal_palette", "inherit").strip()
 
@@ -15200,7 +15200,7 @@ def settings():
         "server_status_mode": db.get_setting("server_status_mode", "smart"),
         "server_status_manual_state": db.get_setting("server_status_manual_state", "operational"),
         "server_status_custom_text": db.get_setting("server_status_custom_text", ""),
-        "portal_layout": db.get_setting("portal_layout", "classic"),
+        "portal_layout": db.get_setting("portal_layout", "bento_2026"),
         "portal_plan_style": db.get_setting("portal_plan_style", "glass_classic")
     }
     login_security_config = {
@@ -24402,8 +24402,8 @@ def _handle_customer_portal_view(token: str = None, telegram_id: int = None, res
     favicon_url = db.get_setting("store_favicon") or db.get_setting("favicon_url") or "/avatars/favicon.ico"
     support_username = db.get_setting("support_username")
     support_phone = db.get_setting("support_phone")
-    portal_layout = db.get_setting("portal_layout", "classic")
-    portal_plan_style = db.get_setting("portal_plan_style", "glass_classic")
+    portal_layout = db.get_setting("portal_layout", "bento_2026")
+    portal_plan_style = db.get_setting("portal_plan_style", "modern_cards")
 
     if reseller_id:
         r_info = db.get_reseller(reseller_id) or {}
@@ -24417,6 +24417,9 @@ def _handle_customer_portal_view(token: str = None, telegram_id: int = None, res
             portal_layout = r_info["portal_layout"]
         if r_info.get("portal_plan_style"):
             portal_plan_style = r_info["portal_plan_style"]
+
+    if portal_layout == "bento_grid_3":
+        portal_layout = "bento_grid_2"
 
     raw_new_customer_text = ""
     if reseller_id:
@@ -24671,8 +24674,9 @@ def _handle_customer_portal_view(token: str = None, telegram_id: int = None, res
     profile_completion_pct = min(100, profile_score)
     avatar_presets = avatar_generator.PRESETS
 
+    target_portal_template = "customer_portal_bento_2026.html" if portal_layout == "bento_2026" else "customer_portal.html"
     return render_template(
-        "customer_portal.html",
+        target_portal_template,
         cust_user=cust_user,
         clean_tg_username=clean_tg_username,
         effective_numeric_tg_id=effective_numeric_tg_id,
