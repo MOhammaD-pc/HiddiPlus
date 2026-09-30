@@ -77,6 +77,11 @@ class TestXrayService(unittest.TestCase):
         self.assertIn("api", tags)
         self.assertIn("inbound-reality", tags)
         self.assertIn("inbound-ws", tags)
+        self.assertIn("inbound-ss", tags)
+        self.assertIn("inbound-trojan-ws", tags)
+        self.assertIn("inbound-vmess-ws", tags)
+        self.assertIn("inbound-vless-grpc", tags)
+        self.assertIn("inbound-reality-grpc", tags)
 
     def test_parse_subscription_configs_plaintext_and_base64(self):
         """بررسی عملکرد تابع تفکیک‌کننده کانفیگ‌ها در حالت خام و Base64"""
@@ -594,6 +599,79 @@ class TestXrayService(unittest.TestCase):
         self.assertIn("node_last_seen", status)
         self.assertIn("node_last_seen_human", status)
         self.assertIn("is_node_online", status)
+
+    def test_shadowsocks_password_consistency(self):
+        """بررسی تطابق ۱۰۰٪ رمزنگاری و پسورد سرور با لینک کلاینت در شادوساکس ۲۰۲۲"""
+        ss_pass = self.service.get_ss_password()
+        self.assertTrue(len(ss_pass) >= 16)
+
+        # بررسی کانفیگ سرور
+        cfg = self.service.generate_full_xray_config()
+        ss_inb = next((i for i in cfg["inbounds"] if i.get("tag") == "inbound-ss"), None)
+        self.assertIsNotNone(ss_inb)
+        self.assertEqual(ss_inb["settings"]["password"], ss_pass)
+        self.assertEqual(ss_inb["settings"]["method"], "2022-blake3-aes-128-gcm")
+
+        # بررسی لینک کلاینت در سابسکریپشن
+        self.db.set_setting("xray_matrix_direct_shadowsocks", "1")
+        self.db.set_setting("xray_direct_domain", "91.107.188.230")
+        configs = self.service.generate_matrix_subscription("uuid-ss-test-123", account_name="TestSS")
+        ss_configs = [c for c in configs if c.startswith("ss://")]
+        self.assertGreater(len(ss_configs), 0)
+
+        # دیکود کردن بخش احراز هویت لینک کلاینت
+        ss_uri = ss_configs[0]
+        userinfo = ss_uri.split("://")[1].split("@")[0]
+        decoded_creds = base64.b64decode(userinfo).decode("utf-8")
+        method, pwd = decoded_creds.split(":", 1)
+        self.assertEqual(method, "2022-blake3-aes-128-gcm")
+        self.assertEqual(pwd, ss_pass)
+
+    def test_xray_domain_ssl_management(self):
+        """بررسی مدیریت و استعلام گواهی SSL برای دامنه‌های اختصاصی Xray"""
+        import ssl_manager
+        # افزودن دامنه تستی
+        res = self.db.add_xray_domain(
+            domain="io.gotel.ir",
+            role="cdn",
+            alias="تست سی‌دی‌ان",
+            port=8443
+        )
+        self.assertTrue(res.get("success"))
+        dom_id = res["id"]
+
+        try:
+            # استعلام و صدور SSL با ارتباط زنده یا شبیه‌سازی
+            ssl_res = ssl_manager.check_and_renew_xray_domain_ssl(dom_id, force_renew=False)
+            self.assertTrue(ssl_res.get("success"))
+            self.assertIn(ssl_res.get("ssl_status"), ("active", "expiring", "pending"))
+
+            # بررسی ذخیره صحیح در دیتابیس
+            saved_dom = self.db.get_xray_domain(dom_id)
+            self.assertIsNotNone(saved_dom)
+            self.assertEqual(saved_dom["ssl_status"], ssl_res.get("ssl_status"))
+            self.assertIsNotNone(saved_dom["ssl_days_left"])
+            self.assertTrue(len(saved_dom["ssl_expiry_date"]) > 5)
+
+            # بررسی روت‌های API در دشبورد
+            with self.client.session_transaction() as sess:
+                sess["logged_in"] = True
+                sess["role"] = "admin"
+                sess["admin_role"] = "super_admin"
+
+            # 1. تست GET /ssl_status
+            r_stat = self.client.get(f"/admin/api/xray/domains/{dom_id}/ssl_status")
+            self.assertEqual(r_stat.status_code, 200)
+            data_stat = r_stat.get_json()
+            self.assertTrue(data_stat.get("success"))
+
+            # 2. تست POST /renew_ssl
+            r_renew = self.client.post(f"/admin/api/xray/domains/{dom_id}/renew_ssl")
+            self.assertEqual(r_renew.status_code, 200)
+            data_renew = r_renew.get_json()
+            self.assertTrue(data_renew.get("success"))
+        finally:
+            self.db.delete_xray_domain(dom_id)
 
 
 if __name__ == "__main__":

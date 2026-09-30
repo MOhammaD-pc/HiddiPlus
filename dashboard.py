@@ -15792,11 +15792,17 @@ def admin_api_xray_ping_node():
     reality_port = int(db.get_setting("xray_reality_port", 443) or 443)
     ws_port = int(db.get_setting("xray_ws_port", 8443) or 8443)
     ss_port = int(db.get_setting("xray_ss_port", 1080) or 1080)
+    grpc_port = int(db.get_setting("xray_grpc_port", 2053) or 2053)
+    trojan_port = int(db.get_setting("xray_trojan_port", 2083) or 2083)
+    vmess_port = int(db.get_setting("xray_vmess_port", 2096) or 2096)
 
     ports_to_check = [
         (reality_port, "Reality Direct (TCP)"),
         (ws_port, "WebSocket CDN"),
-        (ss_port, "Shadowsocks 2022")
+        (ss_port, "Shadowsocks 2022"),
+        (grpc_port, "VLESS gRPC (2053)"),
+        (trojan_port, "Trojan WS (2083)"),
+        (vmess_port, "VMess WS (2096)")
     ]
 
     port_results = {}
@@ -15912,6 +15918,47 @@ def admin_api_xray_domain_add():
         grpc_service_name=grpc_service_name,
         port=port
     )
+
+    if res.get("success") and res.get("id"):
+        # بررسی و دریافت خودکار گواهی امنیتی SSL در پس‌زمینه
+        try:
+            dom_id = res["id"]
+            threading.Thread(
+                target=ssl_manager.check_and_renew_xray_domain_ssl,
+                args=(dom_id,),
+                kwargs={"force_renew": False},
+                daemon=True,
+                name=f"XrayDomainSSL_{dom_id}"
+            ).start()
+        except Exception as e_ssl:
+            logger.warning(f"Could not trigger background SSL check for xray domain: {e_ssl}")
+
+    status = "success" if res.get("success") else "error"
+    return jsonify({"status": status, **res})
+
+
+@app.route("/admin/api/xray/domains/<int:domain_id>/renew_ssl", methods=["POST"], strict_slashes=False)
+@admin_required
+def admin_api_xray_domain_renew_ssl(domain_id: int):
+    """بررسی زنده و صدور/تمدید گواهی SSL دامنه اختصاصی با لاگ کامل"""
+    dom = db.get_xray_domain(domain_id)
+    if not dom:
+        return jsonify({"status": "error", "success": False, "error": "دامنه مورد نظر یافت نشد"}), 404
+
+    res = ssl_manager.check_and_renew_xray_domain_ssl(domain_id, force_renew=True)
+    status = "success" if res.get("success") else "error"
+    return jsonify({"status": status, **res})
+
+
+@app.route("/admin/api/xray/domains/<int:domain_id>/ssl_status", methods=["GET"], strict_slashes=False)
+@admin_required
+def admin_api_xray_domain_ssl_status(domain_id: int):
+    """استعلام زنده وضعیت سرتیفیکیت SSL دامنه اختصاصی"""
+    dom = db.get_xray_domain(domain_id)
+    if not dom:
+        return jsonify({"status": "error", "success": False, "error": "دامنه مورد نظر یافت نشد"}), 404
+
+    res = ssl_manager.check_and_renew_xray_domain_ssl(domain_id, force_renew=False)
     status = "success" if res.get("success") else "error"
     return jsonify({"status": status, **res})
 

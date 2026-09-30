@@ -2244,12 +2244,36 @@ class Database:
                     grpc_service_name TEXT DEFAULT 'tgbot-grpc',
                     port INTEGER DEFAULT 443,
                     is_active INTEGER DEFAULT 1,
+                    ssl_status TEXT DEFAULT 'pending',
+                    ssl_expiry_date TEXT DEFAULT NULL,
+                    ssl_days_left REAL DEFAULT NULL,
+                    ssl_issuer TEXT DEFAULT '',
+                    ssl_last_log TEXT DEFAULT NULL,
+                    ssl_last_checked TEXT DEFAULT NULL,
                     created_at TEXT,
                     updated_at TEXT
                 )
             ''')
         except Exception as e:
             logger.warning(f"Error initializing xray_domains table: {e}")
+
+        # فیلدهای مدیریت گواهی امنیتی SSL برای دامنه‌های اختصاصی Xray
+        try:
+            xray_domain_cols = [col[1] for col in cursor.execute("PRAGMA table_info(xray_domains)").fetchall()]
+            if "ssl_status" not in xray_domain_cols:
+                cursor.execute("ALTER TABLE xray_domains ADD COLUMN ssl_status TEXT DEFAULT 'pending'")
+            if "ssl_expiry_date" not in xray_domain_cols:
+                cursor.execute("ALTER TABLE xray_domains ADD COLUMN ssl_expiry_date TEXT DEFAULT NULL")
+            if "ssl_days_left" not in xray_domain_cols:
+                cursor.execute("ALTER TABLE xray_domains ADD COLUMN ssl_days_left REAL DEFAULT NULL")
+            if "ssl_issuer" not in xray_domain_cols:
+                cursor.execute("ALTER TABLE xray_domains ADD COLUMN ssl_issuer TEXT DEFAULT ''")
+            if "ssl_last_log" not in xray_domain_cols:
+                cursor.execute("ALTER TABLE xray_domains ADD COLUMN ssl_last_log TEXT DEFAULT NULL")
+            if "ssl_last_checked" not in xray_domain_cols:
+                cursor.execute("ALTER TABLE xray_domains ADD COLUMN ssl_last_checked TEXT DEFAULT NULL")
+        except Exception as e_col:
+            logger.warning(f"Error migrating xray_domains ssl columns: {e_col}")
 
 
         # اصلاح دسته‌بندی تیکت‌های مشتریان نماینده به target_role='reseller'
@@ -7279,7 +7303,16 @@ class Database:
             sql += " ORDER BY id ASC"
             cursor.execute(sql)
             rows = cursor.fetchall()
-            return [dict(r) for r in rows]
+            domains_list = []
+            for r in rows:
+                d = dict(r)
+                d["ssl_status"] = d.get("ssl_status") or "pending"
+                d["ssl_expiry_date"] = d.get("ssl_expiry_date") or ""
+                d["ssl_days_left"] = d.get("ssl_days_left")
+                d["ssl_issuer"] = d.get("ssl_issuer") or ""
+                d["ssl_last_log"] = d.get("ssl_last_log") or ""
+                domains_list.append(d)
+            return domains_list
         except Exception as e:
             logger.error(f"Error fetching xray_domains: {e}")
             return []
@@ -7293,7 +7326,15 @@ class Database:
         try:
             cursor.execute("SELECT * FROM xray_domains WHERE id = ?", (domain_id,))
             row = cursor.fetchone()
-            return dict(row) if row else None
+            if not row:
+                return None
+            d = dict(row)
+            d["ssl_status"] = d.get("ssl_status") or "pending"
+            d["ssl_expiry_date"] = d.get("ssl_expiry_date") or ""
+            d["ssl_days_left"] = d.get("ssl_days_left")
+            d["ssl_issuer"] = d.get("ssl_issuer") or ""
+            d["ssl_last_log"] = d.get("ssl_last_log") or ""
+            return d
         except Exception as e:
             logger.error(f"Error fetching xray_domain {domain_id}: {e}")
             return None
@@ -7391,7 +7432,11 @@ class Database:
         conn = self.get_connection()
         cursor = conn.cursor()
         now = get_now_iso()
-        allowed_fields = {"domain", "role", "alias", "sni", "clean_ips", "ws_path", "grpc_service_name", "port", "is_active"}
+        allowed_fields = {
+            "domain", "role", "alias", "sni", "clean_ips", "ws_path",
+            "grpc_service_name", "port", "is_active", "ssl_status",
+            "ssl_expiry_date", "ssl_days_left", "ssl_issuer", "ssl_last_log", "ssl_last_checked"
+        }
         updates = []
         params = []
         for k, v in kwargs.items():
@@ -7418,6 +7463,28 @@ class Database:
             return {"success": False, "message": str(e)}
         finally:
             conn.close()
+
+    def update_xray_domain_ssl(
+        self,
+        domain_id: int,
+        ssl_status: str,
+        ssl_expiry_date: Optional[str] = None,
+        ssl_days_left: Optional[float] = None,
+        ssl_issuer: Optional[str] = None,
+        ssl_last_log: Optional[str] = None
+    ) -> bool:
+        """به‌روزرسانی اختصاصی وضعیت و انقضای سرتیفیکیت SSL دامنه هسته اختصاصی Xray"""
+        updates = {"ssl_status": ssl_status, "ssl_last_checked": get_now_iso()}
+        if ssl_expiry_date is not None:
+            updates["ssl_expiry_date"] = ssl_expiry_date
+        if ssl_days_left is not None:
+            updates["ssl_days_left"] = ssl_days_left
+        if ssl_issuer is not None:
+            updates["ssl_issuer"] = ssl_issuer
+        if ssl_last_log is not None:
+            updates["ssl_last_log"] = ssl_last_log
+        res = self.update_xray_domain(domain_id, **updates)
+        return res.get("success", False)
 
     def delete_xray_domain(self, domain_id: int) -> bool:
         """حذف دامنه"""

@@ -343,11 +343,21 @@ EOF
 
 # باز کردن پورت‌ها در UFW اگر فعال باشد
 if which ufw > /dev/null 2>&1; then
-  echo -e "\e[36m🔓 باز کردن پورت‌های لازم در فایروال (443, 8443, 1080, 80)...\e[0m"
+  echo -e "\e[36m🔓 باز کردن پورت‌های لازم در فایروال (443, 8443, 2053, 2083, 2096, 2087, 1080, 80)...\e[0m"
   ufw allow 443/tcp > /dev/null 2>&1 || true
   ufw allow 8443/tcp > /dev/null 2>&1 || true
+  ufw allow 2053/tcp > /dev/null 2>&1 || true
+  ufw allow 2083/tcp > /dev/null 2>&1 || true
+  ufw allow 2096/tcp > /dev/null 2>&1 || true
+  ufw allow 2087/tcp > /dev/null 2>&1 || true
   ufw allow 1080/tcp > /dev/null 2>&1 || true
   ufw allow 80/tcp > /dev/null 2>&1 || true
+fi
+
+# ایجاد سرتیفیکیت خودامضای پیش‌فرض در صورت نبود جهت ارتباط پایدار TLS و Cloudflare
+if [ ! -f /usr/local/etc/xray/cert.crt ] || [ ! -f /usr/local/etc/xray/cert.key ]; then
+  mkdir -p /usr/local/etc/xray
+  openssl req -x509 -newkey rsa:2048 -nodes -keyout /usr/local/etc/xray/cert.key -out /usr/local/etc/xray/cert.crt -days 3650 -subj "/CN=tgbot-node" > /dev/null 2>&1 || true
 fi
 
 # آزمایش اعتبار فایل کانفیگ قبل از اجرای سرویس
@@ -394,6 +404,9 @@ if systemctl is-active --quiet xray; then
   echo -e "\e[32m🎉 هسته Xray-core با موفقیت نصب و راه‌اندازی شد!\e[0m"
   echo -e "\e[32m   - پورت Reality Direct: 443\e[0m"
   echo -e "\e[32m   - پورت WebSocket CDN: 8443\e[0m"
+  echo -e "\e[32m   - پورت VLESS gRPC: 2053\e[0m"
+  echo -e "\e[32m   - پورت Trojan WS: 2083\e[0m"
+  echo -e "\e[32m   - پورت VMess WS: 2096\e[0m"
   echo -e "\e[32m   - پورت Shadowsocks 2022: 1080\e[0m"
   echo -e "\e[32m   - پورت کنترل API: 10085\e[0m"
   echo -e "\e[32m   - مسدودسازی پورت اسپم SMTP 25: فعال 🛡️\e[0m"
@@ -401,18 +414,24 @@ if systemctl is-active --quiet xray; then
   if [ -n "$PANEL_CONFIG_URL" ]; then
     echo -e "\e[36m   - همگام‌ساز خودکار کاربران: فعال (هر ۲ دقیقه) 🔄\e[0m"
   fi
+
   FINAL_PUB_KEY="${PRESET_PUB_KEY:-${PUB_KEY:-}}"
   FINAL_SHORT_ID="${PRESET_SHORT_ID:-${SHORT_ID:-}}"
   FINAL_SNI="${PRESET_REALITY_SNI:-}"
 
-  if [ -z "$FINAL_PUB_KEY" ] && [ -f /usr/local/etc/xray/config.json ]; then
-    FINAL_PUB_KEY=$(grep -oP '(?<="publicKey": ")[^"]*' /usr/local/etc/xray/config.json 2>/dev/null || true)
-  fi
-  if [ -z "$FINAL_SHORT_ID" ] && [ -f /usr/local/etc/xray/config.json ]; then
-    FINAL_SHORT_ID=$(grep -oP '(?<="shortIds": \[")[^"]*' /usr/local/etc/xray/config.json 2>/dev/null | head -n 1 || true)
-  fi
-  if [ -z "$FINAL_SNI" ] && [ -f /usr/local/etc/xray/config.json ]; then
-    FINAL_SNI=$(grep -oP '(?<="dest": ")[^:]*' /usr/local/etc/xray/config.json 2>/dev/null | head -n 1 || true)
+  if [ -f /usr/local/etc/xray/config.json ]; then
+    if [ -z "$FINAL_PUB_KEY" ]; then
+      NODE_PRIV=$(grep -oP '(?<="privateKey": ")[^"]*' /usr/local/etc/xray/config.json 2>/dev/null | head -n 1 || true)
+      if [ -n "$NODE_PRIV" ] && [ -x /usr/local/bin/xray ]; then
+        FINAL_PUB_KEY=$(/usr/local/bin/xray x25519 -i "$NODE_PRIV" 2>/dev/null | grep -i "Public" | awk -F: '{print $2}' | tr -d '[:space:]' || true)
+      fi
+    fi
+    if [ -z "$FINAL_SHORT_ID" ]; then
+      FINAL_SHORT_ID=$(grep -A 2 '"shortIds"' /usr/local/etc/xray/config.json 2>/dev/null | grep -oP '"[a-fA-F0-9]{8}"' | tr -d '"' | head -n 1 || true)
+    fi
+    if [ -z "$FINAL_SNI" ]; then
+      FINAL_SNI=$(grep -oP '(?<="dest": ")[^:]*' /usr/local/etc/xray/config.json 2>/dev/null | head -n 1 || true)
+    fi
   fi
 
   if [ -n "$FINAL_PUB_KEY" ]; then

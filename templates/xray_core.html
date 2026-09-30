@@ -498,6 +498,7 @@
                                 <th class="py-3">نام مستعار (Alias)</th>
                                 <th class="py-3">آی‌پی‌های تمیز کلودفلر (Clean IPs)</th>
                                 <th class="py-3">پورت و مسیر</th>
+                                <th class="py-3 text-center">وضعیت و انقضای SSL</th>
                                 <th class="py-3 text-center">وضعیت</th>
                                 <th class="py-3 text-center">عملیات</th>
                             </tr>
@@ -549,21 +550,70 @@
                                             <div class="text-muted small font-monospace">مسیر: {{ d.ws_path or '/tgbot-ws' }}</div>
                                         {% endif %}
                                     </td>
+                                    <td class="text-center" id="dom-ssl-cell-{{ d.id }}">
+                                        {% if d.ssl_status == 'active' %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1">
+                                                <i class="fas fa-check-circle me-1"></i> معتبر و فعال
+                                            </span>
+                                            {% if d.ssl_days_left is not none %}
+                                                <div class="small font-monospace text-dark mt-1" style="font-size: 0.72rem;">
+                                                    <i class="fas fa-calendar-alt text-muted me-1"></i>{{ d.ssl_days_left|round(0)|int }} روز مانده
+                                                </div>
+                                            {% elif d.ssl_expiry_date %}
+                                                <div class="small font-monospace text-muted mt-1" style="font-size: 0.72rem;">
+                                                    {{ d.ssl_expiry_date[:10] }}
+                                                </div>
+                                            {% endif %}
+                                            {% if d.ssl_issuer %}
+                                                <div class="mt-1">
+                                                    <span class="badge bg-light text-muted border px-1.5 py-0.5" style="font-size: 0.68rem;">
+                                                        {{ d.ssl_issuer }}
+                                                    </span>
+                                                </div>
+                                            {% endif %}
+                                        {% elif d.ssl_status == 'expiring' %}
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                                <i class="fas fa-exclamation-triangle me-1"></i> نزدیک به انقضا
+                                            </span>
+                                            {% if d.ssl_days_left is not none %}
+                                                <div class="small text-danger fw-bold mt-1" style="font-size: 0.72rem;">
+                                                    {{ d.ssl_days_left|round(0)|int }} روز مانده
+                                                </div>
+                                            {% endif %}
+                                        {% elif d.ssl_status == 'pending' %}
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                                                <i class="fas fa-spinner fa-spin me-1"></i> در حال بررسی
+                                            </span>
+                                        {% elif d.ssl_status == 'failed' %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" title="{{ d.ssl_last_log or 'خطا در دریافت سرتیفیکیت' }}">
+                                                <i class="fas fa-times-circle me-1"></i> خطای صدور
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary-subtle text-secondary px-2 py-1">
+                                                <i class="fas fa-shield-alt me-1"></i> بدون SSL
+                                            </span>
+                                        {% endif %}
+                                    </td>
                                     <td class="text-center">
                                         <div class="form-check form-switch d-inline-block m-0">
                                             <input class="form-check-input" type="checkbox" onchange="toggleDedicatedDomainActive({{ d.id }}, this.checked)" {% if d.is_active %}checked{% endif %}>
                                         </div>
                                     </td>
                                     <td class="text-center">
-                                        <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1" style="width: 30px; height: 30px;" onclick="deleteDedicatedDomain({{ d.id }})" title="حذف دامنه">
-                                            <i class="fas fa-trash-can"></i>
-                                        </button>
+                                        <div class="d-flex justify-content-center gap-1">
+                                            <button type="button" class="btn btn-outline-success btn-sm rounded-circle p-1" style="width: 30px; height: 30px;" onclick="openDedicatedSslRenewModal({{ d.id }}, '{{ d.domain }}')" title="استعلام و صدور زنده SSL">
+                                                <i class="fas fa-lock"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1" style="width: 30px; height: 30px;" onclick="deleteDedicatedDomain({{ d.id }})" title="حذف دامنه">
+                                                <i class="fas fa-trash-can"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
                                 <tr id="noDomainsDedicatedRow">
-                                    <td colspan="7" class="text-center py-4 text-muted">
+                                    <td colspan="8" class="text-center py-4 text-muted">
                                         <i class="fas fa-info-circle me-1"></i> هنوز دامنه‌ای ثبت نشده است. از دکمه «افزودن دامنه جدید» استفاده کنید.
                                     </td>
                                 </tr>
@@ -924,6 +974,41 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- مودال لاگ و تمدید گواهی امنیتی SSL دامنه اختصاصی -->
+<div class="modal fade" id="dedicatedSslLogModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1rem;">
+            <div class="modal-header border-bottom bg-light">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="spinner-border spinner-border-sm text-primary" id="dedicatedSslSpinner" role="status" style="display: none;"></div>
+                    <h5 class="modal-title fw-bold text-dark mb-0" id="dedicatedSslModalTitle">
+                        <i class="fas fa-lock text-success me-2"></i> بررسی و دریافت خودکار گواهی امنیتی SSL
+                    </h5>
+                </div>
+                <button type="button" class="btn-close ms-0 me-auto" id="dedicatedSslCloseBtn" data-bs-dismiss="modal" aria-label="بستن" onclick="handleDedicatedSslModalClose()"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 fs-6" id="dedicatedSslDomainBadge">دامنه: -</span>
+                    <span id="dedicatedSslStatusBadge"><span class="badge bg-secondary">در انتظار</span></span>
+                </div>
+                
+                <div class="p-3 rounded-3 font-monospace small bg-dark text-light border" style="max-height: 280px; min-height: 180px; overflow-y: auto; white-space: pre-wrap; direction: ltr; font-size: 0.82rem; line-height: 1.6;" id="dedicatedSslTerminalLogs">
+[+] آماده بررسی وضعیت SSL...
+                </div>
+
+                <div class="alert alert-light border mt-3 mb-0 py-2 px-3 small text-muted d-flex align-items-center justify-content-between">
+                    <span id="dedicatedSslFooterNote"><i class="fas fa-circle-info text-info me-1"></i> ارتباط مستقیم با مراجع صدور گواهی و کلودفلر برقرار می‌شود.</span>
+                    <span class="font-monospace text-muted" id="dedicatedSslIssuerInfo" style="font-size: 0.75rem;"></span>
+                </div>
+            </div>
+            <div class="modal-footer border-top bg-light">
+                <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" id="dedicatedSslModalDismissBtn" data-bs-dismiss="modal" onclick="handleDedicatedSslModalClose()">بستن و به‌روزرسانی صفحه</button>
+            </div>
         </div>
     </div>
 </div>
@@ -1462,6 +1547,82 @@
             btn.disabled = false;
             btn.innerHTML = origText;
         }
+    }
+
+    let currentDedicatedSslDomainId = null;
+
+    function openDedicatedSslRenewModal(domainId, domainName) {
+        currentDedicatedSslDomainId = domainId;
+        const modalEl = document.getElementById('dedicatedSslLogModal');
+        const modal = new bootstrap.Modal(modalEl);
+
+        const terminal = document.getElementById('dedicatedSslTerminalLogs');
+        const spinner = document.getElementById('dedicatedSslSpinner');
+        const title = document.getElementById('dedicatedSslModalTitle');
+        const badge = document.getElementById('dedicatedSslDomainBadge');
+        const statusBadge = document.getElementById('dedicatedSslStatusBadge');
+        const footerNote = document.getElementById('dedicatedSslFooterNote');
+        const closeBtn = document.getElementById('dedicatedSslCloseBtn');
+        const dismissBtn = document.getElementById('dedicatedSslModalDismissBtn');
+        const issuerInfo = document.getElementById('dedicatedSslIssuerInfo');
+
+        badge.innerText = "🌐 دامنه: " + domainName;
+        statusBadge.innerHTML = '<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1"><i class="fas fa-spinner fa-spin me-1"></i> در حال پردازش...</span>';
+        terminal.innerText = "[+] برقراری ارتباط با سرویس امنیتی SSL...\n[+] بررسی اتصال DNS و وضعیت گواهی دامنه " + domainName + "...\n";
+        spinner.style.display = 'inline-block';
+        title.innerHTML = '<i class="fas fa-arrows-rotate fa-spin text-primary me-2"></i> در حال استعلام و دریافت گواهی SSL...';
+        footerNote.innerHTML = '<i class="fas fa-circle-notch fa-spin text-primary me-1"></i> در حال بررسی رکوردها و صدور...';
+        issuerInfo.innerText = '';
+        closeBtn.disabled = true;
+        dismissBtn.disabled = true;
+
+        modal.show();
+
+        fetch("/admin/api/xray/domains/" + domainId + "/renew_ssl", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            spinner.style.display = 'none';
+            closeBtn.disabled = false;
+            dismissBtn.disabled = false;
+
+            if (data.logs) {
+                terminal.innerText = data.logs;
+                terminal.scrollTop = terminal.scrollHeight;
+            }
+
+            if (data.success) {
+                title.innerHTML = '<i class="fas fa-circle-check text-success me-2"></i> گواهی امنیتی SSL با موفقیت تایید شد';
+                statusBadge.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1"><i class="fas fa-check-circle me-1"></i> معتبر و فعال</span>';
+                const expDays = data.expiry_days ? `${Math.round(data.expiry_days)} روز تا انقضا` : 'فعال';
+                footerNote.innerHTML = `<i class="fas fa-shield-halved text-success me-1"></i> گواهی فعال است (${expDays}). روی «بستن و به‌روزرسانی صفحه» کلیک فرمایید.`;
+                if (data.issuer) {
+                    issuerInfo.innerText = "مرجع صدور: " + data.issuer;
+                }
+            } else {
+                title.innerHTML = '<i class="fas fa-circle-xmark text-danger me-2"></i> خطا در استعلام یا صدور گواهی SSL';
+                statusBadge.innerHTML = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="fas fa-times-circle me-1"></i> خطای صدور</span>';
+                footerNote.innerHTML = `<i class="fas fa-triangle-exclamation text-danger me-1"></i> ${data.error || 'خطا در عملیات SSL'}`;
+            }
+        })
+        .catch(err => {
+            spinner.style.display = 'none';
+            closeBtn.disabled = false;
+            dismissBtn.disabled = false;
+            terminal.innerText += "\n[!] خطای شبکه یا تایم‌اوت ارتباط: " + err;
+            title.innerHTML = '<i class="fas fa-circle-exmark text-danger me-2"></i> خطای ارتباط با سرور';
+            statusBadge.innerHTML = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">خطای ارتباط</span>';
+            footerNote.innerHTML = '<i class="fas fa-triangle-exclamation text-danger me-1"></i> عدم امکان برقراری ارتباط با وب‌سرور.';
+        });
+    }
+
+    function handleDedicatedSslModalClose() {
+        window.location.reload();
     }
 
     document.getElementById('preview-tab').addEventListener('shown.bs.tab', function () {

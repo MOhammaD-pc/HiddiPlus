@@ -193,7 +193,25 @@ class XrayService:
             "short_id": sid
         }
 
-    # ─── تولید لینک‌های کانفیگ اختصاصی مشتری (Config URIs) ───
+    def get_ss_password(self) -> str:
+        """
+        دریافت یا تولید کلید استاندارد ۱۶ بایتی (Base64) برای پروتکل Shadowsocks 2022
+        (2022-blake3-aes-128-gcm نیازمند کلید دقیقا ۱۶ بایتی است)
+        """
+        stored = self.db.get_setting("xray_ss_password")
+        if stored and len(str(stored).strip()) >= 16:
+            val = str(stored).strip()
+            try:
+                decoded = base64.b64decode(val)
+                if len(decoded) == 16:
+                    return val
+            except Exception:
+                pass
+            return base64.b64encode(val.encode("utf-8")[:16].ljust(16, b"0")).decode("utf-8")
+
+        default_b64 = base64.b64encode(b"tgbotshadowsocks").decode("utf-8")
+        self.db.set_setting("xray_ss_password", default_b64)
+        return default_b64
 
     # ─── تولید لینک‌های کانفیگ اختصاصی مشتری (Config URIs) با ماتریس هوشمند ───
 
@@ -330,8 +348,9 @@ class XrayService:
 
                 # VLESS Reality gRPC
                 if sw_direct_reality_grpc and pub_key:
+                    reality_grpc_port = int(self.db.get_setting("xray_reality_grpc_port", 2087) or 2087) if port == 443 else port
                     uri = (
-                        f"vless://{clean_uuid}@{dom}:{port}"
+                        f"vless://{clean_uuid}@{dom}:{reality_grpc_port}"
                         f"?security=reality&encryption=none&pbk={pub_key}&headerType=none"
                         f"&fp=chrome&type=grpc&serviceName={grpc_srv}&sni={reality_sni}&sid={short_id}"
                         f"#{label_base} ⚡{tag_alias} Reality gRPC"
@@ -351,7 +370,8 @@ class XrayService:
                 if sw_direct_shadowsocks:
                     ss_method = "2022-blake3-aes-128-gcm"
                     ss_port = int(self.db.get_setting("xray_ss_port", 1080) or 1080)
-                    raw_creds = f"{ss_method}:{clean_uuid[:16]}"
+                    ss_pass = self.get_ss_password()
+                    raw_creds = f"{ss_method}:{ss_pass}"
                     b64_creds = base64.b64encode(raw_creds.encode("utf-8")).decode("utf-8")
                     uri = f"ss://{b64_creds}@{dom}:{ss_port}#{label_base} 🕶️{tag_alias} Shadowsocks 2022"
                     configs.append(uri)
@@ -382,8 +402,9 @@ class XrayService:
 
                     # Trojan WebSocket
                     if sw_cdn_trojan_ws:
+                        trojan_port = int(self.db.get_setting("xray_trojan_port", 2083) or 2083) if port == 8443 else port
                         uri = (
-                            f"trojan://{clean_uuid}@{target_host}:{port}"
+                            f"trojan://{clean_uuid}@{target_host}:{trojan_port}"
                             f"?security=tls&type=ws&path={ws_path}"
                             f"&host={dom}&sni={dom}"
                             f"#{label_base} 🛡️{tag_alias}{isp_tag} Trojan-WS"
@@ -392,8 +413,9 @@ class XrayService:
 
                     # VLESS gRPC
                     if sw_cdn_vless_grpc:
+                        grpc_port = int(self.db.get_setting("xray_grpc_port", 2053) or 2053) if port == 8443 else port
                         uri = (
-                            f"vless://{clean_uuid}@{target_host}:{port}"
+                            f"vless://{clean_uuid}@{target_host}:{grpc_port}"
                             f"?security=tls&encryption=none&type=grpc&serviceName={grpc_srv}&mode=gun"
                             f"&sni={dom}"
                             f"#{label_base} ⚡{tag_alias}{isp_tag} VLESS-gRPC"
@@ -402,11 +424,12 @@ class XrayService:
 
                     # VMess WebSocket
                     if sw_cdn_vmess_ws:
+                        vmess_port = int(self.db.get_setting("xray_vmess_port", 2096) or 2096) if port == 8443 else port
                         vmess_dict = {
                             "v": "2",
                             "ps": f"{label_base} 🚀{tag_alias}{isp_tag} VMess-WS",
                             "add": target_host,
-                            "port": port,
+                            "port": vmess_port,
                             "id": clean_uuid,
                             "aid": "0",
                             "scy": "auto",
@@ -717,20 +740,125 @@ class XrayService:
             inbound_ws
         ]
 
-        # اینباند Shadowsocks در صورت فعال بودن
-        if self.db.is_setting_enabled("xray_matrix_direct_shadowsocks", default=False):
-            ss_port = int(self.db.get_setting("xray_ss_port", 1080) or 1080)
-            inbound_ss = {
-                "tag": "inbound-ss",
-                "port": ss_port,
-                "protocol": "shadowsocks",
-                "settings": {
-                    "method": "2022-blake3-aes-128-gcm",
-                    "password": base64.b64encode(b"tgbotshadowsocks").decode("utf-8"),
-                    "network": "tcp,udp"
-                }
+        # اینباند Shadowsocks 2022 (همواره فعال است تا پورت ۱۰۸۰ باز و آماده سرویس باشد)
+        ss_port = int(self.db.get_setting("xray_ss_port", 1080) or 1080)
+        ss_password = self.get_ss_password()
+        inbound_ss = {
+            "tag": "inbound-ss",
+            "port": ss_port,
+            "protocol": "shadowsocks",
+            "settings": {
+                "method": "2022-blake3-aes-128-gcm",
+                "password": ss_password,
+                "network": "tcp,udp"
             }
-            inbounds.append(inbound_ss)
+        }
+        inbounds.append(inbound_ss)
+
+        # اینباند Trojan WebSocket (پورت پیش‌فرض ۲۰۸۳ کلودفلر)
+        trojan_ws_port = int(self.db.get_setting("xray_trojan_port", 2083) or 2083)
+        trojan_clients = [{"password": c["id"], "email": c["email"]} for c in active_clients]
+        inbound_trojan_ws = {
+            "tag": "inbound-trojan-ws",
+            "port": trojan_ws_port,
+            "protocol": "trojan",
+            "settings": {
+                "clients": trojan_clients
+            },
+            "streamSettings": {
+                "network": "ws",
+                "security": "none",
+                "wsSettings": {
+                    "path": ws_path
+                }
+            },
+            "sniffing": {
+                "enabled": True,
+                "destOverride": ["http", "tls"]
+            }
+        }
+        inbounds.append(inbound_trojan_ws)
+
+        # اینباند VMess WebSocket (پورت پیش‌فرض ۲۰۹۶ کلودفلر)
+        vmess_ws_port = int(self.db.get_setting("xray_vmess_port", 2096) or 2096)
+        vmess_clients = [{"id": c["id"], "alterId": 0, "email": c["email"]} for c in active_clients]
+        inbound_vmess_ws = {
+            "tag": "inbound-vmess-ws",
+            "port": vmess_ws_port,
+            "protocol": "vmess",
+            "settings": {
+                "clients": vmess_clients
+            },
+            "streamSettings": {
+                "network": "ws",
+                "security": "none",
+                "wsSettings": {
+                    "path": ws_path
+                }
+            },
+            "sniffing": {
+                "enabled": True,
+                "destOverride": ["http", "tls"]
+            }
+        }
+        inbounds.append(inbound_vmess_ws)
+
+        # اینباند VLESS gRPC (پورت پیش‌فرض ۲۰۵۳ کلودفلر)
+        grpc_port = int(self.db.get_setting("xray_grpc_port", 2053) or 2053)
+        inbound_vless_grpc = {
+            "tag": "inbound-vless-grpc",
+            "port": grpc_port,
+            "protocol": "vless",
+            "settings": {
+                "clients": ws_clients,
+                "decryption": "none"
+            },
+            "streamSettings": {
+                "network": "grpc",
+                "security": "none",
+                "grpcSettings": {
+                    "serviceName": "tgbot-grpc"
+                }
+            },
+            "sniffing": {
+                "enabled": True,
+                "destOverride": ["http", "tls"]
+            }
+        }
+        inbounds.append(inbound_vless_grpc)
+
+        # اینباند Reality gRPC (پورت پیش‌فرض ۲۰۸۷ کلودفلر یا مستقیم)
+        reality_grpc_port = int(self.db.get_setting("xray_reality_grpc_port", 2087) or 2087)
+        inbound_reality_grpc = {
+            "tag": "inbound-reality-grpc",
+            "port": reality_grpc_port,
+            "protocol": "vless",
+            "settings": {
+                "clients": ws_clients,
+                "decryption": "none"
+            },
+            "streamSettings": {
+                "network": "grpc",
+                "security": "reality",
+                "realitySettings": {
+                    "show": False,
+                    "dest": f"{reality_sni}:443",
+                    "xver": 0,
+                    "serverNames": server_names,
+                    "privateKey": priv_key,
+                    "shortIds": [short_id] if short_id else ["2dfb9f7a"],
+                    "spiderX": "/"
+                },
+                "grpcSettings": {
+                    "serviceName": "tgbot-grpc"
+                }
+            },
+            "sniffing": {
+                "enabled": True,
+                "destOverride": ["http", "tls"]
+            }
+        }
+        inbounds.append(inbound_reality_grpc)
 
         # لیست اوت‌باندها
         outbounds = [

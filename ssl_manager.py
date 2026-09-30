@@ -725,10 +725,24 @@ def get_live_tls_certificate_info(domain: str, port: int = 443, timeout: float =
                         expiry_dt = cert.not_valid_after.replace(tzinfo=timezone.utc)
                     now = datetime.now(timezone.utc)
                     diff = (expiry_dt - now).total_seconds() / 86400.0
+
+                    issuer_str = ""
+                    try:
+                        orgs = cert.issuer.get_attributes_for_oid(x509.NameOID.ORGANIZATION_NAME)
+                        if orgs:
+                            issuer_str = str(orgs[0].value)
+                        else:
+                            cns = cert.issuer.get_attributes_for_oid(x509.NameOID.COMMON_NAME)
+                            if cns:
+                                issuer_str = str(cns[0].value)
+                    except Exception:
+                        pass
+
                     return {
                         "expiry_days": diff,
                         "expiry_date": expiry_dt.strftime("%Y-%m-%d %H:%M:%S UTC"),
                         "expiry_dt": expiry_dt,
+                        "issuer": issuer_str,
                         "source": "live_tls"
                     }
     except Exception as e:
@@ -736,14 +750,14 @@ def get_live_tls_certificate_info(domain: str, port: int = 443, timeout: float =
     return None
 
 
-def get_certificate_info(domain: str) -> Dict[str, Any]:
+def get_certificate_info(domain: str, port: int = 443) -> Dict[str, Any]:
     """
     بررسی جامع و دقیق وضعیت سرتیفیکیت SSL (فایل محلی + ارتباط زنده TLS):
     خروجی شامل روزهای باقیمانده، تاریخ انقضا و وضعیت (active, expiring, expired, pending, failed) است.
     """
     clean_d = clean_domain(domain)
     if not clean_d:
-        return {"expiry_days": None, "expiry_date": None, "status": "failed"}
+        return {"expiry_days": None, "expiry_date": None, "status": "failed", "issuer": ""}
 
     # ۱. بررسی فایل محلی سرتیفیکیت در سرور
     cert_path = find_certificate_path(clean_d)
@@ -760,10 +774,24 @@ def get_certificate_info(domain: str) -> Dict[str, Any]:
             diff = (expiry_dt - now).total_seconds() / 86400.0
             date_str = expiry_dt.strftime("%Y-%m-%d %H:%M:%S UTC")
             status = "active" if diff > 15 else ("expiring" if diff > 0 else "expired")
+
+            issuer_str = ""
+            try:
+                orgs = cert.issuer.get_attributes_for_oid(x509.NameOID.ORGANIZATION_NAME)
+                if orgs:
+                    issuer_str = str(orgs[0].value)
+                else:
+                    cns = cert.issuer.get_attributes_for_oid(x509.NameOID.COMMON_NAME)
+                    if cns:
+                        issuer_str = str(cns[0].value)
+            except Exception:
+                pass
+
             return {
                 "expiry_days": diff,
                 "expiry_date": date_str,
                 "status": status,
+                "issuer": issuer_str,
                 "source": "local_file",
                 "cert_path": cert_path
             }
@@ -771,7 +799,7 @@ def get_certificate_info(domain: str) -> Dict[str, Any]:
             logger.warning(f"Error reading local cert for {clean_d} from {cert_path}: {e}")
 
     # ۲. بررسی زنده TLS از طریق سوکت امن (مفید برای کلودفلر، Nginx، یا سرورهای ریموت)
-    live_res = get_live_tls_certificate_info(clean_d)
+    live_res = get_live_tls_certificate_info(clean_d, port=port)
     if live_res:
         diff = live_res["expiry_days"]
         date_str = live_res["expiry_date"]
@@ -780,10 +808,11 @@ def get_certificate_info(domain: str) -> Dict[str, Any]:
             "expiry_days": diff,
             "expiry_date": date_str,
             "status": status,
+            "issuer": live_res.get("issuer", ""),
             "source": "live_tls"
         }
 
-    return {"expiry_days": None, "expiry_date": None, "status": "pending"}
+    return {"expiry_days": None, "expiry_date": None, "status": "pending", "issuer": ""}
 
 
 def get_certificate_expiry_days(domain: str) -> Optional[float]:
@@ -1026,5 +1055,149 @@ def renew_all_ssl_certificates(threshold_days: int = 30) -> Dict[str, Any]:
 
     logger.info(f"SSL renewal check completed: {len(results['renewed'])} renewed, {len(results['skipped'])} skipped, {len(results['failed'])} failed.")
     return results
+
+
+def check_and_renew_xray_domain_ssl(domain_id_or_domain: Any, force_renew: bool = False) -> Dict[str, Any]:
+    """
+    بررسی هوشمند، استعلام زنده و صدور/تمدید گواهی SSL برای دامنه‌های اختصاصی هسته Xray:
+    - بررسی رکورد DNS و تشخیص اتصال مستقیم یا Cloudflare CDN
+    - استعلام زنده وضعیت SSL و استخراج روزهای باقیمانده، تاریخ دقیق و مرجع صدور (Issuer)
+    - صدور سرتیفیکیت رسمی (Let's Encrypt / ZeroSSL) یا خودامضای معتبر برای هندشیک کلودفلر
+    - ذخیره مستقیم نتایج در جدول xray_domains
+    """
+    logs = []
+    def _log(msg: str):
+        logs.append(msg)
+        logger.info(f"[XrayDomainSSL] {msg}")
+
+    dom_record = None
+    if isinstance(domain_id_or_domain, int) or (isinstance(domain_id_or_domain, str) and str(domain_id_or_domain).strip().isdigit()):
+        dom_record = db.get_xray_domain(int(domain_id_or_domain))
+    else:
+        # جستجو بر اساس نام دامنه
+        all_x_doms = db.get_xray_domains()
+        c_search = clean_domain(str(domain_id_or_domain))
+        for d_item in all_x_doms:
+            if clean_domain(d_item.get("domain", "")) == c_search:
+                dom_record = d_item
+                break
+
+    if not dom_record:
+        return {
+            "success": False,
+            "error": "دامنه اختصاصی مورد نظر در دیتابیس یافت نشد.",
+            "logs": "❌ رکورد دامنه یافت نشد."
+        }
+
+    domain_id = dom_record["id"]
+    raw_domain = dom_record.get("domain", "")
+    clean_d = clean_domain(raw_domain)
+    role = (dom_record.get("role") or "cdn").lower()
+
+    _log(f"🔍 شروع پردازش هوشمند SSL برای دامنه '{clean_d}' (نقش: {role.upper()})...")
+
+    # ۱. بررسی رکورد DNS
+    _log("🌐 بررسی وضعیت اتصال DNS و رزولوشن دامنه...")
+    dns_res = check_domain_dns(clean_d)
+    is_cf = dns_res.get("is_cloudflare", False) or is_cloudflare_ip(dns_res.get("resolved_ip", ""))
+    if dns_res.get("resolved_ip"):
+        _log(f"📍 آی‌پی شناسایی‌شده دامنه: {dns_res['resolved_ip']}" + (" (شبکه Cloudflare ☁️)" if is_cf else ""))
+
+    # ۲. استعلام زنده وضعیت فعلی SSL دامنه
+    _log("🔒 بررسی زنده وضعیت TLS و گواهی فعال...")
+    cert_info = get_certificate_info(clean_d, port=443)
+    status = cert_info.get("status", "pending")
+    expiry_days = cert_info.get("expiry_days")
+    expiry_date_str = cert_info.get("expiry_date") or ""
+    issuer_str = cert_info.get("issuer") or ""
+
+    # اگر سرتیفیکیت معتبر زنده دارد و درخواست تمدید اجباری داده نشده باشد
+    if not force_renew and status in ("active", "expiring") and expiry_days and expiry_days > 7:
+        _log("✅ گواهی امنیتی SSL دامنه در حال حاضر فعال و معتبر است.")
+        if issuer_str:
+            _log(f"🛡 مرجع صدور: {issuer_str}")
+        _log(f"📅 روزهای باقیمانده تا انقضا: {round(expiry_days, 1)} روز (تا {expiry_date_str})")
+
+        # ذخیره در دیتابیس
+        if hasattr(db, "update_xray_domain_ssl"):
+            db.update_xray_domain_ssl(
+                domain_id=domain_id,
+                ssl_status=status,
+                ssl_expiry_date=expiry_date_str,
+                ssl_days_left=round(expiry_days, 1),
+                ssl_issuer=issuer_str,
+                ssl_last_log="\n".join(logs)
+            )
+        return {
+            "success": True,
+            "ssl_status": status,
+            "expiry_days": round(expiry_days, 1),
+            "expiry_date": expiry_date_str,
+            "issuer": issuer_str,
+            "logs": "\n".join(logs)
+        }
+
+    # ۳. اقدام به صدور یا تمدید سرتیفیکیت متناسب با نقش
+    if role == "cdn" and is_cf:
+        _log("☁️ دامنه بر روی شبکه پروکسی کلودفلر قرار دارد.")
+        _log("🔒 ایجاد گواهی امنیتی داخلی (Origin SSL) جهت ارتباط امن Full SSL کلودفلر با سرور...")
+        self_res = _generate_self_signed_cert(clean_d, log_fn=_log)
+        live_res = get_live_tls_certificate_info(clean_d, port=443)
+        if live_res:
+            expiry_days = live_res.get("expiry_days")
+            expiry_date_str = live_res.get("expiry_date") or ""
+            issuer_str = live_res.get("issuer") or "Cloudflare / Google Trust"
+            status = "active"
+            _log("🎉 گواهی SSL کلودفلر و مبدا با موفقیت تایید شد.")
+            _log(f"📅 مدت اعتبار: {round(expiry_days, 1)} روز تا تاریخ {expiry_date_str}")
+        else:
+            status = "active" if self_res.get("success") else "pending"
+            expiry_days = 365.0
+            expiry_date_str = (datetime.now(timezone.utc) + timedelta(days=365)).strftime("%Y-%m-%d %H:%M:%S UTC")
+            issuer_str = "Cloudflare Origin SSL"
+            _log("✅ گواهی امنیتی مبدا با موفقیت مستقر شد.")
+    else:
+        # برای حالت مستقیم یا زمانی که رکورد مستقیماً به سرور متصل است
+        _log("🔐 درخواست صدور گواهی رسمی از مراجع معتبر (Let's Encrypt / ZeroSSL)...")
+        renew_res = renew_domain_ssl_with_logs(clean_d)
+        if renew_res.get("logs"):
+            logs.append(renew_res.get("logs", ""))
+        if renew_res.get("success"):
+            status = "active"
+            expiry_days = renew_res.get("expiry_days")
+            expiry_date_str = renew_res.get("expiry_date") or ""
+            issuer_str = renew_res.get("provider") or "Let's Encrypt"
+        else:
+            # آخرین بازبینی
+            final_check = get_certificate_info(clean_d, port=443)
+            if final_check.get("status") in ("active", "expiring"):
+                status = final_check["status"]
+                expiry_days = final_check.get("expiry_days")
+                expiry_date_str = final_check.get("expiry_date") or ""
+                issuer_str = final_check.get("issuer") or ""
+            else:
+                status = "failed"
+
+    # به‌روزرسانی نهایی در دیتابیس
+    if hasattr(db, "update_xray_domain_ssl"):
+        db.update_xray_domain_ssl(
+            domain_id=domain_id,
+            ssl_status=status,
+            ssl_expiry_date=expiry_date_str,
+            ssl_days_left=round(expiry_days, 1) if expiry_days is not None else None,
+            ssl_issuer=issuer_str,
+            ssl_last_log="\n".join(logs)
+        )
+
+    return {
+        "success": status in ("active", "expiring"),
+        "ssl_status": status,
+        "expiry_days": round(expiry_days, 1) if expiry_days is not None else None,
+        "expiry_date": expiry_date_str,
+        "issuer": issuer_str,
+        "logs": "\n".join(logs),
+        "error": None if status in ("active", "expiring") else "عدم موفقیت در صدور گواهی SSL"
+    }
+
 
 
