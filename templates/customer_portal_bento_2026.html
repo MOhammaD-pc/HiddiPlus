@@ -118,7 +118,7 @@
                     </div>
                     <div class="portal-brand-status">
                         <span class="portal-status-dot"></span>
-                        <span class="portal-status-text">{{ server_status.title or "سرویس ابری فعال و پایدار" }}</span>
+                        <span class="portal-status-text">{{ (server_status.title if (server_status is defined and server_status and server_status.title) else "سرویس ابری فعال و پایدار") }}</span>
                     </div>
                 </div>
             </div>
@@ -199,7 +199,7 @@
                 <a href="{{ url_for('customer_portal', token=usub.id) }}" class="device-pill {% if usub.id == token or usub.hidify_uuid == token or (usub.device_type == 'mobile' and 'mobile' in token) or (usub.device_type == 'laptop' and 'laptop' in token) %}active{% endif %}">
                     <div class="device-pill-content">
                         <span class="device-pill-title">{{ usub.account_name }}</span>
-                        <span class="device-pill-subtitle">باقی‌مانده: {{ usub.remaining_traffic_gb|to_persian_digits }} گیگ ({{ usub.remaining_days|to_persian_digits }} روز)</span>
+                        <span class="device-pill-subtitle">باقی‌مانده: {{ usub.remaining_traffic_gb|persian_digits }} گیگ ({{ usub.remaining_days|persian_digits }} روز)</span>
                     </div>
                     <div class="device-pill-icon">
                         {% if usub.device_type == 'laptop' %}
@@ -260,7 +260,7 @@
                         <div>
                             <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-primary border-opacity-10">
                                 <span class="small text-secondary">مبلغ دقیق واریزی:</span>
-                                <span class="h5 mb-0 fw-bold text-primary">{{ invoice.final_amount|to_persian_digits }} تومان</span>
+                                <span class="h5 mb-0 fw-bold text-primary">{{ invoice.final_amount|persian_digits }} تومان</span>
                             </div>
                             <div class="small text-secondary" style="font-size: 0.8rem; line-height: 1.6;">
                                 <i class="fas fa-bolt text-warning me-1"></i> سیستم خودکار پیامک بانک فعال است. بلافاصله پس از واریز، سرویس شما فعال می‌گردد.
@@ -305,7 +305,7 @@
                                 <span class="badge bg-danger rounded-pill px-3 py-2">منقضی شده</span>
                                 {% else %}
                                 <span class="badge rounded-pill px-3 py-2" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
-                                    {{ days_left|to_persian_digits }} روز تا تمدید
+                                    {{ days_left|persian_digits }} روز تا تمدید
                                 </span>
                                 {% endif %}
                                 <div class="small text-secondary mt-1" style="font-size: 0.75rem;">انقضا: {{ sub.expire_date_shamsi }}</div>
@@ -331,7 +331,7 @@
                                         <circle class="gauge-progress" cx="60" cy="60" r="50" fill="none" stroke-width="10" stroke-dasharray="314.159" stroke-dashoffset="{{ offset }}" />
                                     </svg>
                                     <div class="traffic-gauge-content">
-                                        <span class="gauge-percent">{{ pct|to_persian_digits }}٪</span>
+                                        <span class="gauge-percent">{{ pct|persian_digits }}٪</span>
                                         <span class="gauge-label">مصرف شده</span>
                                     </div>
                                 </div>
@@ -342,25 +342,25 @@
                                     <div class="col-6">
                                         <div class="p-3 rounded-3" style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle);">
                                             <div class="small text-secondary mb-1">باقی‌مانده:</div>
-                                            <div class="h5 mb-0 fw-bold text-primary" style="color: var(--hiddi-brand) !important;">{{ remain_gb|to_persian_digits }} <span class="small font-monospace">GB</span></div>
+                                            <div class="h5 mb-0 fw-bold text-primary" style="color: var(--hiddi-brand) !important;">{{ remain_gb|persian_digits }} <span class="small font-monospace">GB</span></div>
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="p-3 rounded-3" style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle);">
                                             <div class="small text-secondary mb-1">کل حجم بسته:</div>
-                                            <div class="h5 mb-0 fw-bold">{{ sub.traffic_limit|to_persian_digits }} <span class="small font-monospace">GB</span></div>
+                                            <div class="h5 mb-0 fw-bold">{{ sub.traffic_limit|persian_digits }} <span class="small font-monospace">GB</span></div>
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="p-3 rounded-3" style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle);">
                                             <div class="small text-secondary mb-1">مصرف شده:</div>
-                                            <div class="fw-bold">{{ sub.data_used|to_persian_digits }} <span class="small font-monospace">GB</span></div>
+                                            <div class="fw-bold">{{ sub.data_used|persian_digits }} <span class="small font-monospace">GB</span></div>
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="p-3 rounded-3" style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle);">
                                             <div class="small text-secondary mb-1">میانگین روزانه:</div>
-                                            <div class="fw-bold">{{ traffic_analytics.daily_avg_gb|to_persian_digits }} <span class="small font-monospace">GB</span></div>
+                                            <div class="fw-bold">{{ traffic_analytics.daily_avg_gb|persian_digits }} <span class="small font-monospace">GB</span></div>
                                         </div>
                                     </div>
                                 </div>
@@ -416,7 +416,7 @@
                                 <span class="badge" style="background: rgba(255,255,255,0.15); font-size: 0.68rem; font-weight: 700; border: 1px solid rgba(255,255,255,0.2);">VIP Gold</span>
                             </div>
                             <div class="wallet-balance-amount">
-                                <span class="wallet-balance-val" id="walletBalanceDisplay">{{ user_wallet.formatted_balance }}</span>
+                                <span class="wallet-balance-val" id="walletBalanceDisplay">{{ (user_wallet.formatted_balance if (user_wallet is defined and user_wallet and user_wallet.formatted_balance) else "۰ تومان") }}</span>
                             </div>
                             <div class="wallet-card-perks">
                                 <div class="wallet-card-perk-item">
@@ -588,16 +588,16 @@
                                 {% endif %}
                             </div>
                             <div class="d-flex align-items-center gap-3 mt-1 small text-secondary">
-                                <span><i class="fas fa-calendar-check text-primary me-1"></i> <strong style="color: var(--text-primary) !important;">{{ plan.days|to_persian_digits }} روز</strong></span>
-                                <span><i class="fas fa-database text-info me-1"></i> <strong>{{ plan.traffic_gb|to_persian_digits }} گیگابایت</strong></span>
-                                <span><i class="fas fa-users text-success me-1"></i> {{ plan.user_limit|to_persian_digits }} کاربر</span>
+                                <span><i class="fas fa-calendar-check text-primary me-1"></i> <strong style="color: var(--text-primary) !important;">{{ plan.days|persian_digits }} روز</strong></span>
+                                <span><i class="fas fa-database text-info me-1"></i> <strong>{{ plan.traffic_gb|persian_digits }} گیگابایت</strong></span>
+                                <span><i class="fas fa-users text-success me-1"></i> {{ plan.user_limit|persian_digits }} کاربر</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="d-flex align-items-center gap-4">
                         <div class="text-end">
-                            <span class="h5 fw-bold mb-0" style="color: var(--text-primary) !important;">{{ plan.price|to_persian_digits }}</span>
+                            <span class="h5 fw-bold mb-0" style="color: var(--text-primary) !important;">{{ plan.price|persian_digits }}</span>
                             <span class="small text-secondary">تومان</span>
                         </div>
                         <button type="button" class="btn btn-sm {% if plan.id == 2 %}btn-hiddi-primary{% else %}btn-hiddi-secondary{% endif %} px-4 py-2" onclick="openPurchaseModal({{ plan.id }}, '{{ plan.name }}', {{ plan.price }})">
@@ -642,20 +642,20 @@
                             <!-- بج فوق‌العاده برجسته و شاخص تعداد روزها (پاسخ دقیق به خواسته کاربر) -->
                             <div class="plan-prominent-duration">
                                 <i class="fas fa-calendar-check text-primary"></i>
-                                <span class="duration-highlight">{{ plan.days|to_persian_digits }} روز اعتبار کامل</span>
+                                <span class="duration-highlight">{{ plan.days|persian_digits }} روز اعتبار کامل</span>
                             </div>
                         </div>
 
                         <!-- بخش نمایش هایلایت ترافیک و قیمت (خلوت، بدون متون زائد) -->
                         <div class="plan-showcase-box">
                             <div class="plan-traffic-row">
-                                <span class="plan-traffic-number">{{ plan.traffic_gb|to_persian_digits }}</span>
+                                <span class="plan-traffic-number">{{ plan.traffic_gb|persian_digits }}</span>
                                 <span class="plan-traffic-gb">گیگابایت</span>
                             </div>
                             <div class="plan-price-divider"></div>
                             <div class="plan-price-row">
                                 <div class="plan-price-val-wrap">
-                                    <span class="plan-price-amount">{{ plan.price|to_persian_digits }}</span>
+                                    <span class="plan-price-amount">{{ plan.price|persian_digits }}</span>
                                     <span class="plan-price-curr">تومان</span>
                                 </div>
                             </div>
@@ -670,7 +670,7 @@
                                 </li>
                                 <li class="plan-feature-item">
                                     <span class="plan-check-icon"><i class="fas fa-check"></i></span>
-                                    <span>{{ plan.user_limit|to_persian_digits }} کاربر همزمان</span>
+                                    <span>{{ plan.user_limit|persian_digits }} کاربر همزمان</span>
                                 </li>
                                 <li class="plan-feature-item">
                                     <span class="plan-check-icon"><i class="fas fa-check"></i></span>
@@ -969,7 +969,7 @@
                                     <i class="fas fa-gauge-high me-1"></i>میانگین روزانه
                                 </span>
                                 <strong class="fs-6 d-block" style="color: var(--text-primary);">
-                                    {{ traffic_analytics.daily_avg_gb|to_persian_digits or '۱.۸' }} <small class="text-secondary">GB</small>
+                                    {{ traffic_analytics.daily_avg_gb|persian_digits or '۱.۸' }} <small class="text-secondary">GB</small>
                                 </strong>
                                 <small class="text-secondary" style="font-size: 0.68rem;">مصرف معمول ۲۴ ساعته</small>
                             </div>
@@ -980,7 +980,7 @@
                                     <i class="fas fa-circle-half-stroke me-1"></i>نسبت روز به شب
                                 </span>
                                 <strong class="fs-6 d-block" style="color: var(--text-primary);">
-                                    {{ (traffic_analytics.day_pct or 75)|to_persian_digits }}٪ / {{ (traffic_analytics.night_pct or 25)|to_persian_digits }}٪
+                                    {{ (traffic_analytics.day_pct or 75)|persian_digits }}٪ / {{ (traffic_analytics.night_pct or 25)|persian_digits }}٪
                                 </strong>
                                 <small class="text-secondary" style="font-size: 0.68rem;">روز (۸-۲۴) / شب (۰-۸)</small>
                             </div>
@@ -991,7 +991,7 @@
                                     <i class="fas fa-hourglass-half me-1"></i>تخمین مانده حجم
                                 </span>
                                 <strong class="fs-6 d-block" style="color: var(--text-primary);">
-                                    حدود {{ (traffic_analytics.estimated_days_left or 18)|to_persian_digits }} روز
+                                    حدود {{ (traffic_analytics.estimated_days_left or 18)|persian_digits }} روز
                                 </strong>
                                 <small class="text-secondary" style="font-size: 0.68rem;">با آهنگ مصرف فعلی شما</small>
                             </div>
@@ -1204,28 +1204,28 @@
                                         <i class="fas fa-user-friends"></i>
                                     </div>
                                     <span class="bento-metric-label">دعوت‌شده‌ها</span>
-                                    <span class="bento-metric-value">{{ (customer_ref_stats.invite_count if customer_ref_stats else 12)|to_persian_digits }} <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary);">نفر</span></span>
+                                    <span class="bento-metric-value">{{ (customer_ref_stats.invite_count if customer_ref_stats else 12)|persian_digits }} <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary);">نفر</span></span>
                                 </div>
                                 <div class="bento-metric-col">
                                     <div class="bento-metric-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
                                         <i class="fas fa-shopping-bag"></i>
                                     </div>
                                     <span class="bento-metric-label">خریدهای موفق</span>
-                                    <span class="bento-metric-value">{{ (customer_ref_stats.success_buys if customer_ref_stats else 8)|to_persian_digits }} <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary);">نفر</span></span>
+                                    <span class="bento-metric-value">{{ (customer_ref_stats.success_buys if customer_ref_stats else 8)|persian_digits }} <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary);">نفر</span></span>
                                 </div>
                                 <div class="bento-metric-col">
                                     <div class="bento-metric-icon" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;">
                                         <i class="fas fa-hand-holding-usd"></i>
                                     </div>
                                     <span class="bento-metric-label">مجموع پاداش</span>
-                                    <span class="bento-metric-value">{{ (customer_ref_stats.total_reward|to_persian_digits if customer_ref_stats and customer_ref_stats.total_reward else '۱۶۰,۰۰۰') }} <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary);">ت</span></span>
+                                    <span class="bento-metric-value">{{ (customer_ref_stats.total_reward|persian_digits if customer_ref_stats and customer_ref_stats.total_reward else '۱۶۰,۰۰۰') }} <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary);">ت</span></span>
                                 </div>
                                 <div class="bento-metric-col">
                                     <div class="bento-metric-icon" style="background: rgba(6, 182, 212, 0.12); color: #06b6d4;">
                                         <i class="fas fa-wallet"></i>
                                     </div>
                                     <span class="bento-metric-label">کیف پول فعلی</span>
-                                    <span class="bento-metric-value" id="clubModalWalletBal">{{ user_wallet.formatted_balance }}</span>
+                                    <span class="bento-metric-value" id="clubModalWalletBal">{{ (user_wallet.formatted_balance if (user_wallet is defined and user_wallet and user_wallet.formatted_balance) else "۰ تومان") }}</span>
                                 </div>
                             </div>
 
@@ -1567,7 +1567,7 @@
                         <button type="button" class="ticket-tab-btn" id="tabBtnHistoryTicket" onclick="switchTicketTab('history')">
                             <i class="fas fa-clock-rotate-left"></i>
                             <span>سوابق تیکت‌ها</span>
-                            <span class="ticket-tab-badge" id="ticketHistoryCountBadge">{{ user_tickets|length|to_persian_digits }} تیکت</span>
+                            <span class="ticket-tab-badge" id="ticketHistoryCountBadge">{{ user_tickets|length|persian_digits }} تیکت</span>
                         </button>
                     </div>
 
@@ -1897,7 +1897,7 @@
                 <div class="modal-body py-4 px-4">
                     <div class="text-center mb-4 p-3 rounded-4" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 182, 212, 0.05) 100%); border: 1px solid rgba(16, 185, 129, 0.2);">
                         <span class="small text-secondary">موجودی فعلی قابل استفاده:</span>
-                        <div class="h3 fw-bold text-success mt-1 mb-0" id="modalCurrentWalletBalance">{{ user_wallet.formatted_balance }}</div>
+                        <div class="h3 fw-bold text-success mt-1 mb-0" id="modalCurrentWalletBalance">{{ (user_wallet.formatted_balance if (user_wallet is defined and user_wallet and user_wallet.formatted_balance) else "۰ تومان") }}</div>
                     </div>
 
                     <!-- مبالغ سریع پیش‌فرض -->
@@ -1972,14 +1972,14 @@
                                 <i class="fas fa-layer-group"></i>
                             </div>
                             <span class="bento-metric-label">کل دوره‌ها</span>
-                            <span class="bento-metric-value">{{ (sub_history|length if sub_history else 1)|to_persian_digits }} <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary);">دوره</span></span>
+                            <span class="bento-metric-value">{{ (sub_history|length if sub_history else 1)|persian_digits }} <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary);">دوره</span></span>
                         </div>
                         <div class="bento-metric-col">
                             <div class="bento-metric-icon" style="background: rgba(6, 182, 212, 0.12); color: #06b6d4;">
                                 <i class="fas fa-wallet"></i>
                             </div>
                             <span class="bento-metric-label">مجموع پرداختی‌ها</span>
-                            <span class="bento-metric-value">{{ (total_paid|to_persian_digits if total_paid else '۳۸۰,۰۰۰') }} <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary);">تومان</span></span>
+                            <span class="bento-metric-value">{{ (total_paid|persian_digits if total_paid else '۳۸۰,۰۰۰') }} <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary);">تومان</span></span>
                         </div>
                         <div class="bento-metric-col">
                             <div class="bento-metric-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
@@ -1998,12 +1998,12 @@
                         <button class="seg-tab-btn active" id="history-tx-tab" data-bs-toggle="pill" data-bs-target="#historyTabTransactions" type="button" role="tab">
                             <i class="fas fa-receipt"></i>
                             <span>تراکنش‌ها و پرداخت‌ها</span>
-                            <span class="badge-count">{{ (tx_history|length if tx_history else 3)|to_persian_digits }}</span>
+                            <span class="badge-count">{{ (tx_history|length if tx_history else 3)|persian_digits }}</span>
                         </button>
                         <button class="seg-tab-btn" id="history-periods-tab" data-bs-toggle="pill" data-bs-target="#historyTabPeriods" type="button" role="tab">
                             <i class="fas fa-hourglass-half"></i>
                             <span>سوابق دوره‌ها و مصرف</span>
-                            <span class="badge-count">{{ (sub_history|length if sub_history else 1)|to_persian_digits }}</span>
+                            <span class="badge-count">{{ (sub_history|length if sub_history else 1)|persian_digits }}</span>
                         </button>
                     </div>
 
@@ -2028,7 +2028,7 @@
                                     </div>
                                 </div>
                                 <div class="fintech-tx-trail">
-                                    <span class="fintech-amount-val {% if tx.is_deposit or tx.is_reward %}positive{% else %}neutral{% endif %}">{{ tx.amount|to_persian_digits }} تومان</span>
+                                    <span class="fintech-amount-val {% if tx.is_deposit or tx.is_reward %}positive{% else %}neutral{% endif %}">{{ tx.amount|persian_digits }} تومان</span>
                                     <span class="fintech-status-chip squircle-emerald" style="padding: 2px 8px; border-radius: 10px;">
                                         <i class="fas fa-check-circle" style="font-size: 0.65rem;"></i> تایید آنی
                                     </span>
@@ -2114,7 +2114,7 @@
                             <div class="period-modern-card {% if item.status == 'فعال' %}active-period{% endif %}">
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <div class="d-flex align-items-center gap-2">
-                                        <span class="badge" style="background: rgba(24, 87, 242, 0.15); color: #1857f2; border: 1px solid rgba(24, 87, 242, 0.3); font-size: 0.72rem; font-weight: 800; border-radius: 8px;">دوره {{ loop.index|to_persian_digits }}</span>
+                                        <span class="badge" style="background: rgba(24, 87, 242, 0.15); color: #1857f2; border: 1px solid rgba(24, 87, 242, 0.3); font-size: 0.72rem; font-weight: 800; border-radius: 8px;">دوره {{ loop.index|persian_digits }}</span>
                                         <h6 class="mb-0 fw-bold" style="font-size: 0.95rem;">{{ item.plan_name or "اشتراک ۱ ماهه طلایی" }}</h6>
                                     </div>
                                     <div class="radar-status-pill">
@@ -2130,7 +2130,7 @@
                                 </div>
                                 <div class="d-flex flex-wrap align-items-center justify-content-between small text-secondary gap-2 mt-2" style="font-size: 0.76rem;">
                                     <div><i class="far fa-calendar-alt me-1 text-primary"></i> اعتبار دوره: {{ item.start_date }} تا {{ item.expire_date }}</div>
-                                    <div><i class="fas fa-chart-pie me-1 text-warning"></i> مصرف: <strong class="text-body font-monospace">{{ item.used_gb|to_persian_digits }} GB</strong> از {{ item.total_gb|to_persian_digits }} GB (<span class="text-primary font-monospace">{{ p_pct|to_persian_digits }}٪</span>)</div>
+                                    <div><i class="fas fa-chart-pie me-1 text-warning"></i> مصرف: <strong class="text-body font-monospace">{{ item.used_gb|persian_digits }} GB</strong> از {{ item.total_gb|persian_digits }} GB (<span class="text-primary font-monospace">{{ p_pct|persian_digits }}٪</span>)</div>
                                 </div>
                             </div>
                             {% endfor %}

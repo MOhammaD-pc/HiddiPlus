@@ -1229,7 +1229,11 @@ def filter_last_connection_display(date_str):
 
 
 @app.template_filter("persian_digits")
+@app.template_filter("to_persian_digits")
+@app.template_filter("to_fa_digits")
 @app.template_global("to_persian_digits")
+@app.template_global("to_fa_digits")
+@app.template_global("persian_digits")
 def filter_persian_digits(val):
     """تبدیل ارقام انگلیسی به فارسی در قالب‌های Jinja"""
     return to_persian_digits(val)
