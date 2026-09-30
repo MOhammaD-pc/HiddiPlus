@@ -1239,6 +1239,22 @@ def filter_persian_digits(val):
     return to_persian_digits(val)
 
 
+@app.template_filter("format_price")
+@app.template_global("format_price")
+def filter_format_price(val):
+    """فرمت‌بندی ارقام و مبالغ به صورت جداکننده سه رقمی هزارگان (مثلاً 10,000)"""
+    if val is None or val == "":
+        return "0"
+    try:
+        val_clean = str(val).replace(",", "").strip()
+        f_val = float(val_clean)
+        if f_val.is_integer():
+            return f"{int(f_val):,}"
+        return f"{f_val:,.2f}".rstrip("0").rstrip(".")
+    except (ValueError, TypeError):
+        return str(val)
+
+
 @app.template_filter("activity_time")
 @app.template_global("format_activity_time")
 def filter_activity_time(date_input):

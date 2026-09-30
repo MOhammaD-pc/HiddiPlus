@@ -1,3 +1,13 @@
+{% set sub = sub or {} %}
+{% set traffic_analytics = traffic_analytics or {} %}
+{% set plans = plans or [] %}
+{% set chat_settings = chat_settings or {} %}
+{% set customer_ref_cfg = customer_ref_cfg or {} %}
+{% set customer_ref_stats = customer_ref_stats or {} %}
+{% set total_paid = total_paid or 0 %}
+{% set server_status = server_status or {} %}
+{% set avatar_presets = avatar_presets or [] %}
+{% set user_subscriptions = user_subscriptions or [] %}
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -4125,7 +4135,7 @@
                             </div>
 
                             <!-- مینی چارت بصری بنتو ۱ بر پایه آمار واقعی مصرف هفتگی -->
-                            {% set wc = traffic_analytics.get('weekly_chart') or {} %}
+                            {% set wc = (traffic_analytics.get('weekly_chart') if (traffic_analytics and traffic_analytics.get) else {}) or {} %}
                             {% set b1 = wc.get('bento1') or {} %}
                             <div class="py-2">
                                 <svg viewBox="0 0 200 60" class="w-100" style="height: 58px; overflow: visible;" id="bento1SparkSvg">
@@ -4372,7 +4382,7 @@
                             </div>
 
                             <!-- نمودار موجی نئونی بنتو ۳ بر پایه آمار واقعی مصرف هفتگی -->
-                            {% set wc = traffic_analytics.get('weekly_chart') or {} %}
+                            {% set wc = (traffic_analytics.get('weekly_chart') if (traffic_analytics and traffic_analytics.get) else {}) or {} %}
                             {% set b3 = wc.get('bento3') or {} %}
                             <div class="py-3">
                                 <svg viewBox="0 0 200 70" class="w-100" style="height: 75px; overflow: visible;" id="bento3WaveSvg">
@@ -5216,7 +5226,7 @@
                             <div class="col-6 col-md-3">
                                 <div class="p-3 rounded-3 text-center" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
                                     <span class="d-block text-secondary small mb-1" style="font-size: 0.75rem;">💳 کیف پول فعلی</span>
-                                    <span class="fw-bold fs-5 text-primary">{{ "{:,}".format(customer_ref_stats.wallet_balance) }}</span>
+                                    <span class="fw-bold fs-5 text-primary">{{ (customer_ref_stats.wallet_balance|format_price|persian_digits) if customer_ref_stats else '۰' }}</span>
                                     <small class="text-muted d-block" style="font-size: 0.7rem;">تومان</small>
                                 </div>
                             </div>
@@ -5293,17 +5303,17 @@
                             <h6 class="fw-bold small text-white mb-2"><i class="fas fa-info-circle text-info me-1"></i> شرایط و قوانین یکپارچه دریافت پاداش:</h6>
                             <ul class="text-secondary small mb-0 ps-3" style="font-size: 0.8rem; line-height: 1.8;">
                                 <li>قوانین و پورسانت برای <b>لینک دامنه سایت</b>، <b>شماره تماس در کادر معرف</b> و <b>ربات تلگرام</b> کاملاً یکسان بوده و به صورت آنی به کیف پول شما واریز می‌شود.</li>
-                                {% if customer_ref_cfg.reward_type == 'percent' %}
-                                <li>به ازای هر خرید موفق دوستان شما، <b class="text-white">{{ customer_ref_cfg.reward_amount }}٪</b> از مبلغ فاکتور خرید فوراً به کیف پول شما اضافه می‌شود.</li>
+                                {% if customer_ref_cfg and customer_ref_cfg.reward_type == 'percent' %}
+                                <li>به ازای هر خرید موفق دوستان شما، <b class="text-white">{{ (customer_ref_cfg.reward_amount|persian_digits) if customer_ref_cfg else '۰' }}٪</b> از مبلغ فاکتور خرید فوراً به کیف پول شما اضافه می‌شود.</li>
                                 {% else %}
-                                <li>به ازای هر خرید موفق دوستان شما، مبلغ <b class="text-white">{{ "{:,}".format(customer_ref_cfg.reward_amount) }} تومان</b> پاداش نقدی فوراً به کیف پول شما واریز خواهد شد.</li>
+                                <li>به ازای هر خرید موفق دوستان شما، مبلغ <b class="text-white">{{ (customer_ref_cfg.reward_amount|format_price|persian_digits) if (customer_ref_cfg and customer_ref_cfg.reward_amount) else '۰' }} تومان</b> پاداش نقدی فوراً به کیف پول شما واریز خواهد شد.</li>
                                 {% endif %}
-                                {% if customer_ref_cfg.min_purchase_amount > 0 %}
-                                <li>حداقل مبلغ خرید برای تعلق پاداش: <b class="text-white">{{ "{:,}".format(customer_ref_cfg.min_purchase_amount) }} تومان</b> می‌باشد.</li>
+                                {% if customer_ref_cfg and customer_ref_cfg.min_purchase_amount and customer_ref_cfg.min_purchase_amount > 0 %}
+                                <li>حداقل مبلغ خرید برای تعلق پاداش: <b class="text-white">{{ customer_ref_cfg.min_purchase_amount|format_price|persian_digits }} تومان</b> می‌باشد.</li>
                                 {% endif %}
                                 <li>موجودی کیف پول شما به صورت خودکار در خریدهای بعدی یا تمدید <b>بسته‌ها</b> اعمال شده و از مبلغ فاکتور کسر می‌گردد.</li>
                                 <li>پاداش صرفاً به خریدهای معتبر و قطعی <b>بسته‌ها</b> تعلق می‌گیرد و برای اکانت‌های تست رایگان پاداشی ثبت نخواهد شد.</li>
-                                {% if customer_ref_cfg.custom_terms %}
+                                {% if customer_ref_cfg and customer_ref_cfg.custom_terms %}
                                 <li class="text-info mt-1">{{ customer_ref_cfg.custom_terms }}</li>
                                 {% endif %}
                             </ul>
@@ -5575,7 +5585,7 @@
                                 <i class="fas fa-bolt me-1"></i>ساعت اوج مصرف
                             </span>
                             <strong class="traffic-stat-value fs-6 d-block text-truncate" id="trafficPeakHour">
-                                {{ traffic_analytics.get('peak_hour') or '۱۹:۰۰ الی ۲۲:۰۰' }}
+                                {{ (traffic_analytics.get('peak_hour') if (traffic_analytics and traffic_analytics.get) else None) or '۱۹:۰۰ الی ۲۲:۰۰' }}
                             </strong>
                             <small class="text-secondary" style="font-size: 0.7rem;">پرمصرف‌ترین بازه در شبانه‌روز</small>
                         </div>
@@ -5586,7 +5596,7 @@
                                 <i class="fas fa-gauge-high me-1"></i>میانگین روزانه
                             </span>
                             <strong class="traffic-stat-value fs-6 d-block" id="trafficDailyAvg">
-                                {{ traffic_analytics.get('daily_avg_gb', 0) }} <small class="text-secondary">GB/روز</small>
+                                {{ (traffic_analytics.get('daily_avg_gb', 0) if (traffic_analytics and traffic_analytics.get) else 0) }} <small class="text-secondary">GB/روز</small>
                             </strong>
                             <small class="text-secondary" style="font-size: 0.7rem;">مصرف معمول در ۲۴ ساعت</small>
                         </div>
@@ -5597,7 +5607,7 @@
                                 <i class="fas fa-circle-half-stroke me-1"></i>نسبت روز / شب
                             </span>
                             <strong class="traffic-stat-value fs-6 d-block" id="trafficDayNight">
-                                {{ traffic_analytics.get('day_pct', 75) }}٪ / {{ traffic_analytics.get('night_pct', 25) }}٪
+                                {{ (traffic_analytics.get('day_pct', 75) if (traffic_analytics and traffic_analytics.get) else 75) }}٪ / {{ (traffic_analytics.get('night_pct', 25) if (traffic_analytics and traffic_analytics.get) else 25) }}٪
                             </strong>
                             <small class="text-secondary" style="font-size: 0.7rem;">ساعات روز (۸-۲۴) به شب (۰-۸)</small>
                         </div>
@@ -5608,7 +5618,7 @@
                                 <i class="fas fa-hourglass-half me-1"></i>تخمین مانده حجم
                             </span>
                             <strong class="traffic-stat-value fs-6 d-block" id="trafficEstimatedDays">
-                                {% if traffic_analytics.get('estimated_days_left') %}
+                                {% if traffic_analytics and traffic_analytics.get and traffic_analytics.get('estimated_days_left') %}
                                     حدود {{ traffic_analytics.get('estimated_days_left') }} روز
                                 {% else %}
                                     پایدار و مطمئن
@@ -5731,7 +5741,7 @@
                     <div class="col-4">
                         <div class="p-2 rounded bg-black bg-opacity-30 border border-secondary border-opacity-25">
                             <span class="text-secondary small d-block mb-1">کل پرداختی‌ها</span>
-                            <strong class="text-success fs-5 font-monospace">{{ "{:,}".format(total_paid) }}</strong> <small>تومان</small>
+                            <strong class="text-success fs-5 font-monospace">{{ (total_paid|format_price|persian_digits) if (total_paid is defined and total_paid is not none) else '۰' }}</strong> <small>تومان</small>
                         </div>
                     </div>
                     <div class="col-4">

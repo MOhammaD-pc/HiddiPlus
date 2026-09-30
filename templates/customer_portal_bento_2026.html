@@ -1,3 +1,13 @@
+{% set sub = sub or {} %}
+{% set traffic_analytics = traffic_analytics or {} %}
+{% set plans = plans or [] %}
+{% set chat_settings = chat_settings or {} %}
+{% set customer_ref_cfg = customer_ref_cfg or {} %}
+{% set customer_ref_stats = customer_ref_stats or {} %}
+{% set total_paid = total_paid or 0 %}
+{% set server_status = server_status or {} %}
+{% set avatar_presets = avatar_presets or [] %}
+{% set user_subscriptions = user_subscriptions or [] %}
 <!DOCTYPE html>
 <html lang="fa" dir="rtl" data-bs-theme="dark">
 <head>
@@ -349,7 +359,7 @@
                 <div class="portal-brand-text">
                     <div class="portal-brand-heading">
                         <h1 class="portal-brand-title">{{ brand_title or "هیدی پلاس | HiddiPlus" }}</h1>
-                        {% if sub.is_vip %}
+                        {% if sub and sub.is_vip %}
                         <span class="badge vip-badge">VIP</span>
                         {% endif %}
                     </div>
@@ -535,17 +545,17 @@
                         <!-- هدر کارت وضعیت (بدون بج دستگاه - طراحی تمیز و حرفه‌ای) -->
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
                             <div>
-                                <h2 class="h4 mb-0 fw-bold">{{ sub.account_name or "کاربر گرامی" }}</h2>
+                                <h2 class="h4 mb-0 fw-bold">{{ (sub.account_name if sub else None) or "کاربر گرامی" }}</h2>
                             </div>
                             <div class="text-end">
-                                {% if sub.status == 'expired' or sub.status == 'debt' %}
+                                {% if sub and (sub.status == 'expired' or sub.status == 'debt') %}
                                 <span class="badge bg-danger rounded-pill px-3 py-2">منقضی شده</span>
                                 {% else %}
                                 <span class="badge rounded-pill px-3 py-2" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
-                                    {{ days_left|persian_digits }} روز تا تمدید
+                                    {{ (days_left|persian_digits) if (days_left is defined and days_left is not none) else '۰' }} روز تا تمدید
                                 </span>
                                 {% endif %}
-                                <div class="small text-secondary mt-1" style="font-size: 0.75rem;">انقضا: {{ sub.expire_date_shamsi }}</div>
+                                <div class="small text-secondary mt-1" style="font-size: 0.75rem;">انقضا: {{ (sub.expire_date_shamsi if sub else None) or '---' }}</div>
                             </div>
                         </div>
 
@@ -579,25 +589,25 @@
                                     <div class="col-6">
                                         <div class="p-3 rounded-3" style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle);">
                                             <div class="small text-secondary mb-1">باقی‌مانده:</div>
-                                            <div class="h5 mb-0 fw-bold text-primary" style="color: var(--hiddi-brand) !important;">{{ remain_gb|persian_digits }} <span class="small font-monospace">GB</span></div>
+                                            <div class="h5 mb-0 fw-bold text-primary" style="color: var(--hiddi-brand) !important;">{{ (remain_gb|persian_digits) if (remain_gb is defined and remain_gb is not none) else '۰' }} <span class="small font-monospace">GB</span></div>
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="p-3 rounded-3" style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle);">
                                             <div class="small text-secondary mb-1">کل حجم بسته:</div>
-                                            <div class="h5 mb-0 fw-bold">{{ sub.traffic_limit|persian_digits }} <span class="small font-monospace">GB</span></div>
+                                            <div class="h5 mb-0 fw-bold">{{ (sub.traffic_limit|persian_digits) if (sub and sub.traffic_limit) else '۰' }} <span class="small font-monospace">GB</span></div>
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="p-3 rounded-3" style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle);">
                                             <div class="small text-secondary mb-1">مصرف شده:</div>
-                                            <div class="fw-bold">{{ sub.data_used|persian_digits }} <span class="small font-monospace">GB</span></div>
+                                            <div class="fw-bold">{{ (sub.data_used|persian_digits) if (sub and sub.data_used) else '۰' }} <span class="small font-monospace">GB</span></div>
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="p-3 rounded-3" style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle);">
                                             <div class="small text-secondary mb-1">میانگین روزانه:</div>
-                                            <div class="fw-bold">{{ traffic_analytics.daily_avg_gb|persian_digits }} <span class="small font-monospace">GB</span></div>
+                                            <div class="fw-bold">{{ (traffic_analytics.daily_avg_gb if (traffic_analytics is defined and traffic_analytics and traffic_analytics.daily_avg_gb) else '۰.۰')|persian_digits }} <span class="small font-monospace">GB</span></div>
                                         </div>
                                     </div>
                                 </div>
@@ -607,7 +617,7 @@
 
                     <!-- ردیف دکمه‌های اکشن اصلی و کپی -->
                     <div class="d-flex flex-wrap gap-2 pt-3 border-top border-secondary border-opacity-10 mt-3">
-                        <button type="button" class="btn btn-hiddi-primary flex-fill" onclick="copyText('{{ sub.sub_url or sub.sub_link }}', 'لینک اشتراک هوشمند کپی شد')">
+                        <button type="button" class="btn btn-hiddi-primary flex-fill" onclick="copyText('{{ (sub.sub_url or sub.sub_link) if sub else (actual_sub_url or '') }}', 'لینک اشتراک هوشمند کپی شد')">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             <span>کپی لینک هوشمند اتصال</span>
                         </button>
@@ -808,7 +818,7 @@
             {% elif portal_plan_style == 'compact_rows' %}
             <!-- استایل ۳: لیست نواری فین‌تک (Compact Rows) -->
             <div class="d-flex flex-column gap-3">
-                {% for plan in plans %}
+                {% for plan in (plans or []) %}
                 <div class="plan-compact-row bento-card p-3 d-flex flex-wrap align-items-center justify-content-between gap-3 {% if plan.id == 2 %}border-primary border-opacity-50{% endif %}">
                     <div class="d-flex align-items-center gap-3">
                         <div class="plan-icon-wrap" style="width: 44px; height: 44px;">
@@ -849,7 +859,7 @@
             {% else %}
             <!-- استایل ۱ پیش‌فرض: کارت‌های مدرن، خلوت، بدون متون زائد با بج برجسته روزها و پرتو نوری متغیر (Modern SaaS Cards) -->
             <div class="row g-3 align-items-stretch">
-                {% for plan in plans %}
+                {% for plan in (plans or []) %}
                 <div class="col-12 col-md-6 col-lg-3 d-flex">
                     <div class="modern-plan-card w-100 {% if plan.id == 2 %}plan-featured{% if portal_plan_beam == 'off' or portal_plan_beam == '0' %} no-beam{% endif %}{% endif %}">
                         <!-- هدر کارت پلن: آیکون، نام و بج روزهای اعتبار برجسته -->
@@ -1072,7 +1082,7 @@
                         <div class="p-3 bg-white rounded-4 d-inline-block shadow-sm mb-2" style="box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;">
                             <img id="subQrImg" crossorigin="anonymous" src="/api/qr-image?text={{ (actual_sub_url or 'https://demo.cloud')|urlencode }}" onerror="this.onerror=null; this.src='https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=15&data={{ (actual_sub_url or 'https://demo.cloud')|urlencode }}';" alt="QR Code" style="width: 180px; height: 180px; object-fit: contain; display: block;">
                         </div>
-                        {% if sub.get('account_name') %}
+                        {% if sub and sub.get and sub.get('account_name') %}
                         <div class="small text-secondary font-monospace mb-2 text-truncate" style="max-width: 280px; margin: 0 auto;">
                             <i class="fas fa-user-circle me-1 text-primary"></i>{{ sub.get('account_name') }}
                         </div>
@@ -1083,14 +1093,14 @@
                         <div class="d-flex align-items-center justify-content-center gap-2 mb-3 mt-1">
                             <button type="button" 
                                     class="btn btn-outline-warning btn-sm rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm"
-                                    onclick="downloadQrCodeImage('subQrImg', 'qrcode_{{ sub.get('account_name') or 'subscription' }}.png', '{{ actual_sub_url }}')"
+                                    onclick="downloadQrCodeImage('subQrImg', 'qrcode_{{ (sub.get('account_name') if (sub and sub.get) else None) or 'subscription' }}.png', '{{ actual_sub_url }}')"
                                     title="دانلود بارکد QR با پس‌زمینه سفید">
                                 <i class="fas fa-download"></i>
                                 <span>دانلود بارکد</span>
                             </button>
                             <button type="button" 
                                     class="btn btn-outline-info btn-sm rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm"
-                                    onclick="shareQrCodeImage('subQrImg', 'qrcode_{{ sub.get('account_name') or 'subscription' }}.png', 'بارکد اشتراک {{ sub.get('account_name') or brand_title }}', '{{ actual_sub_url }}')"
+                                    onclick="shareQrCodeImage('subQrImg', 'qrcode_{{ (sub.get('account_name') if (sub and sub.get) else None) or 'subscription' }}.png', 'بارکد اشتراک {{ (sub.get('account_name') if (sub and sub.get) else None) or brand_title }}', '{{ actual_sub_url }}')"
                                     title="اشتراک‌گذاری تصویر بارکد و لینک">
                                 <i class="fas fa-share-nodes"></i>
                                 <span>اشتراک‌گذاری</span>
@@ -1162,7 +1172,7 @@
                                 </a>
 
                                 <!-- Happ (iOS & Android) -->
-                                <a href="{{ actual_sub_url|happ_url(sub.get('account_name') or brand_title or 'HiddiPlus') }}" class="app-brand-card">
+                                <a href="{{ (actual_sub_url or '')|happ_url((sub.get('account_name') if (sub and sub.get) else None) or brand_title or 'HiddiPlus') }}" class="app-brand-card">
                                     <div class="app-brand-logo-wrap">
                                         <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
                                             <rect width="48" height="48" rx="12" fill="url(#happ-bg)"/>
@@ -1180,7 +1190,7 @@
                                 </a>
 
                                 <!-- V2Box (iOS & Windows) -->
-                                <a href="v2box://install-sub?url={{ actual_sub_url|urlencode }}&name={{ (sub.get('account_name') or brand_title or 'HiddiPlus')|urlencode }}" class="app-brand-card">
+                                <a href="v2box://install-sub?url={{ (actual_sub_url or '')|urlencode }}&name={{ (((sub.get('account_name') if (sub and sub.get) else None) or brand_title or 'HiddiPlus'))|urlencode }}" class="app-brand-card">
                                     <div class="app-brand-logo-wrap">
                                         <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
                                             <rect width="48" height="48" rx="12" fill="url(#v2box-bg)"/>
@@ -1318,14 +1328,14 @@
                         <div class="d-flex align-items-center justify-content-center gap-2 mb-3 mt-1">
                             <button type="button" 
                                     class="btn btn-outline-warning btn-sm rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm"
-                                    onclick="downloadQrCodeImage('singleQrImg', 'qrcode_{{ sub.get('account_name') or 'config' }}_single.png', '{{ eff_single_url }}')"
+                                    onclick="downloadQrCodeImage('singleQrImg', 'qrcode_{{ (sub.get('account_name') if (sub and sub.get) else None) or 'config' }}_single.png', '{{ eff_single_url }}')"
                                     title="دانلود بارکد QR با پس‌زمینه سفید">
                                 <i class="fas fa-download"></i>
                                 <span>دانلود بارکد</span>
                             </button>
                             <button type="button" 
                                     class="btn btn-outline-info btn-sm rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm"
-                                    onclick="shareQrCodeImage('singleQrImg', 'qrcode_{{ sub.get('account_name') or 'config' }}_single.png', 'کانفیگ تکی {{ sub.get('account_name') or brand_title }}', '{{ eff_single_url }}')"
+                                    onclick="shareQrCodeImage('singleQrImg', 'qrcode_{{ (sub.get('account_name') if (sub and sub.get) else None) or 'config' }}_single.png', 'کانفیگ تکی {{ (sub.get('account_name') if (sub and sub.get) else None) or brand_title }}', '{{ eff_single_url }}')"
                                     title="اشتراک‌گذاری تصویر بارکد و لینک">
                                 <i class="fas fa-share-nodes"></i>
                                 <span>اشتراک‌گذاری</span>
@@ -1371,7 +1381,7 @@
                                     <i class="fas fa-bolt me-1"></i>ساعت اوج مصرف
                                 </span>
                                 <strong class="fs-6 d-block text-truncate" style="color: var(--text-primary);">
-                                    {{ traffic_analytics.peak_hour or '۱۹:۰۰ الی ۲۲:۰۰' }}
+                                    {{ (traffic_analytics.peak_hour if traffic_analytics and traffic_analytics.peak_hour else '۱۹:۰۰ الی ۲۲:۰۰') }}
                                 </strong>
                                 <small class="text-secondary" style="font-size: 0.68rem;">پرمصرف‌ترین بازه شبانه‌روز</small>
                             </div>
@@ -1382,7 +1392,7 @@
                                     <i class="fas fa-gauge-high me-1"></i>میانگین روزانه
                                 </span>
                                 <strong class="fs-6 d-block" style="color: var(--text-primary);">
-                                    {{ traffic_analytics.daily_avg_gb|persian_digits or '۱.۸' }} <small class="text-secondary">GB</small>
+                                    {{ ((traffic_analytics.daily_avg_gb if traffic_analytics and traffic_analytics.daily_avg_gb else '۱.۸')|persian_digits) }} <small class="text-secondary">GB</small>
                                 </strong>
                                 <small class="text-secondary" style="font-size: 0.68rem;">مصرف معمول ۲۴ ساعته</small>
                             </div>
@@ -1393,7 +1403,7 @@
                                     <i class="fas fa-circle-half-stroke me-1"></i>نسبت روز به شب
                                 </span>
                                 <strong class="fs-6 d-block" style="color: var(--text-primary);">
-                                    {{ (traffic_analytics.day_pct or 75)|persian_digits }}٪ / {{ (traffic_analytics.night_pct or 25)|persian_digits }}٪
+                                    {{ ((traffic_analytics.day_pct if traffic_analytics and traffic_analytics.day_pct else 75)|persian_digits) }}٪ / {{ ((traffic_analytics.night_pct if traffic_analytics and traffic_analytics.night_pct else 25)|persian_digits) }}٪
                                 </strong>
                                 <small class="text-secondary" style="font-size: 0.68rem;">روز (۸-۲۴) / شب (۰-۸)</small>
                             </div>
@@ -1404,7 +1414,7 @@
                                     <i class="fas fa-hourglass-half me-1"></i>تخمین مانده حجم
                                 </span>
                                 <strong class="fs-6 d-block" style="color: var(--text-primary);">
-                                    حدود {{ (traffic_analytics.estimated_days_left or 18)|persian_digits }} روز
+                                    حدود {{ ((traffic_analytics.estimated_days_left if traffic_analytics and traffic_analytics.estimated_days_left else 18)|persian_digits) }} روز
                                 </strong>
                                 <small class="text-secondary" style="font-size: 0.68rem;">با آهنگ مصرف فعلی شما</small>
                             </div>
@@ -2344,7 +2354,7 @@
                     </div>
 
                     <!-- بخش احراز هویت و اتصال رسمی با تلگرام -->
-                    {% set is_tg_connected = (sub.get('telegram_id') and sub.get('telegram_id')|int > 0) or (cust_user and cust_user.get('telegram_id') and cust_user.get('telegram_id')|int > 0 and cust_user.get('is_verified')) %}
+                    {% set is_tg_connected = (sub and sub.get and sub.get('telegram_id') and sub.get('telegram_id')|int > 0) or (cust_user and cust_user.get and cust_user.get('telegram_id') and cust_user.get('telegram_id')|int > 0 and cust_user.get('is_verified')) %}
                     <div class="mb-4 p-3 rounded-4" style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%); border: 1.5px dashed rgba(56, 189, 248, 0.4);">
                         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                             <div>
@@ -2362,7 +2372,7 @@
                                 </p>
                             </div>
                             <div class="text-nowrap">
-                                <a href="https://t.me/{{ bot_username or 'bot' }}?start=link_{{ token or sub.get('hidify_uuid') or sub.get('id') }}" target="_blank" class="btn btn-sm btn-outline-info rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-2">
+                                <a href="https://t.me/{{ bot_username or 'bot' }}?start=link_{{ token or (sub.get('hidify_uuid') if (sub and sub.get) else '') or (sub.get('id') if (sub and sub.get) else '') }}" target="_blank" class="btn btn-sm btn-outline-info rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-2">
                                     <i class="fab fa-telegram fs-6"></i>
                                     <span>{% if is_tg_connected %}اتصال مجدد به تلگرام{% else %}اتصال تلگرامی 🚀{% endif %}</span>
                                 </a>
@@ -2371,9 +2381,9 @@
                     </div>
 
                     <form id="customerProfileForm" onsubmit="submitCustomerProfile(event)" enctype="multipart/form-data">
-                        <input type="hidden" name="token" value="{{ token or sub.get('hidify_uuid') or sub.get('id') }}">
-                        <input type="hidden" name="sub_id" value="{{ sub.get('id') }}">
-                        <input type="hidden" name="telegram_id" value="{{ sub.get('telegram_id') if (sub.get('telegram_id') and sub.get('telegram_id')|int > 0) else '' }}">
+                        <input type="hidden" name="token" value="{{ token or (sub.get('hidify_uuid') if (sub and sub.get) else '') or (sub.get('id') if (sub and sub.get) else '') }}">
+                        <input type="hidden" name="sub_id" value="{{ (sub.get('id') if (sub and sub.get) else '') }}">
+                        <input type="hidden" name="telegram_id" value="{{ (sub.get('telegram_id') if (sub and sub.get and sub.get('telegram_id') and sub.get('telegram_id')|int > 0) else '') }}">
                         <input type="hidden" id="selectedAvatarPreset" name="avatar_preset" value="">
 
                         <div class="row g-3">
@@ -2384,7 +2394,7 @@
                                         <span><i class="fas fa-tag text-warning me-1"></i> ۱. نام اشتراک (نمایشی):</span>
                                         <span class="badge" style="background: rgba(24, 87, 242, 0.1); color: #1857f2; font-size: 0.65rem;">همگام سرور</span>
                                     </label>
-                                    <input type="text" class="form-control form-control-sm" id="profAccountName" name="account_name" value="{{ sub.get('account_name') or '' }}" placeholder="مثال: Ali-iPhone یا Work-Laptop" required style="border-radius: 10px;">
+                                    <input type="text" class="form-control form-control-sm" id="profAccountName" name="account_name" value="{{ (sub.get('account_name') if (sub and sub.get) else '') or '' }}" placeholder="مثال: Ali-iPhone یا Work-Laptop" required style="border-radius: 10px;">
                                     <div class="form-text text-secondary mt-1" style="font-size: 0.7rem;">
                                         نام کانفیگ‌ها در کلاینت‌های اتصال؛ با تغییر نام، عنوان سرورها فوراً به‌روزرسانی می‌شود.
                                     </div>
@@ -2397,7 +2407,7 @@
                                     <label class="form-label small fw-bold mb-2">
                                         <i class="fas fa-user text-primary me-1"></i> ۲. نام و نام خانوادگی:
                                     </label>
-                                    <input type="text" class="form-control form-control-sm" id="profFullName" name="full_name" value="{{ sub.get('full_name') or (cust_user.get('full_name') if cust_user else '') or '' }}" placeholder="مثال: علی رضایی" style="border-radius: 10px;">
+                                    <input type="text" class="form-control form-control-sm" id="profFullName" name="full_name" value="{{ (sub.get('full_name') if (sub and sub.get) else '') or (cust_user.get('full_name') if (cust_user and cust_user.get) else '') or '' }}" placeholder="مثال: علی رضایی" style="border-radius: 10px;">
                                     <div class="form-text text-secondary mt-1" style="font-size: 0.7rem;">
                                         جهت تطبیق نام واریزکننده در پرداخت‌های کارت‌به‌کارت و رهگیری آسان فاکتورها.
                                     </div>
@@ -2410,7 +2420,7 @@
                                     <label class="form-label small fw-bold mb-2">
                                         <i class="fas fa-phone text-success me-1"></i> ۳. شماره تماس (موبایل):
                                     </label>
-                                    <input type="tel" dir="ltr" class="form-control form-control-sm font-monospace text-start" id="profPhoneNumber" name="phone_number" value="{{ sub.get('phone_number') or (cust_user.get('phone_number') if cust_user else '') or '' }}" placeholder="0912xxxxxxx" style="border-radius: 10px;">
+                                    <input type="tel" dir="ltr" class="form-control form-control-sm font-monospace text-start" id="profPhoneNumber" name="phone_number" value="{{ (sub.get('phone_number') if (sub and sub.get) else '') or (cust_user.get('phone_number') if (cust_user and cust_user.get) else '') or '' }}" placeholder="0912xxxxxxx" style="border-radius: 10px;">
                                     <div class="form-text text-secondary mt-1" style="font-size: 0.7rem;">
                                         جهت ارسال پیامک تمدید، هشدار اتمام ترافیک و لینک‌های اضطراری در زمان قطعی.
                                     </div>
@@ -2455,7 +2465,7 @@
                                     </div>
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text" style="font-size: 0.72rem;">تایپ دستی:</span>
-                                        <input type="text" dir="ltr" class="form-control font-monospace text-center" id="profBirthday" name="birthday" value="{{ sub.get('birthday') or (cust_user.get('birthday') if cust_user else '') or '' }}" placeholder="1375/06/15" oninput="syncBdayFromInput()">
+                                        <input type="text" dir="ltr" class="form-control font-monospace text-center" id="profBirthday" name="birthday" value="{{ (sub.get('birthday') if (sub and sub.get) else '') or (cust_user.get('birthday') if (cust_user and cust_user.get) else '') or '' }}" placeholder="1375/06/15" oninput="syncBdayFromInput()">
                                     </div>
                                     <div class="form-text text-secondary mt-1" style="font-size: 0.7rem;">
                                         در سالروز تولدتان، بسته حجم رایگان و کد تخفیف تمدید تقدیم خواهد شد! 🎂
@@ -2469,27 +2479,28 @@
                                     <label class="form-label small fw-bold mb-2">
                                         <i class="fas fa-tower-broadcast text-info me-1"></i> ۵. اپراتور اینترنت اصلی:
                                     </label>
+                                    {% set current_isp = (cust_user.get('primary_isp') if (cust_user and cust_user.get) else None) or (sub.get('primary_isp') if (sub and sub.get) else None) %}
                                     <select class="form-select form-select-sm" id="profPrimaryIsp" name="primary_isp" style="border-radius: 10px;">
                                         <option value="">-- انتخاب اپراتور اصلی --</option>
                                         <optgroup label="اینترنت همراه (سیم‌کارت)">
-                                            <option value="همراه اول (MCI)" {% if (cust_user and cust_user.get('primary_isp') == 'همراه اول (MCI)') or sub.get('primary_isp') == 'همراه اول (MCI)' %}selected{% endif %}>همراه اول (MCI)</option>
-                                            <option value="ایرانسل (MTN)" {% if (cust_user and cust_user.get('primary_isp') == 'ایرانسل (MTN)') or sub.get('primary_isp') == 'ایرانسل (MTN)' %}selected{% endif %}>ایرانسل (MTN)</option>
-                                            <option value="رایتل (Rightel)" {% if (cust_user and cust_user.get('primary_isp') == 'رایتل (Rightel)') or sub.get('primary_isp') == 'رایتل (Rightel)' %}selected{% endif %}>رایتل (Rightel)</option>
-                                            <option value="شاتل موبایل" {% if (cust_user and cust_user.get('primary_isp') == 'شاتل موبایل') or sub.get('primary_isp') == 'شاتل موبایل' %}selected{% endif %}>شاتل موبایل</option>
-                                            <option value="آپتل (Aptel)" {% if (cust_user and cust_user.get('primary_isp') == 'آپتل (Aptel)') or sub.get('primary_isp') == 'آپتل (Aptel)' %}selected{% endif %}>آپتل (Aptel)</option>
-                                            <option value="سامانتل" {% if (cust_user and cust_user.get('primary_isp') == 'سامانتل') or sub.get('primary_isp') == 'سامانتل' %}selected{% endif %}>سامانتل</option>
+                                            <option value="همراه اول (MCI)" {% if current_isp == 'همراه اول (MCI)' %}selected{% endif %}>همراه اول (MCI)</option>
+                                            <option value="ایرانسل (MTN)" {% if current_isp == 'ایرانسل (MTN)' %}selected{% endif %}>ایرانسل (MTN)</option>
+                                            <option value="رایتل (Rightel)" {% if current_isp == 'رایتل (Rightel)' %}selected{% endif %}>رایتل (Rightel)</option>
+                                            <option value="شاتل موبایل" {% if current_isp == 'شاتل موبایل' %}selected{% endif %}>شاتل موبایل</option>
+                                            <option value="آپتل (Aptel)" {% if current_isp == 'آپتل (Aptel)' %}selected{% endif %}>آپتل (Aptel)</option>
+                                            <option value="سامانتل" {% if current_isp == 'سامانتل' %}selected{% endif %}>سامانتل</option>
                                         </optgroup>
                                         <optgroup label="اینترنت خانگی و فیبر (ثابت / ADSL / TD-LTE / FTTH)">
-                                            <option value="مخابرات ایران (TCI / تانوما)" {% if (cust_user and cust_user.get('primary_isp') == 'مخابرات ایران (TCI / تانوما)') or sub.get('primary_isp') == 'مخابرات ایران (TCI / تانوما)' %}selected{% endif %}>مخابرات ایران (TCI / تانوما)</option>
-                                            <option value="شاتل (Shatel)" {% if (cust_user and cust_user.get('primary_isp') == 'شاتل (Shatel)') or sub.get('primary_isp') == 'شاتل (Shatel)' %}selected{% endif %}>شاتل (Shatel)</option>
-                                            <option value="آسیاتک (Asiatech)" {% if (cust_user and cust_user.get('primary_isp') == 'آسیاتک (Asiatech)') or sub.get('primary_isp') == 'آسیاتک (Asiatech)' %}selected{% endif %}>آسیاتک (Asiatech)</option>
-                                            <option value="پارس آنلاین" {% if (cust_user and cust_user.get('primary_isp') == 'پارس آنلاین') or sub.get('primary_isp') == 'پارس آنلاین' %}selected{% endif %}>پارس آنلاین</option>
-                                            <option value="های‌وب (HiWeb)" {% if (cust_user and cust_user.get('primary_isp') == 'های‌وب (HiWeb)') or sub.get('primary_isp') == 'های‌وب (HiWeb)' %}selected{% endif %}>های‌وب (HiWeb)</option>
-                                            <option value="مبین‌نت (Mobinnet)" {% if (cust_user and cust_user.get('primary_isp') == 'مبین‌نت (Mobinnet)') or sub.get('primary_isp') == 'مبین‌نت (Mobinnet)' %}selected{% endif %}>مبین‌نت (Mobinnet)</option>
-                                            <option value="زیتل (Zitel)" {% if (cust_user and cust_user.get('primary_isp') == 'زیتل (Zitel)') or sub.get('primary_isp') == 'زیتل (Zitel)' %}selected{% endif %}>زیتل (Zitel)</option>
-                                            <option value="پیشگامان (Pishgaman)" {% if (cust_user and cust_user.get('primary_isp') == 'پیشگامان (Pishgaman)') or sub.get('primary_isp') == 'پیشگامان (Pishgaman)' %}selected{% endif %}>پیشگامان (Pishgaman)</option>
-                                            <option value="صبانت (Sabanet)" {% if (cust_user and cust_user.get('primary_isp') == 'صبانت (Sabanet)') or sub.get('primary_isp') == 'صبانت (Sabanet)' %}selected{% endif %}>صبانت (Sabanet)</option>
-                                            <option value="سایر اپراتورها" {% if (cust_user and cust_user.get('primary_isp') == 'سایر اپراتورها') or sub.get('primary_isp') == 'سایر اپراتورها' %}selected{% endif %}>سایر اپراتورها</option>
+                                            <option value="مخابرات ایران (TCI / تانوما)" {% if current_isp == 'مخابرات ایران (TCI / تانوما)' %}selected{% endif %}>مخابرات ایران (TCI / تانوما)</option>
+                                            <option value="شاتل (Shatel)" {% if current_isp == 'شاتل (Shatel)' %}selected{% endif %}>شاتل (Shatel)</option>
+                                            <option value="آسیاتک (Asiatech)" {% if current_isp == 'آسیاتک (Asiatech)' %}selected{% endif %}>آسیاتک (Asiatech)</option>
+                                            <option value="پارس آنلاین" {% if current_isp == 'پارس آنلاین' %}selected{% endif %}>پارس آنلاین</option>
+                                            <option value="های‌وب (HiWeb)" {% if current_isp == 'های‌وب (HiWeb)' %}selected{% endif %}>های‌وب (HiWeb)</option>
+                                            <option value="مبین‌نت (Mobinnet)" {% if current_isp == 'مبین‌نت (Mobinnet)' %}selected{% endif %}>مبین‌نت (Mobinnet)</option>
+                                            <option value="زیتل (Zitel)" {% if current_isp == 'زیتل (Zitel)' %}selected{% endif %}>زیتل (Zitel)</option>
+                                            <option value="پیشگامان (Pishgaman)" {% if current_isp == 'پیشگامان (Pishgaman)' %}selected{% endif %}>پیشگامان (Pishgaman)</option>
+                                            <option value="صبانت (Sabanet)" {% if current_isp == 'صبانت (Sabanet)' %}selected{% endif %}>صبانت (Sabanet)</option>
+                                            <option value="سایر اپراتورها" {% if current_isp == 'سایر اپراتورها' %}selected{% endif %}>سایر اپراتورها</option>
                                         </optgroup>
                                     </select>
                                     <div class="form-text text-secondary mt-1" style="font-size: 0.7rem;">
@@ -2560,7 +2571,7 @@
                                                              style="cursor: pointer; transition: all 0.2s;"
                                                              onclick="selectAvatarPreset('{{ p.id }}', this)" 
                                                              data-preset-id="{{ p.id }}">
-                                                            <img src="/avatar/preset/{{ p.id }}?seed={{ sub.get('account_name') or 'Customer' }}" 
+                                                            <img src="/avatar/preset/{{ p.id }}?seed={{ (sub.get('account_name') if (sub and sub.get) else 'Customer') }}" 
                                                                  alt="{{ p.name }}" 
                                                                  class="rounded-circle shadow-sm mb-1" 
                                                                  style="width: 48px; height: 48px; object-fit: cover; background: rgba(0,0,0,0.2);">
@@ -2576,7 +2587,7 @@
                                             <div class="d-flex flex-column flex-sm-row align-items-center gap-3 p-3 rounded-3" style="background: rgba(0,0,0,0.15);">
                                                 <div class="position-relative flex-shrink-0">
                                                     <img id="avatarUploadPreview" 
-                                                         src="{{ avatar_url(sub.get('telegram_id') or telegram_id or sub.get('phone_number') or sub.get('account_name') or 'Customer') }}" 
+                                                         src="{{ avatar_url(((sub.get('telegram_id') if (sub and sub.get) else None) or telegram_id or (sub.get('phone_number') if (sub and sub.get) else None) or (sub.get('account_name') if (sub and sub.get) else None) or 'Customer')) }}" 
                                                          alt="پیش‌نمایش عکس" 
                                                          class="rounded-circle border border-primary border-opacity-50 shadow" 
                                                          style="width: 64px; height: 64px; object-fit: cover;"
@@ -2697,7 +2708,7 @@
                         <div>
                             <h5 class="fw-bold mb-0" style="font-size: 1.05rem;">تاریخچه جامع اشتراک و پرداخت‌ها</h5>
                             <div class="small text-secondary" style="font-size: 0.74rem;">
-                                سوابق کامل مصرف، فاکتورها و تراکنش‌های حساب «{{ sub.account_name or 'کاربر گرامی' }}»
+                                سوابق کامل مصرف، فاکتورها و تراکنش‌های حساب «{{ (sub.account_name if sub else None) or 'کاربر گرامی' }}»
                             </div>
                         </div>
                     </div>
@@ -3737,7 +3748,7 @@
         }
 
         // ۱۸. سیستم اسلایدر ابری هوشمند با ایستگاه‌های توقف پلن‌های واقعی (Connected Real Plan Sliders)
-        const ALL_SYSTEM_PLANS = {{ plans|tojson }} || [];
+        const ALL_SYSTEM_PLANS = {{ (plans or [])|tojson }};
 
         // استخراج حجم‌ها و زمان‌های منحصر‌به‌فرد از پلن‌های واقعی
         const UNIQUE_VOLUMES = [...new Set(ALL_SYSTEM_PLANS.map(p => Number(p.traffic_gb || p.data_limit || 0)))].filter(v => v > 0).sort((a,b) => a - b);
@@ -3931,7 +3942,7 @@
         }
 
         // ۱۹. سیستم تفکیک‌شده نمودار مصرف هوشمند و ریز گزارشات ترافیک (Traffic Analytics & Detailed Logs)
-        const TRAFFIC_ANALYTICS = {{ traffic_analytics|tojson }} || {};
+        const TRAFFIC_ANALYTICS = {{ (traffic_analytics if traffic_analytics else {})|tojson }};
         let currentTrafficRange = '24h';
         let currentLogRange = '24h';
         let currentLogFilter = 'all';
@@ -4257,9 +4268,9 @@
     </div>
 
     <!-- ─── دکمه شناور گفتگوی آنلاین با پشتیبانی (Floating Online Support Widget) ─── -->
-    <div class="hiddi-fab-support-container pos-{{ chat_settings.chat_button_position or 'right' }}" id="floatingSupportFab">
-        <button type="button" class="floating-chat-btn hiddi-fab-support pos-{{ chat_settings.chat_button_position or 'right' }} style-{{ chat_settings.chat_button_style or 'bento_luxury' }}" id="floatingChatBtn" onclick="openPortalChatModal()" title="گفتگوی آنلاین با پشتیبانی">
-            {% if chat_settings.chat_button_style in ['hiddi_radar', 'bento_luxury'] %}
+    <div class="hiddi-fab-support-container pos-{{ (chat_settings.chat_button_position if chat_settings else 'right') or 'right' }}" id="floatingSupportFab">
+        <button type="button" class="floating-chat-btn hiddi-fab-support pos-{{ (chat_settings.chat_button_position if chat_settings else 'right') or 'right' }} style-{{ (chat_settings.chat_button_style if chat_settings else 'bento_luxury') or 'bento_luxury' }}" id="floatingChatBtn" onclick="openPortalChatModal()" title="گفتگوی آنلاین با پشتیبانی">
+            {% if (not chat_settings) or (chat_settings.chat_button_style in ['hiddi_radar', 'bento_luxury']) %}
             <span class="fab-pulse-radar"></span>
             {% endif %}
             <div class="fab-icon-box position-relative d-inline-flex align-items-center justify-content-center">
@@ -4268,7 +4279,7 @@
                 </svg>
                 <span class="chat-status-dot fab-online-dot {% if support_online_info and support_online_info.is_online %}online{% else %}offline{% endif %}" id="chatStatusDot" title="{% if support_online_info and support_online_info.is_online %}پشتیبانی آنلاین و پاسخگو است{% else %}پشتیبانی در حال حاضر آفلاین است (می‌توانید پیام بگذارید){% endif %}"></span>
             </div>
-            <span class="chat-badge-text fab-label d-none d-md-inline" id="chatBadgeText">{{ chat_settings.chat_button_text or 'پشتیبانی آنلاین' }}</span>
+            <span class="chat-badge-text fab-label d-none d-md-inline" id="chatBadgeText">{{ (chat_settings.chat_button_text if chat_settings else 'پشتیبانی آنلاین') or 'پشتیبانی آنلاین' }}</span>
             <span class="chat-unread-badge d-none" id="chatUnreadBadge">0</span>
         </button>
     </div>
