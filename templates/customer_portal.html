@@ -3793,101 +3793,439 @@
         </div>
     {% endif %}
 
-    <!-- ─── بنر جشنواره و کمپین فروش ویژه (Sales Campaign Festival Banner) ─── -->
+    <!-- ─── بنر جشنواره و کمپین فروش ویژه با استایل لوکس بنتو ۲۰۲۶ پرچمدار و رقص نور نئونی ─── -->
     {% if sales_campaign and sales_campaign.is_active %}
-    <div class="portal-campaign-banner mb-4 p-3 rounded-4 shadow-sm position-relative overflow-hidden" 
-         id="portalCampaignBanner" 
-         style="background: linear-gradient(135deg, {{ sales_campaign.banner_color_start or '#1857f2' }} 0%, {{ sales_campaign.banner_color_end or '#00f2fe' }} 100%); color: #ffffff; border: 1px solid rgba(255,255,255,0.25);"
-         data-end-at="{{ sales_campaign.end_at or '' }}">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-            <div class="d-flex align-items-center gap-3">
-                <div class="rounded-circle d-flex align-items-center justify-content-center bg-white bg-opacity-20 flex-shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">
-                    <i class="fas fa-gift text-white"></i>
-                </div>
-                <div>
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <strong class="fs-6">{{ sales_campaign.title }}</strong>
-                        {% if sales_campaign.badge_text %}
-                        <span class="badge bg-warning text-dark font-monospace py-0.5 px-2 rounded-pill" style="font-size: 0.72rem;">{{ sales_campaign.badge_text }}</span>
-                        {% endif %}
-                    </div>
-                    {% if sales_campaign.description or sales_campaign.subtitle %}
-                    <div class="small opacity-90" style="font-size: 0.82rem;">{{ sales_campaign.description or sales_campaign.subtitle }}</div>
+    <style>
+    /* ─── استایل فوق‌مدرن و لوکس بنر جشنواره (طرح بنتو ۲۰۲۶ پرچمدار با رقص نور متحرک و قابل تنظیم) ─── */
+    .hiddi-promo-bar {
+        --promo-beam: {{ sales_campaign.beam_color or '#38bdf8' }};
+        position: relative;
+        width: 100%;
+        margin-bottom: 1.5rem;
+        border-radius: 18px;
+        padding: 1.5px;
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.45), 0 0 20px -8px var(--promo-beam);
+        overflow: hidden;
+        isolation: isolate;
+    }
+
+    .hiddi-promo-bar::before {
+        content: "";
+        position: absolute;
+        inset: -150%;
+        background: conic-gradient(
+            from 0deg,
+            transparent 0deg,
+            var(--promo-beam) 45deg,
+            transparent 90deg,
+            transparent 180deg,
+            var(--promo-beam) 225deg,
+            transparent 270deg,
+            transparent 360deg
+        );
+        animation: promoBeamRotatePortal 5s linear infinite;
+        pointer-events: none;
+        z-index: 1;
+        opacity: 0.85;
+    }
+
+    @keyframes promoBeamRotatePortal {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .hiddi-promo-bar .promo-bar-inner {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 0.85rem 1.25rem;
+        border-radius: 16.5px;
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.94) 100%);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .hiddi-promo-bar .promo-bar-inner::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(100deg, transparent 20%, var(--promo-beam) 46%, transparent 72%);
+        transform: translateX(-120%);
+        animation: promoSheenPortal 5s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+        opacity: 0.38;
+    }
+
+    @keyframes promoSheenPortal {
+        0%, 70% { transform: translateX(-120%); }
+        100% { transform: translateX(120%); }
+    }
+
+    .hiddi-promo-bar .promo-bar-lead {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        flex-wrap: wrap;
+    }
+
+    .hiddi-promo-bar .promo-bar-flag {
+        flex: none;
+        font-size: 0.72rem;
+        font-weight: 800;
+        padding: 4px 10px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+        color: #0f172a;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+    }
+
+    .hiddi-promo-bar .promo-bar-msg {
+        font-size: 0.88rem;
+        line-height: 1.4;
+        color: #f1f5f9;
+    }
+
+    .hiddi-promo-bar .promo-bar-msg strong {
+        color: var(--promo-beam);
+        font-weight: 800;
+    }
+
+    .hiddi-promo-bar .promo-bar-clock {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-variant-numeric: tabular-nums;
+        direction: ltr;
+    }
+
+    .hiddi-promo-bar .promo-clock-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-width: 38px;
+        padding: 4px 7px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .hiddi-promo-bar .promo-clock-cell .cell-val {
+        font-size: 0.95rem;
+        font-weight: 800;
+        font-family: inherit;
+        line-height: 1.1;
+        color: #ffffff;
+    }
+
+    .hiddi-promo-bar .promo-clock-cell .cell-lbl {
+        font-size: 0.6rem;
+        opacity: 0.75;
+        margin-top: 1px;
+        color: #cbd5e1;
+    }
+
+    .hiddi-promo-bar .promo-clock-sep {
+        font-weight: 800;
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 1rem;
+        margin-top: -6px;
+    }
+
+    .hiddi-promo-bar .promo-cell-sec {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--promo-beam) !important;
+        box-shadow: 0 0 14px -2px var(--promo-beam);
+    }
+
+    .hiddi-promo-bar .promo-cell-sec .cell-val {
+        color: var(--promo-beam) !important;
+        text-shadow: 0 0 8px var(--promo-beam);
+    }
+
+    .hiddi-promo-bar .promo-bar-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    .hiddi-promo-bar .promo-code-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px dashed rgba(255, 255, 255, 0.3);
+        color: #ffffff;
+        cursor: pointer;
+        font-size: 0.78rem;
+        transition: all 0.2s ease;
+    }
+
+    .hiddi-promo-bar .promo-code-btn:hover {
+        border-color: var(--promo-beam);
+        box-shadow: 0 0 12px -2px var(--promo-beam);
+        color: #ffffff;
+    }
+
+    .hiddi-promo-bar .promo-code-btn .code-label {
+        opacity: 0.7;
+        font-size: 0.7rem;
+    }
+
+    .hiddi-promo-bar .promo-code-btn .code-val {
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        font-family: monospace;
+    }
+
+    .hiddi-promo-bar .promo-cta-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--promo-beam) 0%, #ffffff 220%);
+        color: #0b1120 !important;
+        font-weight: 800;
+        text-decoration: none;
+        font-size: 0.8rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 14px -2px var(--promo-beam);
+    }
+
+    .hiddi-promo-bar .promo-cta-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px 0 var(--promo-beam);
+        color: #0b1120 !important;
+    }
+
+    .hiddi-promo-bar .promo-dismiss-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .hiddi-promo-bar .promo-dismiss-btn:hover {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    @media (max-width: 991px) {
+        .hiddi-promo-bar .promo-bar-inner {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+        }
+        .hiddi-promo-bar .promo-bar-lead {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .hiddi-promo-bar .promo-bar-clock {
+            margin: 0 auto;
+        }
+        .hiddi-promo-bar .promo-bar-actions {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .hiddi-promo-bar .promo-code-btn {
+            flex: 1;
+            justify-content: center;
+        }
+        .hiddi-promo-bar .promo-cta-btn {
+            flex: 1;
+            justify-content: center;
+        }
+        .hiddi-promo-bar .promo-dismiss-btn {
+            flex: none;
+        }
+    }
+    </style>
+
+    <div class="hiddi-promo-bar mb-4 theme-{{ sales_campaign.banner_style or 'autumn_glow' }}" 
+         id="autumnPromoBanner" 
+         style="--promo-beam: {{ sales_campaign.beam_color or '#38bdf8' }};"
+         data-end-at="{{ sales_campaign.end_at or '' }}" 
+         data-discount-code="{{ sales_campaign.discount_code or '' }}">
+        <div class="promo-bar-inner">
+            <div class="promo-bar-lead">
+                <span class="promo-bar-flag">{{ sales_campaign.title }}</span>
+                <div class="promo-bar-msg">
+                    {% if sales_campaign.badge_text %}
+                    <strong>{{ sales_campaign.badge_text }}</strong>
                     {% endif %}
+                    <span>{{ sales_campaign.subtitle or sales_campaign.description or '' }}</span>
                 </div>
             </div>
 
-            <!-- شمارش معکوس جشنواره و اکشن‌ها -->
-            <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
-                {% if sales_campaign.end_at %}
-                <div class="d-flex align-items-center gap-1 bg-black bg-opacity-30 px-3 py-1.5 rounded-pill font-monospace small" id="campaignCountdownBox" dir="ltr">
-                    <i class="fas fa-clock text-warning me-1"></i>
-                    <span id="campaignDays">00</span>d :
-                    <span id="campaignHours">00</span>h :
-                    <span id="campaignMins">00</span>m :
-                    <span id="campaignSecs">00</span>s
+            <!-- تایمر معکوس زنده با فونت خوانا و سلول‌های شیشه‌ای دیجیتال -->
+            <div class="promo-bar-clock" id="promoCountdownClock" dir="ltr">
+                <div class="promo-clock-cell">
+                    <span class="cell-val" id="promoDays">۰۰</span>
+                    <span class="cell-lbl">روز</span>
                 </div>
-                {% endif %}
+                <span class="promo-clock-sep">:</span>
+                <div class="promo-clock-cell">
+                    <span class="cell-val" id="promoHours">۰۰</span>
+                    <span class="cell-lbl">ساعت</span>
+                </div>
+                <span class="promo-clock-sep">:</span>
+                <div class="promo-clock-cell">
+                    <span class="cell-val" id="promoMins">۰۰</span>
+                    <span class="cell-lbl">دقیقه</span>
+                </div>
+                <span class="promo-clock-sep promo-sep-sec">:</span>
+                <div class="promo-clock-cell promo-cell-sec">
+                    <span class="cell-val" id="promoSecs">۰۰</span>
+                    <span class="cell-lbl">ثانیه</span>
+                </div>
+            </div>
 
+            <div class="promo-bar-actions">
                 {% if sales_campaign.discount_code %}
-                <button type="button" class="btn btn-sm btn-light rounded-pill px-3 py-1.5 fw-bold text-dark d-inline-flex align-items-center gap-1 shadow-sm" onclick="copyCampaignDiscount('{{ sales_campaign.discount_code }}', this)">
-                    <i class="fas fa-ticket-alt text-primary"></i>
-                    <span>کد: {{ sales_campaign.discount_code }}</span>
-                    <i class="fas fa-copy ms-1 opacity-75"></i>
+                <!-- دکمه کپی کد تخفیف با بازخورد آنی -->
+                <button class="promo-code-btn" type="button" id="promoCopyBtn" onclick="copyPromoCode('{{ sales_campaign.discount_code }}', this)" title="کلیک برای کپی کد">
+                    <span class="code-label">کد:</span>
+                    <span class="code-val">{{ sales_campaign.discount_code }}</span>
+                    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="7" width="9" height="9" rx="2"/><path d="M13 7V5.5A1.5 1.5 0 0 0 11.5 4H5.5A1.5 1.5 0 0 0 4 5.5v6A1.5 1.5 0 0 0 5.5 13H7"/></svg>
                 </button>
                 {% endif %}
 
-                <a href="{{ sales_campaign.cta_link or '#plansSection' }}" class="btn btn-sm btn-dark bg-opacity-50 text-white rounded-pill px-3 py-1.5 fw-bold border border-white border-opacity-25 shadow-sm">
-                    {{ sales_campaign.cta_text or 'مشاهده و خرید پلن‌ها' }}
+                <!-- دکمه هدایت به پلن‌ها -->
+                <a href="{{ sales_campaign.cta_link or '#plansSection' }}" class="promo-cta-btn">
+                    <span>{{ sales_campaign.cta_text or 'خرید و تمدید' }}</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                 </a>
 
-                <button type="button" class="btn-close btn-close-white ms-1" onclick="dismissCampaignBanner()" aria-label="بستن"></button>
+                <!-- دکمه بستن بنر -->
+                <button class="promo-dismiss-btn" type="button" onclick="dismissPromoBanner()" aria-label="بستن بنر">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
         </div>
     </div>
     <script>
-    function copyCampaignDiscount(code, btn) {
+    function copyPromoCode(code, btn) {
         if (!code) return;
         navigator.clipboard.writeText(code).then(() => {
-            const orig = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-check text-success"></i> کپی شد!';
-            setTimeout(() => { btn.innerHTML = orig; }, 2000);
-            if (typeof copyText === 'function') copyText(code, 'کد تخفیف جشنواره');
-        }).catch(() => {});
+            if (typeof showToast === 'function') {
+                showToast(`کد تخفیف ${code} کپی شد`);
+            } else if (typeof copyText === 'function') {
+                copyText(code, 'کد تخفیف');
+            }
+            if (btn) {
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = `<span class="code-val" style="color: #10b981;">کپی شد ✓</span>`;
+                btn.style.borderColor = '#10b981';
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.style.borderColor = '';
+                }, 2500);
+            }
+            const couponInput = document.getElementById('couponCode') || document.getElementById('discountCodeInput') || document.getElementById('discountCode');
+            if (couponInput) {
+                couponInput.value = code;
+                if (typeof applyCoupon === 'function') applyCoupon();
+            }
+        }).catch(() => {
+            if (typeof copyText === 'function') copyText(code, 'کد تخفیف');
+        });
     }
-    function dismissCampaignBanner() {
-        const b = document.getElementById('portalCampaignBanner');
-        if (b) b.style.display = 'none';
+
+    // سازگاری با روتین‌های قدیمی
+    function copyCampaignDiscount(code, btn) {
+        copyPromoCode(code, btn);
     }
-    (function initCampaignCountdown() {
-        const b = document.getElementById('portalCampaignBanner');
-        if (!b) return;
-        const endAtStr = b.getAttribute('data-end-at');
-        if (!endAtStr) return;
-        const endTime = new Date(endAtStr).getTime();
-        if (isNaN(endTime)) return;
 
-        function updateClock() {
-            const now = Date.now();
-            const rem = Math.max(0, endTime - now);
-            const d = Math.floor(rem / (1000 * 60 * 60 * 24));
-            const h = Math.floor((rem / (1000 * 60 * 60)) % 24);
-            const m = Math.floor((rem / (1000 * 60)) % 60);
-            const s = Math.floor((rem / 1000) % 60);
-
-            const elD = document.getElementById('campaignDays');
-            const elH = document.getElementById('campaignHours');
-            const elM = document.getElementById('campaignMins');
-            const elS = document.getElementById('campaignSecs');
-
-            if (elD) elD.textContent = String(d).padStart(2, '0');
-            if (elH) elH.textContent = String(h).padStart(2, '0');
-            if (elM) elM.textContent = String(m).padStart(2, '0');
-            if (elS) elS.textContent = String(s).padStart(2, '0');
-            if (rem <= 0) clearInterval(timer);
+    function dismissPromoBanner() {
+        const banner = document.getElementById('autumnPromoBanner') || document.getElementById('portalCampaignBanner');
+        if (banner) {
+            banner.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+            banner.style.opacity = '0';
+            banner.style.transform = 'translateY(-10px)';
+            banner.style.maxHeight = banner.scrollHeight + 'px';
+            setTimeout(() => {
+                banner.style.maxHeight = '0';
+                banner.style.padding = '0';
+                banner.style.marginBottom = '0';
+                banner.style.pointerEvents = 'none';
+                setTimeout(() => banner.remove(), 400);
+            }, 50);
+            sessionStorage.setItem('autumn_promo_dismissed', 'true');
         }
-        updateClock();
-        const timer = setInterval(updateClock, 1000);
+    }
+
+    function dismissCampaignBanner() {
+        dismissPromoBanner();
+    }
+
+    (function initPromoCountdown() {
+        if (sessionStorage.getItem('autumn_promo_dismissed') === 'true') {
+            const banner = document.getElementById('autumnPromoBanner');
+            if (banner) banner.style.display = 'none';
+            return;
+        }
+        const banner = document.getElementById('autumnPromoBanner');
+        let targetTime = 0;
+        if (banner && banner.dataset.endAt) {
+            const parsed = Date.parse(banner.dataset.endAt);
+            if (!isNaN(parsed)) {
+                targetTime = parsed;
+            }
+        }
+        if (!targetTime) {
+            targetTime = Date.now() + (24 * 3600) * 1000;
+        }
+
+        function tick() {
+            const diff = Math.max(0, targetTime - Date.now());
+            const totalSec = Math.floor(diff / 1000);
+            const days = Math.floor(totalSec / 86400);
+            const hours = Math.floor((totalSec % 86400) / 3600);
+            const mins = Math.floor((totalSec % 3600) / 60);
+            const secs = totalSec % 60;
+
+            const toFa = n => String(n).padStart(2, '0').replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+            const dEl = document.getElementById('promoDays');
+            const hEl = document.getElementById('promoHours');
+            const mEl = document.getElementById('promoMins');
+            const sEl = document.getElementById('promoSecs');
+            if (dEl) dEl.textContent = toFa(days);
+            if (hEl) hEl.textContent = toFa(hours);
+            if (mEl) mEl.textContent = toFa(mins);
+            if (sEl) sEl.textContent = toFa(secs);
+
+            if (diff > 0) {
+                requestAnimationFrame(() => setTimeout(tick, 1000 - (Date.now() % 1000)));
+            }
+        }
+        tick();
     })();
     </script>
     {% endif %}

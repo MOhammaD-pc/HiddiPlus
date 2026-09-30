@@ -271,6 +271,7 @@
         <!-- ─── بنر هوشمند جشنواره با تایمر معکوس زنده ─── -->
         <div class="hiddi-promo-bar mb-4 theme-{{ sales_campaign.banner_style or 'autumn_glow' }} {% if portal_promo_mobile_sec == 'hide' %}promo-hide-sec-mobile{% endif %}" 
              id="autumnPromoBanner" 
+             style="--promo-beam: {{ sales_campaign.beam_color or '#38bdf8' }};"
              data-end-at="{{ sales_campaign.end_at or '' }}" 
              data-discount-code="{{ sales_campaign.discount_code or '' }}">
             <div class="promo-bar-inner">

@@ -183,8 +183,9 @@
                                         {% elif c.position == 'bottom_footer' %}پایین فوتر
                                         {% else %}زیر مشخصات{% endif %}
                                     </span>
-                                    <span class="text-secondary d-block" style="font-size: 0.72rem;">
+                                    <span class="text-secondary d-flex align-items-center gap-1.5" style="font-size: 0.72rem;">
                                         تم: {{ 'پاییزه' if c.banner_style == 'autumn_glow' else ('یاقوت' if c.banner_style == 'royal_sapphire' else ('زمرد' if c.banner_style == 'emerald_growth' else 'سایبر')) }}
+                                        <span class="rounded-circle d-inline-block ms-1" style="width: 8px; height: 8px; background-color: {{ c.beam_color or '#38bdf8' }}; box-shadow: 0 0 6px {{ c.beam_color or '#38bdf8' }};" title="رنگ رقص نور: {{ c.beam_color or '#38bdf8' }}"></span>
                                     </span>
                                 </div>
                             </td>
@@ -369,7 +370,27 @@
                             </select>
                         </div>
 
-                        <!-- فیلد ۸: متن دکمه اقدام (CTA) -->
+                        <!-- فیلد ۸: رنگ رقص نور بنر (Light Dance / Beam Color) -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-white mb-1">
+                                <i class="fas fa-wand-magic-sparkles text-info me-1"></i>رنگ رقص نور بنر (Beam Color):
+                            </label>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="color" class="form-control form-control-color bg-dark border-secondary p-1" id="campBeamColorPicker" value="#38bdf8" title="انتخاب رنگ رقص نور" style="width: 44px; height: 38px; cursor: pointer; flex-shrink: 0;">
+                                <input type="text" class="form-control bg-dark text-white border-secondary font-monospace text-uppercase" id="campBeamColor" name="beam_color" value="#38bdf8" placeholder="#38bdf8" style="letter-spacing: 1px; max-width: 110px;">
+                                <div class="btn-group btn-group-sm flex-wrap" role="group">
+                                    <button type="button" class="btn btn-outline-secondary px-2 py-1" onclick="setBeamPreset('#38bdf8')" style="color: #38bdf8;" title="آبی فیروزه‌ای">●</button>
+                                    <button type="button" class="btn btn-outline-secondary px-2 py-1" onclick="setBeamPreset('#a855f7')" style="color: #a855f7;" title="بنفش نئونی">●</button>
+                                    <button type="button" class="btn btn-outline-secondary px-2 py-1" onclick="setBeamPreset('#10b981')" style="color: #10b981;" title="سبز زمردی">●</button>
+                                    <button type="button" class="btn btn-outline-secondary px-2 py-1" onclick="setBeamPreset('#f59e0b')" style="color: #f59e0b;" title="طلایی آفتابی">●</button>
+                                    <button type="button" class="btn btn-outline-secondary px-2 py-1" onclick="setBeamPreset('#ef4444')" style="color: #ef4444;" title="یاقوتی قرمز">●</button>
+                                    <button type="button" class="btn btn-outline-secondary px-2 py-1" onclick="setBeamPreset('#ec4899')" style="color: #ec4899;" title="صورتی فانتزی">●</button>
+                                </div>
+                            </div>
+                            <div class="form-text text-secondary small">رنگ خطوط نئونی متحرک و جلوه‌های رقص نور بنر در تمام قالب‌ها.</div>
+                        </div>
+
+                        <!-- فیلد ۹: متن دکمه اقدام (CTA) -->
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-white mb-1">
                                 <i class="fas fa-mouse-pointer text-info me-1"></i>عنوان دکمه اقدام:
@@ -377,7 +398,7 @@
                             <input type="text" class="form-control bg-dark text-white border-secondary" id="campCtaText" name="cta_text" value="خرید و تمدید">
                         </div>
 
-                        <!-- فیلد ۹: لینک دکمه اقدام -->
+                        <!-- فیلد ۱۰: لینک دکمه اقدام -->
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-white mb-1">
                                 <i class="fas fa-link text-info me-1"></i>لینک هدایت دکمه اقدام:
@@ -467,6 +488,35 @@
                     </div>
                 </div>
 
+                <!-- بسته‌های مجاز -->
+                <div class="mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <label class="form-label small fw-bold text-white mb-0">
+                            <i class="fas fa-boxes-stacked text-warning me-1"></i>بسته‌های مجاز (اختیاری):
+                        </label>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-link btn-sm p-0 text-info text-decoration-none small" onclick="toggleAllQuickPlans(true)">انتخاب همه</button>
+                            <span class="text-secondary small">|</span>
+                            <button type="button" class="btn btn-link btn-sm p-0 text-secondary text-decoration-none small" onclick="toggleAllQuickPlans(false)">عدم انتخاب</button>
+                        </div>
+                    </div>
+                    <div class="form-text text-secondary small mb-2" style="font-size: 0.76rem;">در صورت عدم انتخاب هیچ بسته‌ای، تخفیف برای تمام بسته‌ها معتبر خواهد بود.</div>
+                    <div class="p-2.5 rounded border border-secondary border-opacity-25" style="max-height: 165px; overflow-y: auto; background: rgba(15, 23, 42, 0.7);">
+                        {% for p in plans %}
+                        <div class="form-check py-1.5 border-bottom border-secondary border-opacity-10">
+                            <input class="form-check-input quick-plan-checkbox" type="checkbox" value="{{ p.id }}" id="quick_plan_{{ p.id }}">
+                            <label class="form-check-label d-flex justify-content-between align-items-center w-100 pe-2 cursor-pointer small text-white" for="quick_plan_{{ p.id }}">
+                                <span class="fw-semibold">{{ p.name }}</span>
+                                <span class="text-secondary font-monospace" style="font-size: 0.74rem;">({{ p.duration or 30 }} روزه - {{ p.data_limit or 0 }} گیگ) - {{ "{:,}".format(p.price) if p.price else '۰' }} ت</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                        {% if not plans %}
+                        <div class="text-center py-2 text-secondary small">هیچ بسته‌ای تعریف نشده است.</div>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <div id="quickDiscountError" class="alert alert-danger rounded-3 small d-none mb-0"></div>
             </div>
 
@@ -481,11 +531,38 @@
 </div>
 
 <script>
+function setBeamPreset(hex) {
+    const picker = document.getElementById('campBeamColorPicker');
+    const input = document.getElementById('campBeamColor');
+    if (picker) picker.value = hex;
+    if (input) input.value = hex;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const picker = document.getElementById('campBeamColorPicker');
+    const input = document.getElementById('campBeamColor');
+    if (picker && input) {
+        picker.addEventListener('input', function() {
+            input.value = this.value;
+        });
+        input.addEventListener('input', function() {
+            if (/^#[0-9A-Fa-f]{6}$/.test(this.value.trim())) {
+                picker.value = this.value.trim();
+            }
+        });
+    }
+});
+
+function toggleAllQuickPlans(checked) {
+    document.querySelectorAll('.quick-plan-checkbox').forEach(cb => cb.checked = checked);
+}
+
 function openNewCampaignModal() {
     document.getElementById('campaignForm').reset();
     document.getElementById('campaignId').value = '';
     document.getElementById('campaignModalTitle').textContent = 'تعریف کمپین فروش و بنر جشنواره';
     document.getElementById('campIsActive').checked = true;
+    setBeamPreset('#38bdf8');
 
     // پیش‌فرض زمان پایان: ۷ روز بعد
     const now = new Date();
@@ -512,6 +589,7 @@ function editCampaign(camp) {
     document.getElementById('campEndAt').value = (camp.end_at || '').replace(' ', 'T').slice(0, 16);
     document.getElementById('campPosition').value = camp.position || 'below_hero';
     document.getElementById('campBannerStyle').value = camp.banner_style || 'autumn_glow';
+    setBeamPreset(camp.beam_color || '#38bdf8');
     document.getElementById('campCtaText').value = camp.cta_text || 'خرید و تمدید';
     document.getElementById('campCtaLink').value = camp.cta_link || '#plansSection';
     document.getElementById('campIsActive').checked = Boolean(camp.is_active);
@@ -528,6 +606,7 @@ function openQuickDiscountModal() {
     document.getElementById('quickAmountInput').value = '';
     document.getElementById('quickMaxUsesInput').value = '0';
     document.getElementById('quickValidDaysInput').value = '7';
+    toggleAllQuickPlans(false);
     document.getElementById('quickDiscountError').classList.add('d-none');
 
     generateRandomDiscountCode();
@@ -549,6 +628,7 @@ function submitQuickDiscount() {
     const amount = parseInt(document.getElementById('quickAmountInput').value) || 0;
     const maxUses = parseInt(document.getElementById('quickMaxUsesInput').value) || 0;
     const validDays = parseInt(document.getElementById('quickValidDaysInput').value) || 7;
+    const checkedPlans = Array.from(document.querySelectorAll('.quick-plan-checkbox:checked')).map(cb => cb.value).join(',');
     const errDiv = document.getElementById('quickDiscountError');
     const btn = document.getElementById('btnSubmitQuickDiscount');
 
@@ -575,7 +655,8 @@ function submitQuickDiscount() {
             discount_percent: percent,
             discount_amount: amount,
             max_uses: maxUses,
-            valid_days: validDays
+            valid_days: validDays,
+            allowed_plans: checkedPlans
         })
     })
     .then(res => res.json())

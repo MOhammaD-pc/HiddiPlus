@@ -14054,6 +14054,7 @@ def admin_campaigns_page():
         cta_link = request.form.get("cta_link", "#plansSection").strip()
         position = request.form.get("position", "below_hero").strip()
         banner_style = request.form.get("banner_style", "autumn_glow").strip()
+        beam_color = request.form.get("beam_color", "#38bdf8").strip()
         is_active = 1 if request.form.get("is_active") in ("1", "on", "true") else 0
 
         if not title:
@@ -14076,6 +14077,7 @@ def admin_campaigns_page():
                 "cta_link": cta_link,
                 "position": position,
                 "banner_style": banner_style,
+                "beam_color": beam_color,
                 "is_active": is_active
             })
             flash(f"کمپین فروش «{title}» با موفقیت ذخیره شد.", "success")
@@ -21052,6 +21054,7 @@ def reseller_campaigns_page():
         cta_link = request.form.get("cta_link", "#plansSection").strip()
         position = request.form.get("position", "below_hero").strip()
         banner_style = request.form.get("banner_style", "autumn_glow").strip()
+        beam_color = request.form.get("beam_color", "#38bdf8").strip()
         is_active = 1 if request.form.get("is_active") in ("1", "on", "true") else 0
 
         if not title:
@@ -21074,6 +21077,7 @@ def reseller_campaigns_page():
                 "cta_link": cta_link,
                 "position": position,
                 "banner_style": banner_style,
+                "beam_color": beam_color,
                 "is_active": is_active
             })
             flash(f"کمپین فروش «{title}» با موفقیت ذخیره شد.", "success")
@@ -21130,7 +21134,10 @@ def reseller_quick_create_discount():
         max_uses = int(data.get("max_uses") or 0)
     except (ValueError, TypeError):
         max_uses = 0
+    valid_days = data.get("valid_days")
     valid_until = (data.get("valid_until") or "").strip() or None
+    if not valid_until and valid_days and str(valid_days).isdigit() and int(valid_days) > 0:
+        valid_until = (get_now_naive() + timedelta(days=int(valid_days))).isoformat()
     allowed_plans = data.get("allowed_plans") or ""
 
     if not code:

@@ -503,11 +503,16 @@ class Database:
                 cta_link TEXT DEFAULT '#plansSection',
                 position TEXT DEFAULT 'below_hero',
                 banner_style TEXT DEFAULT 'autumn_glow',
+                beam_color TEXT DEFAULT '#38bdf8',
                 is_active INTEGER DEFAULT 1,
                 created_at TEXT,
                 updated_at TEXT
             )
         """)
+        try:
+            cursor.execute("ALTER TABLE sales_campaigns ADD COLUMN beam_color TEXT DEFAULT '#38bdf8'")
+        except Exception:
+            pass
         try:
             cursor.execute("SELECT COUNT(*) as count FROM sales_campaigns WHERE owner_type='admin'")
             sc_count = cursor.fetchone()["count"]
@@ -9928,6 +9933,9 @@ class Database:
             cta_link = str(data.get("cta_link") or "#plansSection").strip()
             position = str(data.get("position") or "below_hero").strip()
             banner_style = str(data.get("banner_style") or "autumn_glow").strip()
+            beam_color = str(data.get("beam_color") or "#38bdf8").strip()
+            if not beam_color:
+                beam_color = "#38bdf8"
             is_active = 1 if data.get("is_active") in (1, "1", True, "on") else 0
 
             if cid and int(cid) > 0:
@@ -9936,12 +9944,12 @@ class Database:
                     UPDATE sales_campaigns SET
                         title = ?, badge_text = ?, subtitle = ?, discount_code = ?,
                         discount_percent = ?, start_at = ?, end_at = ?, cta_text = ?,
-                        cta_link = ?, position = ?, banner_style = ?, is_active = ?,
+                        cta_link = ?, position = ?, banner_style = ?, beam_color = ?, is_active = ?,
                         updated_at = ?
                     WHERE id = ? AND owner_type = ? AND owner_id = ?
                     """,
                     (title, badge_text, subtitle, discount_code, discount_percent,
-                     start_at, end_at, cta_text, cta_link, position, banner_style,
+                     start_at, end_at, cta_text, cta_link, position, banner_style, beam_color,
                      is_active, now_str, int(cid), owner_type, owner_id)
                 )
                 conn.commit()
@@ -9952,13 +9960,13 @@ class Database:
                     INSERT INTO sales_campaigns (
                         owner_type, owner_id, title, badge_text, subtitle,
                         discount_code, discount_percent, start_at, end_at,
-                        cta_text, cta_link, position, banner_style, is_active,
+                        cta_text, cta_link, position, banner_style, beam_color, is_active,
                         created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (owner_type, owner_id, title, badge_text, subtitle,
                      discount_code, discount_percent, start_at, end_at,
-                     cta_text, cta_link, position, banner_style, is_active,
+                     cta_text, cta_link, position, banner_style, beam_color, is_active,
                      now_str, now_str)
                 )
                 conn.commit()
