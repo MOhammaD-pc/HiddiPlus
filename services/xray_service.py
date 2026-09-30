@@ -301,9 +301,25 @@ class XrayService:
 
             # ۱. نقش مستقیم (Direct)
             if role == "direct":
+                def _is_ip(val: str) -> bool:
+                    if not val:
+                        return False
+                    try:
+                        import ipaddress
+                        ipaddress.ip_address(val.strip())
+                        return True
+                    except Exception:
+                        return False
+
+                # برای پروتکل Reality: استتار حتماً باید یک دامنه مجاز خارجی باشد و هرگز نباید آی‌پی سرور باشد
+                item_sni = (item.get("sni") or "").strip()
+                if item_sni and not _is_ip(item_sni) and item_sni != dom:
+                    reality_sni = item_sni
+                else:
+                    reality_sni = str(self.db.get_setting("xray_reality_sni", "www.microsoft.com") or "www.microsoft.com").strip()
+
                 # VLESS Reality TCP Vision
                 if sw_direct_reality_tcp and pub_key:
-                    reality_sni = str(item.get("sni") or self.db.get_setting("xray_reality_sni", "www.microsoft.com") or "www.microsoft.com").strip()
                     uri = (
                         f"vless://{clean_uuid}@{dom}:{port}"
                         f"?security=reality&encryption=none&pbk={pub_key}&headerType=none"
@@ -314,7 +330,6 @@ class XrayService:
 
                 # VLESS Reality gRPC
                 if sw_direct_reality_grpc and pub_key:
-                    reality_sni = str(item.get("sni") or self.db.get_setting("xray_reality_sni", "www.microsoft.com") or "www.microsoft.com").strip()
                     uri = (
                         f"vless://{clean_uuid}@{dom}:{port}"
                         f"?security=reality&encryption=none&pbk={pub_key}&headerType=none"
@@ -588,7 +603,24 @@ class XrayService:
 
         api_port = int(self.db.get_setting("xray_api_port", 10085) or 10085)
         reality_port = int(self.db.get_setting("xray_reality_port", 443) or 443)
-        reality_sni = str(self.db.get_setting("xray_reality_sni", "www.microsoft.com") or "www.microsoft.com").strip()
+        raw_sni = str(self.db.get_setting("xray_reality_sni", "www.microsoft.com") or "www.microsoft.com").strip()
+        is_sni_ip = False
+        try:
+            import ipaddress
+            ipaddress.ip_address(raw_sni)
+            is_sni_ip = True
+        except ValueError:
+            pass
+        if not raw_sni or is_sni_ip:
+            reality_sni = "www.microsoft.com"
+        else:
+            reality_sni = raw_sni
+
+        server_names = [reality_sni]
+        for fallback_dom in ["www.microsoft.com", "www.cbc.ca"]:
+            if fallback_dom not in server_names:
+                server_names.append(fallback_dom)
+
         ws_port = int(self.db.get_setting("xray_ws_port", 8443) or 8443)
         ws_path = str(self.db.get_setting("xray_ws_path", "/tgbot-ws") or "/tgbot-ws").strip()
 
@@ -632,9 +664,9 @@ class XrayService:
                     "show": False,
                     "dest": f"{reality_sni}:443",
                     "xver": 0,
-                    "serverNames": [reality_sni],
+                    "serverNames": server_names,
                     "privateKey": priv_key,
-                    "shortIds": [short_id],
+                    "shortIds": [short_id] if short_id else ["2dfb9f7a"],
                     "spiderX": "/"
                 }
             },
@@ -963,6 +995,41 @@ class XrayService:
         except Exception:
             pass
 
+        # محاسبه وضعیت ارتباط نود اختصاصی
+        node_ip = (self.db.get_setting("xray_node_last_ip") or self.db.get_setting("xray_server_ip") or "").strip()
+        node_last_seen = str(self.db.get_setting("xray_node_last_seen") or "").strip()
+        is_node_online = False
+        node_last_seen_human = "هنوز متصل نشده"
+        if node_last_seen:
+            try:
+                clean_seen = node_last_seen.replace("Z", "")
+                last_dt = datetime.fromisoformat(clean_seen)
+                now_dt = datetime.now(timezone.utc)
+                if last_dt.tzinfo is None:
+                    last_dt = last_dt.replace(tzinfo=timezone.utc)
+                diff_sec = (now_dt - last_dt).total_seconds()
+                if diff_sec < 600:
+                    is_node_online = True
+                    node_last_seen_human = "آنلاین (چند لحظه پیش)"
+                elif diff_sec < 3600:
+                    node_last_seen_human = f"{int(diff_sec // 60)} دقیقه پیش"
+                elif diff_sec < 86400:
+                    node_last_seen_human = f"{int(diff_sec // 3600)} ساعت پیش"
+                else:
+                    node_last_seen_human = f"{int(diff_sec // 86400)} روز پیش"
+            except Exception:
+                node_last_seen_human = node_last_seen
+
+        raw_sni = str(self.db.get_setting("xray_reality_sni", "www.microsoft.com") or "www.microsoft.com").strip()
+        is_sni_ip = False
+        try:
+            import ipaddress
+            ipaddress.ip_address(raw_sni)
+            is_sni_ip = True
+        except ValueError:
+            pass
+        reality_sni = "www.microsoft.com" if (not raw_sni or is_sni_ip) else raw_sni
+
         return {
             "is_installed": installed,
             "binary_path": self._binary_path or "یافت نشد",
@@ -981,10 +1048,15 @@ class XrayService:
             "matrix_direct_shadowsocks": self.db.is_setting_enabled("xray_matrix_direct_shadowsocks", default=False),
             "include_external_node": self.db.is_setting_enabled("xray_include_external_node", default=True),
             "reality_port": int(self.db.get_setting("xray_reality_port", 443) or 443),
-            "reality_sni": str(self.db.get_setting("xray_reality_sni", "www.yahoo.com") or "www.yahoo.com").strip(),
+            "reality_sni": reality_sni,
             "reality_pub_key": credentials.get("public_key", ""),
+            "reality_public_key": credentials.get("public_key", ""),
             "reality_priv_key": credentials.get("private_key", ""),
             "reality_short_id": credentials.get("short_id", ""),
+            "node_ip": node_ip,
+            "node_last_seen": node_last_seen,
+            "node_last_seen_human": node_last_seen_human,
+            "is_node_online": is_node_online,
             "ws_port": int(self.db.get_setting("xray_ws_port", 8443) or 8443),
             "ws_path": str(self.db.get_setting("xray_ws_path", "/tgbot-ws") or "/tgbot-ws").strip(),
             "ss_port": int(self.db.get_setting("xray_ss_port", 1080) or 1080),

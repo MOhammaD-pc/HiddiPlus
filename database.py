@@ -7272,6 +7272,33 @@ class Database:
         if clean_role not in ("cdn", "direct", "sub_only", "relay"):
             clean_role = "cdn"
 
+        # بررسی و اعتبارسنجی SNI: برای نقش direct نباید از آی‌پی به عنوان SNI استفاده شود
+        is_domain_ip = False
+        try:
+            import ipaddress
+            ipaddress.ip_address(clean_domain)
+            is_domain_ip = True
+        except ValueError:
+            pass
+
+        raw_sni = (sni or "").strip()
+        is_sni_ip = False
+        if raw_sni:
+            try:
+                import ipaddress
+                ipaddress.ip_address(raw_sni)
+                is_sni_ip = True
+            except ValueError:
+                pass
+
+        if clean_role == "direct":
+            if not raw_sni or is_sni_ip or (is_domain_ip and raw_sni == clean_domain):
+                clean_sni = str(self.get_setting("xray_reality_sni", "www.microsoft.com") or "www.microsoft.com").strip()
+            else:
+                clean_sni = raw_sni
+        else:
+            clean_sni = raw_sni or clean_domain
+
         now = get_now_iso()
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -7285,7 +7312,7 @@ class Database:
                     SET role = ?, alias = CASE WHEN ? != '' THEN ? ELSE alias END, sni = ?, clean_ips = ?, ws_path = ?, grpc_service_name = ?, port = ?, is_active = ?, updated_at = ?
                     WHERE id = ?
                 """, (
-                    clean_role, (alias or "").strip(), (alias or "").strip(), (sni or clean_domain).strip(),
+                    clean_role, (alias or "").strip(), (alias or "").strip(), clean_sni,
                     (clean_ips or "").strip(), (ws_path or "/tgbot-ws").strip(), (grpc_service_name or "tgbot-grpc").strip(),
                     int(port or 443), int(is_active), now, domain_id
                 ))
@@ -7297,7 +7324,7 @@ class Database:
                 (domain, role, alias, sni, clean_ips, ws_path, grpc_service_name, port, is_active, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                clean_domain, clean_role, (alias or "").strip(), (sni or clean_domain).strip(),
+                clean_domain, clean_role, (alias or "").strip(), clean_sni,
                 (clean_ips or "").strip(), (ws_path or "/tgbot-ws").strip(), (grpc_service_name or "tgbot-grpc").strip(),
                 int(port or 443), int(is_active), now, now
             ))

@@ -1516,26 +1516,39 @@ def smart_subscription_proxy(sub_uuid: str, sub_path: str = ""):
     external_expire_ts = 0
     include_external = db.is_setting_enabled("xray_include_external_node", default=True)
     if is_sub_active and include_external and hiddify_url:
-        target_url = f"{hiddify_url}/{proxy_path}/{sub_uuid}/all.txt"
+        # در هیدیفای، مسیر all.txt تمام کانفیگ‌ها را بدون در نظر گرفتن تیک‌های نمایش برمی‌گرداند.
+        # برای دریافت دقیقاً کانفیگ‌های انتخاب‌شده برای نمایش، ابتدا لینک استاندارد کلاینت با هدر v2rayNG فراخوانی می‌شود.
+        candidate_urls = [
+            f"{hiddify_url}/{proxy_path}/{sub_uuid}/",
+            f"{hiddify_url}/{proxy_path}/{sub_uuid}/sub",
+            f"{hiddify_url}/{proxy_path}/{sub_uuid}/all.txt"
+        ]
         req_headers = {k: v for k, v in request.headers if k.lower() not in ["host", "content-length"]}
         req_headers["User-Agent"] = "v2rayNG/1.8.12"
         try:
-            with httpx.Client(verify=False, follow_redirects=True, timeout=5.0) as client:
-                resp = client.get(target_url, headers=req_headers)
-                if resp.status_code == 200:
-                    for h_name, h_val in resp.headers.items():
-                        if h_name.lower() == "subscription-userinfo":
-                            for part in h_val.split(";"):
-                                if "expire=" in part:
-                                    try:
-                                        external_expire_ts = int(part.split("expire=")[1].strip())
-                                    except Exception:
-                                        pass
-                    if resp.text:
-                        h_configs = _parse_subscription_configs(resp.text)
-                        combined_configs.extend(h_configs)
+            with httpx.Client(verify=False, follow_redirects=True, timeout=6.0) as client:
+                for target_url in candidate_urls:
+                    try:
+                        resp = client.get(target_url, headers=req_headers)
+                        if resp.status_code == 200 and resp.text:
+                            for h_name, h_val in resp.headers.items():
+                                if h_name.lower() == "subscription-userinfo":
+                                    for part in h_val.split(";"):
+                                        if "expire=" in part:
+                                            try:
+                                                external_expire_ts = int(part.split("expire=")[1].strip())
+                                            except Exception:
+                                                pass
+                            text_body = resp.text.strip()
+                            if "<html" not in text_body.lower() and "<!doctype html" not in text_body.lower():
+                                h_configs = _parse_subscription_configs(text_body)
+                                if h_configs:
+                                    combined_configs.extend(h_configs)
+                                    break
+                    except Exception as e_inner:
+                        logger.debug(f"Subscription candidate {target_url} failed: {e_inner}")
         except Exception as e:
-            logger.warning(f"Could not fetch external configs from {target_url}: {e}")
+            logger.warning(f"Could not fetch external configs: {e}")
 
     # ۳. پاسخ با سابسکریپشن ترکیبی Base64 در صورت وجود کانفیگ
     if combined_configs:
@@ -15363,9 +15376,27 @@ def admin_api_xray_save_settings():
     if "reality_port" in data:
         db.set_setting("xray_reality_port", int(data.get("reality_port") or 443))
     if "reality_sni" in data:
-        db.set_setting("xray_reality_sni", str(data.get("reality_sni") or "www.yahoo.com").strip())
-    if "reality_pub_key" in data and data.get("reality_pub_key"):
-        db.set_setting("xray_reality_public_key", str(data.get("reality_pub_key")).strip())
+        raw_sni = str(data.get("reality_sni") or "www.microsoft.com").strip()
+        is_sni_ip = False
+        try:
+            import ipaddress
+            ipaddress.ip_address(raw_sni)
+            is_sni_ip = True
+        except ValueError:
+            pass
+        new_sni = "www.microsoft.com" if (not raw_sni or is_sni_ip) else raw_sni
+        db.set_setting("xray_reality_sni", new_sni)
+        try:
+            domains = db.get_xray_domains()
+            for d in domains:
+                if d.get("role") == "direct":
+                    db.update_xray_domain(d["id"], sni=new_sni)
+        except Exception as e_ds:
+            logger.warning(f"Could not sync reality_sni to direct domains: {e_ds}")
+
+    pub_k = str(data.get("reality_pub_key") or data.get("reality_public_key") or "").strip()
+    if pub_k:
+        db.set_setting("xray_reality_public_key", pub_k)
     if "reality_priv_key" in data and data.get("reality_priv_key"):
         db.set_setting("xray_reality_private_key", str(data.get("reality_priv_key")).strip())
     if "reality_short_id" in data and data.get("reality_short_id"):
@@ -15468,6 +15499,8 @@ def admin_api_xray_node_config():
         node_ip = request.headers.get("CF-Connecting-IP") or request.headers.get("X-Real-IP") or request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
 
     if node_ip and node_ip not in ("127.0.0.1", "localhost", "::1"):
+        db.set_setting("xray_node_last_ip", node_ip)
+        db.set_setting("xray_node_last_seen", get_now_iso())
         current_ip = (db.get_setting("xray_server_ip") or "").strip()
         if not current_ip or current_ip in ("127.0.0.1", "localhost"):
             db.set_setting("xray_server_ip", node_ip)
@@ -15476,15 +15509,31 @@ def admin_api_xray_node_config():
         try:
             domains = db.get_xray_domains()
             has_direct = any(d.get("role") == "direct" and d.get("domain") not in ("ss.server.com", "example.com") for d in domains)
+            clean_reality_sni = str(db.get_setting("xray_reality_sni", "www.microsoft.com") or "www.microsoft.com").strip()
             if not has_direct:
                 db.add_xray_domain(
                     domain=node_ip,
                     role="direct",
                     alias="نود اوبونتو مستقیم",
-                    sni=db.get_setting("xray_reality_sni", "www.microsoft.com"),
+                    sni=clean_reality_sni,
                     port=int(db.get_setting("xray_reality_port", 443) or 443)
                 )
                 logger.info(f"Auto-created direct domain entry for node IP {node_ip}")
+            else:
+                # اطمینان از اینکه هیچ دامنه دایرکتی آی‌پی را به عنوان SNI قرار نداده باشد
+                for d in domains:
+                    if d.get("role") == "direct":
+                        curr_sni = str(d.get("sni") or "").strip()
+                        is_ip = False
+                        try:
+                            import ipaddress
+                            ipaddress.ip_address(curr_sni)
+                            is_ip = True
+                        except ValueError:
+                            pass
+                        if not curr_sni or is_ip:
+                            db.update_xray_domain(d["id"], sni=clean_reality_sni)
+                            logger.info(f"Fixed direct domain #{d['id']} SNI from '{curr_sni}' to '{clean_reality_sni}'")
         except Exception as e_dom:
             logger.warning(f"Error auto-registering node direct domain: {e_dom}")
 
@@ -15538,11 +15587,13 @@ def admin_api_xray_install_script():
     # تزریق خودکار متغیرهای اتصال و کلیدهای پنل در ابتدای اسکریپت
     creds = xray_service.ensure_reality_credentials()
     node_config_url = f"{base_host}/admin/api/xray/node_config?token={token or valid_token}"
+    reality_sni_val = str(db.get_setting("xray_reality_sni", "www.microsoft.com") or "www.microsoft.com").strip()
     injection = (
         f'export PANEL_CONFIG_URL="{node_config_url}"\n'
         f'export PRESET_PRIV_KEY="{creds.get("private_key", "")}"\n'
         f'export PRESET_PUB_KEY="{creds.get("public_key", "")}"\n'
         f'export PRESET_SHORT_ID="{creds.get("short_id", "")}"\n'
+        f'export PRESET_REALITY_SNI="{reality_sni_val}"\n'
     )
     script_content = script_content.replace("#!/bin/bash\n", f"#!/bin/bash\n{injection}\n", 1)
 
@@ -15554,6 +15605,99 @@ def admin_api_xray_install_script():
             "Cache-Control": "no-cache, no-store, must-revalidate"
         }
     )
+
+
+@app.route("/admin/api/xray/ping_node", methods=["GET", "POST"])
+@admin_required
+def admin_api_xray_ping_node():
+    """تست زنده اتصال TCP به پورت‌های کلیدی نود اوبونتو و سنجش تأخیر زمانی (Ping/Latency)"""
+    import socket
+    import time
+
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    target_ip = (
+        request.args.get("ip")
+        or data.get("ip")
+        or db.get_setting("xray_node_last_ip")
+        or db.get_setting("xray_server_ip")
+        or ""
+    ).strip()
+
+    # اگر هنوز آی‌پی ثبت نشده است، بررسی دامنه‌های دایرکت
+    if not target_ip or target_ip in ("127.0.0.1", "localhost"):
+        try:
+            for d in db.get_xray_domains():
+                if d.get("role") == "direct" and d.get("domain") not in ("ss.server.com", "example.com"):
+                    target_ip = d["domain"].strip()
+                    break
+        except Exception:
+            pass
+
+    if not target_ip or target_ip in ("127.0.0.1", "localhost"):
+        return jsonify({
+            "status": "error",
+            "success": False,
+            "message": "آدرس IP نود اوبونتو هنوز در سیستم ثبت نشده است. لطفاً ابتدا اسکریپت نصب را روی سرور اجرا کنید."
+        }), 400
+
+    reality_port = int(db.get_setting("xray_reality_port", 443) or 443)
+    ws_port = int(db.get_setting("xray_ws_port", 8443) or 8443)
+    ss_port = int(db.get_setting("xray_ss_port", 1080) or 1080)
+
+    ports_to_check = [
+        (reality_port, "Reality Direct (TCP)"),
+        (ws_port, "WebSocket CDN"),
+        (ss_port, "Shadowsocks 2022")
+    ]
+
+    port_results = {}
+    is_online = False
+    best_latency = None
+
+    for port, label in ports_to_check:
+        t_start = time.perf_counter()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2.5)
+        try:
+            sock.connect((target_ip, port))
+            latency_ms = round((time.perf_counter() - t_start) * 1000, 1)
+            sock.close()
+            port_results[str(port)] = {
+                "open": True,
+                "latency_ms": latency_ms,
+                "label": label
+            }
+            is_online = True
+            if best_latency is None or latency_ms < best_latency:
+                best_latency = latency_ms
+        except Exception as sock_err:
+            try:
+                sock.close()
+            except Exception:
+                pass
+            port_results[str(port)] = {
+                "open": False,
+                "latency_ms": None,
+                "label": label,
+                "error": str(sock_err)
+            }
+
+    # اگر پورت‌ها پاسخ دادند، وضعیت و تایم‌استمپ را در دیتابیس ثبت می‌کنیم
+    now_iso = get_now_iso()
+    if is_online:
+        db.set_setting("xray_node_last_seen", now_iso)
+        db.set_setting("xray_node_last_ip", target_ip)
+
+    return jsonify({
+        "status": "success",
+        "success": True,
+        "node_ip": target_ip,
+        "is_online": is_online,
+        "best_latency_ms": best_latency,
+        "ports": port_results,
+        "checked_at": now_iso,
+        "message": f"تست ارتباط نود {target_ip} با موفقیت انجام شد." if is_online else f"نود {target_ip} در دسترس نیست یا پورت‌ها مسدودند."
+    })
 
 
 @app.route("/admin/api/xray/daemon_status", methods=["GET"])

@@ -551,6 +551,50 @@ class TestXrayService(unittest.TestCase):
             conn.commit()
             conn.close()
 
+    def test_reality_sni_never_uses_ip(self):
+        """تست اطمینان از اینکه هیچگاه آدرس آی‌پی به عنوان SNI در Reality ثبت یا تولید نمی‌شود"""
+        self.db.set_setting("xray_reality_sni", "www.microsoft.com")
+        
+        # افزودن یک دامنه direct با دادن آی‌پی به عنوان دامنه و بدون SNI
+        dom_res = self.db.add_xray_domain(
+            domain="91.107.188.230",
+            role="direct",
+            alias="تست نود مستقیم",
+            sni="91.107.188.230"  # به اشتباه آی‌پی داده شده
+        )
+        dom_id = dom_res.get("id") if isinstance(dom_res, dict) else dom_res
+        try:
+            domains = self.db.get_xray_domains()
+            saved = next((d for d in domains if d["id"] == dom_id), None)
+            self.assertIsNotNone(saved)
+            # باید خودکار با xray_reality_sni جایگزین شده باشد نه آی‌پی
+            self.assertEqual(saved["sni"], "www.microsoft.com")
+
+            # تولید کانفیگ ماتریس سابسکریپشن
+            configs = self.service.generate_matrix_subscription("uuid-sni-test-123", account_name="TestSNI")
+            reality_configs = [c for c in configs if "security=reality" in c]
+            self.assertGreater(len(reality_configs), 0)
+            for c in reality_configs:
+                self.assertIn("sni=www.microsoft.com", c)
+                self.assertNotIn("sni=91.107.188.230", c)
+        finally:
+            if dom_id:
+                self.db.delete_xray_domain(dom_id)
+
+    def test_get_service_status_includes_node_and_keys(self):
+        """بررسی وجود فیلدهای کلید عمومی و وضعیت نود در get_service_status"""
+        self.db.set_setting("xray_node_last_ip", "91.107.188.230")
+        self.db.set_setting("xray_node_last_seen", "2026-09-30T09:00:00Z")
+        status = self.service.get_service_status()
+        self.assertIn("reality_public_key", status)
+        self.assertIn("reality_pub_key", status)
+        self.assertEqual(status["reality_public_key"], status["reality_pub_key"])
+        self.assertIn("node_ip", status)
+        self.assertEqual(status["node_ip"], "91.107.188.230")
+        self.assertIn("node_last_seen", status)
+        self.assertIn("node_last_seen_human", status)
+        self.assertIn("is_node_online", status)
+
 
 if __name__ == "__main__":
     unittest.main()

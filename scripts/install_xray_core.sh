@@ -401,11 +401,28 @@ if systemctl is-active --quiet xray; then
   if [ -n "$PANEL_CONFIG_URL" ]; then
     echo -e "\e[36m   - همگام‌ساز خودکار کاربران: فعال (هر ۲ دقیقه) 🔄\e[0m"
   fi
-  if [ -n "$PUB_KEY" ]; then
-    echo -e "\e[33m🔑 کلید عمومی Reality (Public Key): ${PUB_KEY}\e[0m"
+  FINAL_PUB_KEY="${PRESET_PUB_KEY:-${PUB_KEY:-}}"
+  FINAL_SHORT_ID="${PRESET_SHORT_ID:-${SHORT_ID:-}}"
+  FINAL_SNI="${PRESET_REALITY_SNI:-}"
+
+  if [ -z "$FINAL_PUB_KEY" ] && [ -f /usr/local/etc/xray/config.json ]; then
+    FINAL_PUB_KEY=$(grep -oP '(?<="publicKey": ")[^"]*' /usr/local/etc/xray/config.json 2>/dev/null || true)
   fi
-  if [ -n "$SHORT_ID" ]; then
-    echo -e "\e[33m🆔 شناسه کوتاه Reality (Short ID): ${SHORT_ID}\e[0m"
+  if [ -z "$FINAL_SHORT_ID" ] && [ -f /usr/local/etc/xray/config.json ]; then
+    FINAL_SHORT_ID=$(grep -oP '(?<="shortIds": \[")[^"]*' /usr/local/etc/xray/config.json 2>/dev/null | head -n 1 || true)
+  fi
+  if [ -z "$FINAL_SNI" ] && [ -f /usr/local/etc/xray/config.json ]; then
+    FINAL_SNI=$(grep -oP '(?<="dest": ")[^:]*' /usr/local/etc/xray/config.json 2>/dev/null | head -n 1 || true)
+  fi
+
+  if [ -n "$FINAL_PUB_KEY" ]; then
+    echo -e "\e[33m🔑 کلید عمومی Reality (Public Key): ${FINAL_PUB_KEY}\e[0m"
+  fi
+  if [ -n "$FINAL_SHORT_ID" ]; then
+    echo -e "\e[33m🆔 شناسه کوتاه Reality (Short ID): ${FINAL_SHORT_ID}\e[0m"
+  fi
+  if [ -n "$FINAL_SNI" ]; then
+    echo -e "\e[33m🌐 دامنه استتار Reality (SNI): ${FINAL_SNI}\e[0m"
   fi
   echo -e "\e[34m=====================================================\e[0m"
   echo -e "\e[32m✅ سرور اوبونتو اکنون به عنوان نود پروکسی آماده سرویس‌دهی به کاربران است.\e[0m"

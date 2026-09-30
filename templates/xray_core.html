@@ -184,6 +184,54 @@
         </div>
     </div>
 
+    <!-- نوار وضعیت و تست زنده اتصال نود اوبونتو (Remote Node Live Health & Ping) -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-body-tertiary">
+        <div class="card-body p-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-2.5 rounded-circle bg-info-subtle text-info">
+                    <i class="fas fa-server fs-5" id="nodeStatusIcon"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold small text-dark">سرور نود اوبونتو اختصاصی (Remote Xray Node)</span>
+                        <span id="nodeStatusBadge" class="badge {% if xray_config and xray_config.is_node_online %}bg-success-subtle text-success border border-success-subtle{% elif xray_config and xray_config.node_ip %}bg-warning-subtle text-warning border border-warning-subtle{% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %} rounded-pill">
+                            {% if xray_config and xray_config.is_node_online %}
+                                <i class="fas fa-circle-check me-1"></i> متصل و آنلاین
+                            {% elif xray_config and xray_config.node_ip %}
+                                <i class="fas fa-clock me-1"></i> ثبت‌شده (نیاز به تست)
+                            {% else %}
+                                <i class="fas fa-circle-xmark me-1"></i> هنوز متصل نشده
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="text-muted small mt-1">
+                        آدرس IP سرور: <code class="fw-semibold text-primary px-1.5 py-0.5 rounded bg-light" id="nodeIpDisplay">{{ xray_config.node_ip|default(xray_config.server_ip)|default('ثبت‌نشده') }}</code>
+                        | آخرین اتصال: <span id="nodeLastSeenText" class="fw-semibold text-dark">{{ xray_config.node_last_seen_human|default('هنوز متصل نشده') }}</span>
+                        | پورت‌های فعال: <span class="badge bg-light text-secondary border">Reality: {{ xray_config.reality_port|default(443) }}</span> <span class="badge bg-light text-secondary border">WS: {{ xray_config.ws_port|default(8443) }}</span> <span class="badge bg-light text-secondary border">SS: {{ xray_config.ss_port|default(1080) }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 shadow-sm" id="testNodePingBtn" onclick="testNodeLivePing(this)">
+                    <i class="fas fa-network-wired me-1 text-info"></i> تست زنده اتصال نود (Live Ping)
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#installScriptModal">
+                    <i class="fas fa-terminal me-1"></i> دستور نصب مجدد
+                </button>
+            </div>
+        </div>
+        <!-- کادر نتایج تست پینگ زنده در صورت کلیک -->
+        <div id="nodePingResultBox" class="p-3 border-top bg-light-subtle rounded-bottom-4 d-none">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small fw-bold text-dark"><i class="fas fa-chart-line text-primary me-1"></i> نتیجه بررسی زنده پورت‌های TCP نود:</span>
+                <span id="nodePingSummaryBadge" class="badge rounded-pill"></span>
+            </div>
+            <div class="row g-2 text-center" id="nodePortCardsRow">
+                <!-- پورت‌های نود به طور دینامیک توسط JS پر می‌شوند -->
+            </div>
+        </div>
+    </div>
+
     <!-- ناوبری تب‌های موضوعی -->
     <ul class="nav nav-pills gap-2 mb-4 p-2 bg-light rounded-pill border" id="xrayTab" role="tablist">
         <li class="nav-item" role="presentation">
@@ -857,7 +905,7 @@
                                 <i class="fas fa-arrows-rotate me-1"></i> تولید جفت‌کلید جدید
                             </button>
                         </div>
-                        <input type="text" class="form-control font-monospace small" id="reality_modal_pub_key" value="{{ xray_config.reality_public_key|default('') }}" placeholder="کلید عمومی تولیدشده توسط سیستم" style="direction: ltr;">
+                        <input type="text" class="form-control font-monospace small" id="reality_modal_pub_key" value="{{ xray_config.reality_pub_key|default(xray_config.reality_public_key)|default('') }}" placeholder="کلید عمومی تولیدشده توسط سیستم" style="direction: ltr;">
                         <div class="form-text small text-muted">کلیدها به طور خودکار به سرور اوبونتو تزریق شده و نیازی به ورود دستی ندارند.</div>
                     </div>
                     <div class="mb-3">
@@ -1335,6 +1383,71 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({xray_ws_path: wsPath.trim()})
             }).then(() => window.location.reload());
+        }
+    }
+
+    async function testNodeLivePing(btn) {
+        const origText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> در حال پایش پورت‌های TCP...';
+
+        const resultBox = document.getElementById('nodePingResultBox');
+        const summaryBadge = document.getElementById('nodePingSummaryBadge');
+        const cardsRow = document.getElementById('nodePortCardsRow');
+
+        try {
+            const resp = await fetch('/admin/api/xray/ping_node', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({})
+            });
+            const data = await resp.json();
+
+            resultBox.classList.remove('d-none');
+            cardsRow.innerHTML = '';
+
+            if (data.success && data.is_online) {
+                summaryBadge.className = 'badge bg-success-subtle text-success border border-success-subtle px-3 py-1';
+                summaryBadge.innerHTML = `<i class="fas fa-check-circle me-1"></i> نود آنلاین (${data.best_latency_ms} ms)`;
+
+                const statusBadge = document.getElementById('nodeStatusBadge');
+                if (statusBadge) {
+                    statusBadge.className = 'badge bg-success-subtle text-success border border-success-subtle rounded-pill';
+                    statusBadge.innerHTML = '<i class="fas fa-circle-check me-1"></i> متصل و آنلاین';
+                }
+                const lastSeenEl = document.getElementById('nodeLastSeenText');
+                if (lastSeenEl) {
+                    lastSeenEl.innerText = 'آنلاین (هم‌اکنون)';
+                }
+            } else {
+                summaryBadge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1';
+                summaryBadge.innerHTML = `<i class="fas fa-times-circle me-1"></i> نود آفلاین یا غیرقابل دسترس`;
+            }
+
+            if (data.ports) {
+                for (const [port, pdata] of Object.entries(data.ports)) {
+                    const col = document.createElement('div');
+                    col.className = 'col-4';
+                    col.innerHTML = `
+                        <div class="p-2.5 rounded-3 border ${pdata.open ? 'border-success bg-success-subtle text-success' : 'border-danger bg-danger-subtle text-danger'}">
+                            <div class="fw-bold small">پورت ${port}</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">${pdata.label}</div>
+                            <div class="fw-bold mt-1">${pdata.open ? `<i class="fas fa-circle-check"></i> ${pdata.latency_ms} ms` : `<i class="fas fa-circle-xmark"></i> مسدود / غیرفعال`}</div>
+                        </div>
+                    `;
+                    cardsRow.appendChild(col);
+                }
+            } else if (data.message) {
+                cardsRow.innerHTML = `<div class="col-12 text-muted small">${data.message}</div>`;
+            }
+        } catch (err) {
+            resultBox.classList.remove('d-none');
+            summaryBadge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1';
+            summaryBadge.innerHTML = `<i class="fas fa-triangle-exclamation me-1"></i> خطا در تست`;
+            cardsRow.innerHTML = `<div class="col-12 text-danger small">خطای برقراری ارتباط با پنل: ${err.message}</div>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = origText;
         }
     }
 
