@@ -250,7 +250,7 @@
                             <div class="bg-light p-2.5 rounded-3 font-monospace small mb-3">
                                 <div class="d-flex justify-content-between text-muted"><span>Port:</span> <strong class="text-dark">{{ xray_config.reality_port|default(443) }}</strong></div>
                                 <div class="d-flex justify-content-between text-muted"><span>Flow:</span> <span class="text-primary font-bold">xtls-rprx-vision</span></div>
-                                <div class="d-flex justify-content-between text-muted"><span>SNI Dest:</span> <span>{{ xray_config.reality_sni|default('www.yahoo.com') }}</span></div>
+                                <div class="d-flex justify-content-between text-muted"><span>SNI Dest:</span> <span>{{ xray_config.reality_sni|default('www.microsoft.com') }}</span></div>
                             </div>
                         </div>
                         <div class="border-top pt-2.5 d-flex justify-content-between align-items-center">
@@ -847,12 +847,18 @@
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label small fw-semibold text-dark">سایت شبیه‌سازی و استتار TLS (SNI Dest)</label>
-                        <input type="text" class="form-control font-monospace" id="reality_modal_sni" value="{{ xray_config.reality_sni|default('www.yahoo.com') }}" required style="direction: ltr;">
-                        <div class="form-text small text-muted">دامنه خارجی مجاز بدون فیلتر جهت هندشیک (مثال: www.yahoo.com یا speedtest.net)</div>
+                        <input type="text" class="form-control font-monospace" id="reality_modal_sni" value="{{ xray_config.reality_sni|default('www.microsoft.com') }}" required style="direction: ltr;">
+                        <div class="form-text small text-muted">دامنه خارجی مجاز بدون فیلتر جهت هندشیک (پیش‌فرض پیشنهادی: www.microsoft.com)</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-semibold text-dark">کلید عمومی Reality (Public Key)</label>
-                        <input type="text" class="form-control font-monospace small" id="reality_modal_pub_key" value="{{ xray_config.reality_public_key|default('') }}" placeholder="کلید عمومی تولیدشده روی سرور اوبونتو" style="direction: ltr;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-semibold text-dark mb-0">کلید عمومی Reality (Public Key)</label>
+                            <button type="button" class="btn btn-outline-primary btn-xs py-0 px-2 rounded-pill" onclick="generateNewRealityKeysInModal()" title="تولید جفت‌کلید ریاضیاتی معتبر">
+                                <i class="fas fa-arrows-rotate me-1"></i> تولید جفت‌کلید جدید
+                            </button>
+                        </div>
+                        <input type="text" class="form-control font-monospace small" id="reality_modal_pub_key" value="{{ xray_config.reality_public_key|default('') }}" placeholder="کلید عمومی تولیدشده توسط سیستم" style="direction: ltr;">
+                        <div class="form-text small text-muted">کلیدها به طور خودکار به سرور اوبونتو تزریق شده و نیازی به ورود دستی ندارند.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-semibold text-dark">شناسه کوتاه (Short ID)</label>
@@ -888,14 +894,14 @@
                 <div class="alert alert-info border-0 rounded-3 mb-4 d-flex align-items-start gap-2">
                     <i class="fas fa-circle-info fs-5 mt-1 text-info"></i>
                     <div>
-                        <strong>راه‌اندازی فوری بدون نیاز به پنل شخص ثالث:</strong>
-                        <div class="small mt-1">با اجرای دستور زیر در سرور اوبونتو، هسته رسمی Xray-core، سرویس خودکار systemd، باز کردن پورت‌ها در فایروال و اتصال مستقیم به این پنل تنها در چند ثانیه به صورت خودکار انجام خواهد شد.</div>
+                        <strong>راه‌اندازی فوری و هوشمند نود اوبونتو:</strong>
+                        <div class="small mt-1">تنها با اجرای دستور زیر در سرور اوبونتو، هسته رسمی Xray-core نصب شده، کلیدها و کاربران فعال فوراً از پنل دریافت شده، آی‌پی سرور در پنل ثبت شده و همگام‌ساز خودکار فعال می‌گردد.</div>
                     </div>
                 </div>
 
                 <label class="form-label fw-bold text-dark small mb-2">دستور اجرای مستقیم با یک کلیک در ترمینال سرور (One-Click Install):</label>
                 <div class="position-relative mb-3">
-                    <pre class="bg-dark text-white p-3 rounded-3 font-monospace small mb-0 overflow-auto" id="installCmdText" style="direction: ltr; text-align: left; max-height: 120px;">curl -sSL "{{ request.host_url }}admin/api/xray/install_script?token={{ installer_token }}" | sudo bash</pre>
+                    <pre class="bg-dark text-white p-3 rounded-3 font-monospace small mb-0 overflow-auto" id="installCmdText" style="direction: ltr; text-align: left; max-height: 120px;">curl -sSL "{{ panel_host_url|default(request.host_url) }}admin/api/xray/install_script?token={{ installer_token }}" | sudo bash</pre>
                     <button type="button" class="btn btn-sm btn-primary position-absolute top-0 end-0 m-2 rounded-pill px-3" onclick="copyInstallScriptCmd(this)">
                         <i class="fas fa-copy me-1"></i> کپی دستور
                     </button>
@@ -903,7 +909,7 @@
 
                 <label class="form-label fw-bold text-dark small mb-2">دستور همگام‌سازی فوری کاربران در سرور اوبونتو (Quick Sync Users):</label>
                 <div class="position-relative mb-3">
-                    <pre class="bg-dark text-white p-3 rounded-3 font-monospace small mb-0 overflow-auto" id="syncCmdText" style="direction: ltr; text-align: left; max-height: 120px;">curl -sSL "{{ request.host_url }}admin/api/xray/node_config?token={{ installer_token }}" -o /usr/local/etc/xray/config.json && systemctl reload-or-restart xray</pre>
+                    <pre class="bg-dark text-white p-3 rounded-3 font-monospace small mb-0 overflow-auto" id="syncCmdText" style="direction: ltr; text-align: left; max-height: 120px;">curl -sSL "{{ panel_host_url|default(request.host_url) }}admin/api/xray/node_config?token={{ installer_token }}" -o /usr/local/etc/xray/config.json && systemctl restart xray</pre>
                     <button type="button" class="btn btn-sm btn-outline-info position-absolute top-0 end-0 m-2 rounded-pill px-3" onclick="copySyncCmd(this)">
                         <i class="fas fa-copy me-1"></i> کپی دستور
                     </button>
@@ -1255,6 +1261,23 @@
             btn.innerHTML = orig;
         } finally {
             btn.disabled = false;
+        }
+    }
+
+    async function generateNewRealityKeysInModal() {
+        if (!confirm('آیا از تولید جفت‌کلید ریاضیاتی جدید Reality اطمینان دارید؟')) return;
+        try {
+            const resp = await fetch('/admin/api/xray/generate_keys', {method: 'POST'});
+            const data = await resp.json();
+            if (data.success || data.status === 'success') {
+                document.getElementById('reality_modal_pub_key').value = data.public_key;
+                document.getElementById('reality_modal_short_id').value = data.short_id;
+                alert('جفت‌کلید جدید X25519 با موفقیت تولید و در سیستم ذخیره گردید.');
+            } else {
+                alert('خطا: ' + (data.message || data.error));
+            }
+        } catch (e) {
+            alert('خطای ارتباط با سرور: ' + e.message);
         }
     }
 

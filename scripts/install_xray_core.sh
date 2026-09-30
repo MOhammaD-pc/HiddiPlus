@@ -39,6 +39,26 @@ echo -e "\e[36m⏳ به‌روزرسانی مخازن و نصب پیش‌نیا�
 apt-get update -y > /dev/null 2>&1
 apt-get install -y curl unzip ufw openssl > /dev/null 2>&1
 
+# غیرفعال‌سازی سرویس‌های متداخلی که ممکن است پورت‌های 80 یا 443 را اشغال کرده باشند
+systemctl stop apache2 nginx caddy 2>/dev/null || true
+systemctl disable apache2 nginx caddy 2>/dev/null || true
+
+# فعال‌سازی BBR و بهینه‌سازی پارامترهای ترافیک شبکه در هسته لینوکس
+echo -e "\e[36m🚀 فعال‌سازی BBR و بهینه‌سازی ترافیک شبکه در هسته لینوکس...\e[0m"
+modprobe tcp_bbr 2>/dev/null || true
+cat <<SYSCTL_EOF > /etc/sysctl.d/99-tgbot-xray.conf
+net.ipv4.ip_forward = 1
+net.ipv6.conf.all.forwarding = 1
+net.core.default_qdisc = fq
+net.ipv4.tcp_congestion_control = bbr
+net.ipv4.tcp_fastopen = 3
+net.core.rmem_max = 67108864
+net.core.wmem_max = 67108864
+net.ipv4.tcp_rmem = 4096 87380 33554432
+net.ipv4.tcp_wmem = 4096 65536 33554432
+SYSCTL_EOF
+sysctl -p /etc/sysctl.d/99-tgbot-xray.conf > /dev/null 2>&1 || sysctl --system > /dev/null 2>&1 || true
+
 # دانلود آخرین نسخه رسمی Xray-core از گیت‌هاب
 TMP_DIR=$(mktemp -d)
 DOWNLOAD_URL="https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-${XRAY_ARCH}.zip"
@@ -87,16 +107,34 @@ if [ -f "${PROJECT_ROOT}/services/xray_service.py" ]; then
   fi
 fi
 
+# به دست آوردن IP عمومی سرور جهت ثبت خودکار در پنل
+SERVER_IP=$(curl -s4 --connect-timeout 3 https://api.ipify.org || curl -s4 --connect-timeout 3 https://ifconfig.me || curl -s4 --connect-timeout 3 https://icanhazip.com || true)
+
 # اگر آدرس دریافت کانفیگ از پنل مشخص شده باشد، فایل کامل را مستقیماً دریافت می‌کنیم
 if [ -n "$PANEL_CONFIG_URL" ]; then
   echo -e "\e[36m📥 در حال دریافت فایل پیکربندی هسته و کاربران از پنل مدیریت...\e[0m"
-  TMP_CFG="${TMP_DIR}/panel_config.json"
-  if curl -sSL "$PANEL_CONFIG_URL" -o "$TMP_CFG" && grep -q "inbound-reality" "$TMP_CFG"; then
+  TMP_CFG=$(mktemp)
+  FETCH_URL="$PANEL_CONFIG_URL"
+  if [ -n "$SERVER_IP" ]; then
+    if [[ "$FETCH_URL" == *"?"* ]]; then
+      FETCH_URL="${FETCH_URL}&node_ip=${SERVER_IP}"
+    else
+      FETCH_URL="${FETCH_URL}?node_ip=${SERVER_IP}"
+    fi
+  fi
+
+  if curl -sSL "$FETCH_URL" -o "$TMP_CFG" && grep -q "inbound-reality" "$TMP_CFG"; then
     mkdir -p /usr/local/etc/xray
     cp "$TMP_CFG" /usr/local/etc/xray/config.json
     CONFIG_GENERATED=true
     echo -e "\e[32m✅ پیکربندی و لیست کاربران فعال با موفقیت از پنل مدیریت دریافت شد.\e[0m"
+    if [ -n "$SERVER_IP" ]; then
+      echo -e "\e[32m🌐 آدرس IP سرور نود ($SERVER_IP) در پنل ثبت گردید.\e[0m"
+    fi
+  else
+    echo -e "\e[33m⚠️ امکان دریافت مستقیم کانفیگ از پنل فراهم نشد؛ ایجاد پیکربندی استاندارد اولیه...\e[0m"
   fi
+  rm -f "$TMP_CFG"
 fi
 
 # بررسی نیاز به تولید یا بازنویسی کانفیگ پایه
@@ -201,11 +239,12 @@ except Exception:
         "security": "reality",
         "realitySettings": {
           "show": false,
-          "dest": "www.yahoo.com:443",
+          "dest": "www.microsoft.com:443",
           "xver": 0,
-          "serverNames": ["www.yahoo.com"],
+          "serverNames": ["www.microsoft.com"],
           "privateKey": "${PRIV_KEY}",
-          "shortIds": ["${SHORT_ID}"]
+          "shortIds": ["${SHORT_ID}"],
+          "spiderX": "/"
         }
       },
       "sniffing": {
@@ -291,9 +330,10 @@ User=root
 CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
+Environment="XRAY_LOCATION_ASSET=/usr/local/share/xray"
 ExecStart=/usr/local/bin/xray run -config /usr/local/etc/xray/config.json
-Restart=on-failure
-RestartPreventExitStatus=23
+Restart=always
+RestartSec=3s
 LimitNPROC=10000
 LimitNOFILE=1000000
 
@@ -313,7 +353,7 @@ fi
 # آزمایش اعتبار فایل کانفیگ قبل از اجرای سرویس
 if [ -f /usr/local/etc/xray/config.json ]; then
   echo -e "\e[36m🧪 بررسی صحت فایل پیکربندی Xray...\e[0m"
-  /usr/local/bin/xray -test -config /usr/local/etc/xray/config.json || true
+  /usr/local/bin/xray run -test -config /usr/local/etc/xray/config.json || true
 fi
 
 # فعال‌سازی و راه‌اندازی سرویس
@@ -325,17 +365,21 @@ sleep 2
 
 # تنظیم همگام‌ساز خودکار کاربران با پنل مدیریت در صورت وجود آدرس پنل
 if [ -n "$PANEL_CONFIG_URL" ]; then
-  cat <<CRON_SCRIPT > /usr/local/bin/tgbot-xray-sync
+  cat <<'CRON_SCRIPT' > /usr/local/bin/tgbot-xray-sync
 #!/bin/bash
-TMP_F="/tmp/xray_sync_cfg.json"
-if curl -sSL "$PANEL_CONFIG_URL" -o "\$TMP_F" && [ -s "\$TMP_F" ]; then
-  if /usr/local/bin/xray -test -config "\$TMP_F" > /dev/null 2>&1; then
-    cp "\$TMP_F" /usr/local/etc/xray/config.json
-    systemctl reload-or-restart xray > /dev/null 2>&1
+PANEL_URL="__PANEL_CONFIG_URL__"
+TMP_F=$(mktemp)
+if curl -sSL "$PANEL_URL" -o "$TMP_F" && [ -s "$TMP_F" ] && grep -q "inbound-reality" "$TMP_F"; then
+  if /usr/local/bin/xray run -test -config "$TMP_F" > /dev/null 2>&1; then
+    if ! cmp -s "$TMP_F" /usr/local/etc/xray/config.json; then
+      cp "$TMP_F" /usr/local/etc/xray/config.json
+      systemctl restart xray > /dev/null 2>&1
+    fi
   fi
-  rm -f "\$TMP_F"
 fi
+rm -f "$TMP_F"
 CRON_SCRIPT
+  sed -i "s|__PANEL_CONFIG_URL__|${PANEL_CONFIG_URL}|g" /usr/local/bin/tgbot-xray-sync
   chmod +x /usr/local/bin/tgbot-xray-sync
 
   cat <<CRON_JOB > /etc/cron.d/tgbot_xray_sync

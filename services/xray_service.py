@@ -146,18 +146,46 @@ class XrayService:
         }
 
     def ensure_reality_credentials(self) -> Dict[str, str]:
-        """اطمینان از وجود کلیدهای Reality در تنظیمات، یا تولید و ذخیره خودکار آن‌ها"""
-        priv = self.db.get_setting("xray_reality_private_key")
-        pub = self.db.get_setting("xray_reality_public_key")
-        sid = self.db.get_setting("xray_reality_short_id")
+        """اطمینان از وجود کلیدهای Reality در تنظیمات، اعتبارسنجی انطباق کلیدها و تولید/ذخیره خودکار در صورت مغایرت"""
+        priv = str(self.db.get_setting("xray_reality_private_key") or "").strip()
+        pub = str(self.db.get_setting("xray_reality_public_key") or "").strip()
+        sid = str(self.db.get_setting("xray_reality_short_id") or "").strip()
+
+        needs_regeneration = False
 
         if not priv or not pub or not sid:
+            needs_regeneration = True
+        elif HAS_CRYPTO:
+            try:
+                def _b64_decode_k(k: str) -> bytes:
+                    rem = len(k) % 4
+                    if rem > 0:
+                        k += "=" * (4 - rem)
+                    return base64.urlsafe_b64decode(k)
+
+                priv_bytes = _b64_decode_k(priv)
+                if len(priv_bytes) != 32:
+                    needs_regeneration = True
+                else:
+                    priv_obj = x25519.X25519PrivateKey.from_private_bytes(priv_bytes)
+                    derived_pub = base64.urlsafe_b64encode(priv_obj.public_key().public_bytes_raw()).decode("utf-8").rstrip("=")
+                    if derived_pub != pub.rstrip("="):
+                        logger.warning(f"Reality key mismatch detected: derived {derived_pub} != saved {pub}. Updating public key to match private key.")
+                        pub = derived_pub
+                        self.db.set_setting("xray_reality_public_key", pub)
+            except Exception as e:
+                logger.warning(f"Error validating X25519 keypair: {e}. Regenerating...")
+                needs_regeneration = True
+
+        if needs_regeneration:
             keys = self.generate_x25519_keypair()
-            self.db.set_setting("xray_reality_private_key", keys["private_key"])
-            self.db.set_setting("xray_reality_public_key", keys["public_key"])
-            self.db.set_setting("xray_reality_short_id", keys["short_id"])
-            logger.info("Generated and saved new X25519 Reality keypair in system settings.")
-            return keys
+            priv = keys["private_key"]
+            pub = keys["public_key"]
+            sid = keys["short_id"]
+            self.db.set_setting("xray_reality_private_key", priv)
+            self.db.set_setting("xray_reality_public_key", pub)
+            self.db.set_setting("xray_reality_short_id", sid)
+            logger.info("Generated and saved verified matching X25519 Reality keypair in system settings.")
 
         return {
             "private_key": priv,
@@ -208,24 +236,36 @@ class XrayService:
 
         # اگر هیچ دامنه‌ای در جدول ثبت نشده باشد، از دامنه‌های پیش‌فرض تنظیمات استفاده می‌کنیم
         if not registered_domains:
-            def_direct = (
-                self.db.get_setting("xray_direct_domain")
-                or self.db.get_setting("custom_domain")
-                or os.getenv("PANEL_DOMAIN")
-                or self.db.get_setting("xray_server_ip")
-                or "127.0.0.1"
-            ).strip().replace("https://", "").replace("http://", "").rstrip("/")
+            raw_direct = (self.db.get_setting("xray_direct_domain") or "").strip().replace("https://", "").replace("http://", "").rstrip("/")
+            raw_ip = (self.db.get_setting("xray_server_ip") or "").strip()
+            
+            # فیلتر مقادیر نمونه و ماک مانند ss.server.com یا example.com
+            is_dummy_direct = raw_direct.lower() in ("ss.server.com", "example.com", "test.com", "127.0.0.1", "localhost", "")
+            
+            def_direct = ""
+            if not is_dummy_direct:
+                def_direct = raw_direct
+            elif raw_ip and raw_ip not in ("127.0.0.1", "localhost"):
+                def_direct = raw_ip
+            else:
+                def_direct = (
+                    raw_direct
+                    or raw_ip
+                    or (self.db.get_setting("custom_domain") or "").strip().replace("https://", "").replace("http://", "").rstrip("/")
+                    or "127.0.0.1"
+                )
 
             def_cdn = (self.db.get_setting("xray_cdn_domain") or "").strip().replace("https://", "").replace("http://", "").rstrip("/")
             if not def_cdn and sw_cdn_vless_ws:
                 def_cdn = (self.db.get_setting("custom_domain") or def_direct).strip().replace("https://", "").replace("http://", "").rstrip("/")
 
+            default_sni = str(self.db.get_setting("xray_reality_sni", "www.microsoft.com") or "www.microsoft.com").strip()
             if def_direct and (sw_direct_reality_tcp or sw_direct_reality_grpc or sw_direct_trojan or sw_direct_shadowsocks):
                 registered_domains.append({
                     "domain": def_direct,
                     "role": "direct",
                     "alias": "",
-                    "sni": self.db.get_setting("xray_reality_sni", "www.yahoo.com"),
+                    "sni": default_sni,
                     "clean_ips": "",
                     "ws_path": "/tgbot-ws",
                     "grpc_service_name": "tgbot-grpc",
@@ -263,7 +303,7 @@ class XrayService:
             if role == "direct":
                 # VLESS Reality TCP Vision
                 if sw_direct_reality_tcp and pub_key:
-                    reality_sni = str(self.db.get_setting("xray_reality_sni", "www.yahoo.com") or "www.yahoo.com").strip()
+                    reality_sni = str(item.get("sni") or self.db.get_setting("xray_reality_sni", "www.microsoft.com") or "www.microsoft.com").strip()
                     uri = (
                         f"vless://{clean_uuid}@{dom}:{port}"
                         f"?security=reality&encryption=none&pbk={pub_key}&headerType=none"
@@ -274,7 +314,7 @@ class XrayService:
 
                 # VLESS Reality gRPC
                 if sw_direct_reality_grpc and pub_key:
-                    reality_sni = str(self.db.get_setting("xray_reality_sni", "www.yahoo.com") or "www.yahoo.com").strip()
+                    reality_sni = str(item.get("sni") or self.db.get_setting("xray_reality_sni", "www.microsoft.com") or "www.microsoft.com").strip()
                     uri = (
                         f"vless://{clean_uuid}@{dom}:{port}"
                         f"?security=reality&encryption=none&pbk={pub_key}&headerType=none"
@@ -548,12 +588,13 @@ class XrayService:
 
         api_port = int(self.db.get_setting("xray_api_port", 10085) or 10085)
         reality_port = int(self.db.get_setting("xray_reality_port", 443) or 443)
-        reality_sni = str(self.db.get_setting("xray_reality_sni", "www.yahoo.com") or "www.yahoo.com").strip()
+        reality_sni = str(self.db.get_setting("xray_reality_sni", "www.microsoft.com") or "www.microsoft.com").strip()
         ws_port = int(self.db.get_setting("xray_ws_port", 8443) or 8443)
         ws_path = str(self.db.get_setting("xray_ws_path", "/tgbot-ws") or "/tgbot-ws").strip()
 
-        # استخراج کاربران فعال از دیتابیس
+        # استخراج کاربران فعال از دیتابیس با حذف رکوردهای تکراری
         active_clients = []
+        seen_uuids = set()
         try:
             conn = self.db.get_connection()
             cursor = conn.cursor()
@@ -562,8 +603,9 @@ class XrayService:
                 WHERE status = 'active' AND (is_deleted = 0 OR is_deleted IS NULL)
             """)
             for row in cursor.fetchall():
-                u_id = row["hidify_uuid"]
-                if u_id:
+                u_id = str(row["hidify_uuid"] or "").strip()
+                if u_id and u_id not in seen_uuids:
+                    seen_uuids.add(u_id)
                     email_tag = f"sub_{row['id']}@{u_id[:8]}"
                     active_clients.append({
                         "id": u_id,
@@ -592,7 +634,8 @@ class XrayService:
                     "xver": 0,
                     "serverNames": [reality_sni],
                     "privateKey": priv_key,
-                    "shortIds": [short_id]
+                    "shortIds": [short_id],
+                    "spiderX": "/"
                 }
             },
             "sniffing": {

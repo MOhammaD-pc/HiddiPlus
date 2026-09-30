@@ -7276,6 +7276,22 @@ class Database:
         conn = self.get_connection()
         cursor = conn.cursor()
         try:
+            cursor.execute("SELECT id FROM xray_domains WHERE domain = ?", (clean_domain,))
+            existing = cursor.fetchone()
+            if existing:
+                domain_id = existing["id"] if isinstance(existing, dict) or hasattr(existing, "keys") else existing[0]
+                cursor.execute("""
+                    UPDATE xray_domains 
+                    SET role = ?, alias = CASE WHEN ? != '' THEN ? ELSE alias END, sni = ?, clean_ips = ?, ws_path = ?, grpc_service_name = ?, port = ?, is_active = ?, updated_at = ?
+                    WHERE id = ?
+                """, (
+                    clean_role, (alias or "").strip(), (alias or "").strip(), (sni or clean_domain).strip(),
+                    (clean_ips or "").strip(), (ws_path or "/tgbot-ws").strip(), (grpc_service_name or "tgbot-grpc").strip(),
+                    int(port or 443), int(is_active), now, domain_id
+                ))
+                conn.commit()
+                return {"success": True, "id": domain_id, "message": "اطلاعات دامنه با موفقیت به‌روزرسانی شد"}
+
             cursor.execute("""
                 INSERT INTO xray_domains 
                 (domain, role, alias, sni, clean_ips, ws_path, grpc_service_name, port, is_active, created_at, updated_at)

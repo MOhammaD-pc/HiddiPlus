@@ -513,6 +513,44 @@ class TestXrayService(unittest.TestCase):
         self.assertTrue(json_off["success"])
         self.assertFalse(json_off["status"]["is_running"])
 
+    def test_reality_keypair_mathematical_correction(self):
+        """بررسی تصحیح خودکار کلید عمومی در صورت مغایرت ریاضیاتی با کلید خصوصی"""
+        from cryptography.hazmat.primitives.asymmetric import x25519
+        priv = x25519.X25519PrivateKey.generate()
+        real_pub = base64.urlsafe_b64encode(priv.public_key().public_bytes_raw()).decode("utf-8").rstrip("=")
+        priv_b64 = base64.urlsafe_b64encode(priv.private_bytes_raw()).decode("utf-8").rstrip("=")
+
+        # ذخیره کلید خصوصی سالم ولی کلید عمومی متناقض و ساختگی
+        self.db.set_setting("xray_reality_private_key", priv_b64)
+        self.db.set_setting("xray_reality_public_key", "mismatched_public_key_abcdef1234567890")
+        self.db.set_setting("xray_reality_short_id", "12345678")
+
+        creds = self.service.ensure_reality_credentials()
+        self.assertEqual(creds["private_key"], priv_b64)
+        self.assertEqual(creds["public_key"], real_pub)
+        self.assertEqual(self.db.get_setting("xray_reality_public_key"), real_pub)
+
+    def test_node_config_auto_registration(self):
+        """بررسی ثبت خودکار آی‌پی نود و دامنه direct هنگام درخواست پیکربندی توسط اوبونتو"""
+        self.db.set_setting("xray_installer_token", "test_auto_token_999")
+        orig_ip = self.db.get_setting("xray_server_ip")
+        self.db.set_setting("xray_server_ip", "")
+
+        try:
+            res = self.client.get("/admin/api/xray/node_config?token=test_auto_token_999&node_ip=198.51.100.77")
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(self.db.get_setting("xray_server_ip"), "198.51.100.77")
+
+            domains = self.db.get_xray_domains()
+            matching = [d for d in domains if d.get("domain") == "198.51.100.77" and d.get("role") == "direct"]
+            self.assertGreaterEqual(len(matching), 1)
+        finally:
+            self.db.set_setting("xray_server_ip", orig_ip or "")
+            conn = self.db.get_connection()
+            conn.execute("DELETE FROM xray_domains WHERE domain = '198.51.100.77'")
+            conn.commit()
+            conn.close()
+
 
 if __name__ == "__main__":
     unittest.main()

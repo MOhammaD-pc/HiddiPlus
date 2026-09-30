@@ -15308,12 +15308,20 @@ def admin_xray_core():
 
     daemon_status = xray_service.get_daemon_status()
 
+    base_host = (db.get_setting("custom_domain") or os.getenv("PANEL_DOMAIN") or request.host_url).strip().rstrip("/")
+    if not base_host.startswith("http://") and not base_host.startswith("https://"):
+        base_host = f"https://{base_host}"
+    elif base_host.startswith("http://") and ("mahsoool.ir" in base_host or request.headers.get("X-Forwarded-Proto") == "https"):
+        base_host = base_host.replace("http://", "https://")
+    panel_host_url = base_host.rstrip("/") + "/"
+
     return render_template(
         "xray_core.html",
         xray_config=status,
         active_inbounds_count=active_inbounds,
         admin_role=session.get("admin_role"),
         installer_token=installer_token,
+        panel_host_url=panel_host_url,
         xray_daemon=daemon_status
     )
 
@@ -15395,7 +15403,7 @@ def admin_api_xray_save_settings():
 
 
 @app.route("/admin/api/xray/generate_keys", methods=["POST"])
-@super_admin_required
+@admin_required
 def admin_api_xray_generate_keys():
     """تولید جفت‌کلید جدید X25519 برای پروتکل Reality"""
     keys = xray_service.generate_x25519_keypair()
@@ -15403,6 +15411,7 @@ def admin_api_xray_generate_keys():
     db.set_setting("xray_reality_public_key", keys["public_key"])
     db.set_setting("xray_reality_short_id", keys["short_id"])
     return jsonify({
+        "status": "success",
         "success": True,
         "public_key": keys["public_key"],
         "private_key": keys["private_key"],
@@ -15453,6 +15462,36 @@ def admin_api_xray_node_config():
     if not (is_admin_session or is_valid_token):
         return jsonify({"status": "error", "success": False, "error": "Unauthorized. Please provide valid ?token= or login as admin."}), 401
 
+    # استخراج و ثبت خودکار آی‌پی نود اوبونتو در صورت دریافت
+    node_ip = request.args.get("node_ip", "").strip()
+    if not node_ip:
+        node_ip = request.headers.get("CF-Connecting-IP") or request.headers.get("X-Real-IP") or request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+
+    if node_ip and node_ip not in ("127.0.0.1", "localhost", "::1"):
+        current_ip = (db.get_setting("xray_server_ip") or "").strip()
+        if not current_ip or current_ip in ("127.0.0.1", "localhost"):
+            db.set_setting("xray_server_ip", node_ip)
+            logger.info(f"Auto-registered Xray node IP in system settings: {node_ip}")
+
+        try:
+            domains = db.get_xray_domains()
+            has_direct = any(d.get("role") == "direct" and d.get("domain") not in ("ss.server.com", "example.com") for d in domains)
+            if not has_direct:
+                db.add_xray_domain(
+                    domain=node_ip,
+                    role="direct",
+                    alias="نود اوبونتو مستقیم",
+                    sni=db.get_setting("xray_reality_sni", "www.microsoft.com"),
+                    port=int(db.get_setting("xray_reality_port", 443) or 443)
+                )
+                logger.info(f"Auto-created direct domain entry for node IP {node_ip}")
+        except Exception as e_dom:
+            logger.warning(f"Error auto-registering node direct domain: {e_dom}")
+
+    # فعال‌سازی خودکار فلگ هسته Xray در سیستم
+    if not db.is_setting_enabled("xray_core_enabled", default=False):
+        db.set_setting("xray_core_enabled", "1")
+
     cfg = xray_service.generate_full_xray_config()
     cfg_str = json.dumps(cfg, indent=2, ensure_ascii=False)
     return Response(
@@ -15489,9 +15528,16 @@ def admin_api_xray_install_script():
     except Exception as e:
         return jsonify({"error": f"Failed reading script: {e}"}), 500
 
+    # تعیین آدرس عمومی و امن پنل با تضمین پروتکل https در محیط ریلوی و کلودفلر
+    base_host = (db.get_setting("custom_domain") or os.getenv("PANEL_DOMAIN") or request.host_url).strip().rstrip("/")
+    if not base_host.startswith("http://") and not base_host.startswith("https://"):
+        base_host = f"https://{base_host}"
+    elif base_host.startswith("http://") and ("mahsoool.ir" in base_host or request.headers.get("X-Forwarded-Proto") == "https"):
+        base_host = base_host.replace("http://", "https://")
+
     # تزریق خودکار متغیرهای اتصال و کلیدهای پنل در ابتدای اسکریپت
     creds = xray_service.ensure_reality_credentials()
-    node_config_url = f"{request.host_url.rstrip('/')}/admin/api/xray/node_config?token={token or valid_token}"
+    node_config_url = f"{base_host}/admin/api/xray/node_config?token={token or valid_token}"
     injection = (
         f'export PANEL_CONFIG_URL="{node_config_url}"\n'
         f'export PRESET_PRIV_KEY="{creds.get("private_key", "")}"\n'
