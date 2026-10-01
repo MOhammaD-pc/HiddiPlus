@@ -3960,37 +3960,37 @@ def reseller_required(f):
 import random
 
 def generate_svg_captcha() -> tuple[str, str]:
-    """تولید کپچای تصویری امن SVG با نویز و کاراکترهای چرخانده شده بدون نیاز به کتابخانه جانبی"""
-    chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+    """تولید کپچای تصویری امن کاملاً عددی SVG با نویز ملایم و ارقام خوانا بدون نیاز به کتابخانه جانبی"""
+    chars = "0123456789"
     code = "".join(random.choices(chars, k=5))
     width, height = 150, 48
     
-    # خطوط نویز
+    # خطوط نویز ملایم
     lines_svg = []
-    palette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
-    for _ in range(5):
+    palette = ["#4f46e5", "#0ea5e9", "#10b981", "#64748b", "#8b5cf6"]
+    for _ in range(4):
         x1, y1 = random.randint(5, width - 5), random.randint(5, height - 5)
         x2, y2 = random.randint(5, width - 5), random.randint(5, height - 5)
         stroke = random.choice(palette)
-        lines_svg.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{stroke}" stroke-width="{random.choice([1, 2])}" opacity="0.45" />')
+        lines_svg.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{stroke}" stroke-width="{random.choice([1, 2])}" opacity="0.4" />')
         
     # نقاط نویز
     dots_svg = []
-    for _ in range(25):
+    for _ in range(20):
         cx, cy = random.randint(2, width - 2), random.randint(2, height - 2)
-        r = random.uniform(1.0, 2.2)
+        r = random.uniform(1.0, 2.0)
         color = random.choice(palette)
-        dots_svg.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{color}" opacity="0.35" />')
+        dots_svg.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{color}" opacity="0.3" />')
         
-    # حروف با زاویه و استایل
+    # ارقام کاملاً مشخص، پررنگ و خوانا با زاویه ملایم
     chars_svg = []
     for i, ch in enumerate(code):
-        x = 16 + (i * 25) + random.randint(-2, 2)
-        y = 33 + random.randint(-3, 3)
-        angle = random.randint(-22, 22)
-        color = random.choice(["#0f172a", "#1e1b4b", "#0369a1", "#047857", "#b91c1c", "#4338ca"])
+        x = 18 + (i * 24) + random.randint(-1, 1)
+        y = 34 + random.randint(-2, 2)
+        angle = random.randint(-14, 14)
+        color = random.choice(["#0f172a", "#1e1b4b", "#0369a1", "#047857", "#334155", "#4338ca"])
         chars_svg.append(
-            f'<text x="{x}" y="{y}" font-family="Verdana, Tahoma, sans-serif" font-size="25" font-weight="bold" fill="{color}" transform="rotate({angle}, {x}, {y})">{ch}</text>'
+            f'<text x="{x}" y="{y}" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="900" fill="{color}" transform="rotate({angle}, {x}, {y})">{ch}</text>'
         )
         
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
@@ -4242,6 +4242,14 @@ def inject_global_branding():
 
 def render_login_page():
     login_style = db.get_setting("login_style", "glass_aurora")
+    # تبدیل تم‌های منسوخ به تم‌های جدید برای پایداری کامل
+    if login_style in ("ruby_waves", "gradient_vibrant"):
+        login_style = "nordic_studio"
+    elif login_style == "liquid_glass":
+        login_style = "glass_aurora"
+    elif login_style == "ios_glass":
+        login_style = "ios_lockscreen"
+
     login_page_title = db.get_setting("login_page_title", "")
     login_page_subtitle = db.get_setting("login_page_subtitle", "")
     login_bg_effect = str(db.get_setting("login_bg_effect", "1")).lower() in ("1", "true")
@@ -4270,7 +4278,10 @@ def _handle_login_flow():
 
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
-        captcha_input = request.form.get("captcha", "").strip().upper()
+        captcha_raw = request.form.get("captcha", "").strip()
+        # تبدیل خودکار ارقام فارسی و عربی به انگلیسی
+        persian_arabic_to_eng = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+        captcha_input = captcha_raw.translate(persian_arabic_to_eng).upper()
 
         real_captcha = str(session.get("captcha_code", "")).upper()
         if not real_captcha or captcha_input != real_captcha:
@@ -15674,9 +15685,17 @@ def settings():
         "portal_layout": db.get_setting("portal_layout", "bento_2026"),
         "portal_plan_style": db.get_setting("portal_plan_style", "glass_classic")
     }
+    cur_login_style = db.get_setting("login_style", "glass_aurora")
+    if cur_login_style in ("ruby_waves", "gradient_vibrant"):
+        cur_login_style = "nordic_studio"
+    elif cur_login_style == "liquid_glass":
+        cur_login_style = "glass_aurora"
+    elif cur_login_style == "ios_glass":
+        cur_login_style = "ios_lockscreen"
+
     login_security_config = {
         "admin_login_proxy_path": get_admin_login_proxy_path(),
-        "login_style": db.get_setting("login_style", "glass_aurora"),
+        "login_style": cur_login_style,
         "login_page_title": db.get_setting("login_page_title", ""),
         "login_page_subtitle": db.get_setting("login_page_subtitle", ""),
         "login_bg_effect": str(db.get_setting("login_bg_effect", "1")).lower() in ("1", "true"),
