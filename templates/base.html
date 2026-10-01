@@ -516,7 +516,6 @@
             box-shadow: var(--palette-card-shadow, 0 10px 25px -5px rgba(0,0,0,0.05)) !important;
             border-radius: 18px;
             transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-            transform: translate3d(0, 0, 0);
         }
 
         .sidebar {
@@ -524,7 +523,6 @@
             -webkit-backdrop-filter: blur(var(--glass-blur, 14px)) saturate(160%);
             border-left: 1px solid var(--sidebar-border);
             z-index: 1020;
-            transform: translate3d(0, 0, 0);
         }
 
         /* ─── منوهای کشویی شیشه‌ای مات مدرن (Liquid Glass Dropdown Menu) ─── */
@@ -2980,6 +2978,23 @@
     }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   بهینه‌سازی مصرف سخت‌افزار (GPU / CPU) - انجماد انیمیشن‌ها در تب‌های پس‌زمینه
+   ═══════════════════════════════════════════════════════════════════════════ */
+body.tab-hidden *,
+body.tab-hidden *::before,
+body.tab-hidden *::after {
+    animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    استایل‌های مدرن و هماهنگ جدول مشتریان (Customer Table UI Enhancements)
    ═══════════════════════════════════════════════════════════════════ */
@@ -4870,23 +4885,34 @@
             if (bgWorker) {
                 bgWorker.onmessage = function(ev) {
                     if (ev.data === 'tick') {
+                        // بهینه‌سازی قطعی سخت‌افزار: در تب‌های پس‌زمینه استعلام غیرفعال باشد
+                        if (document.hidden) return;
                         pollCallback();
                     }
                 };
                 bgWorker.postMessage('start');
             } else {
-                setInterval(pollCallback, 6000);
+                setInterval(function() {
+                    if (document.hidden) return;
+                    pollCallback();
+                }, 6000);
             }
 
-            // فراخوانی آنی هنگام بازگشت کاربر به صفحه (Focus / VisibilityChange)
-            document.addEventListener('visibilitychange', function() {
+            // فراخوانی آنی و مدیریت کلاس انجماد انیمیشن‌ها هنگام بازگشت کاربر به صفحه (Focus / VisibilityChange)
+            function handleAdminVisibility() {
                 if (!document.hidden) {
+                    document.body.classList.remove('tab-hidden');
                     pollCallback();
+                } else {
+                    document.body.classList.add('tab-hidden');
                 }
-            });
+            }
+            document.addEventListener('visibilitychange', handleAdminVisibility);
             window.addEventListener('focus', function() {
+                document.body.classList.remove('tab-hidden');
                 pollCallback();
             });
+            handleAdminVisibility();
         }
 
         {% if session.get('role') == 'admin' %}
@@ -6209,11 +6235,9 @@
                 }
             }, { capture: true });
 
-            // ۳. پاک‌سازی خودکار لاگ‌های کنسول
+            // ۳. پاک‌سازی اولیه لاگ‌های کنسول (بدون لوپ دائمی پردازشی)
             if (window.console) {
-                setInterval(function() {
-                    try { console.clear(); } catch(err) {}
-                }, 2000);
+                try { console.clear(); } catch(err) {}
             }
         })();
     </script>

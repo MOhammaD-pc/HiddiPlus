@@ -2524,6 +2524,13 @@
                 background: #0284c7 !important;
             }
         }
+
+        /* بهینه‌سازی مصرف سخت‌افزار در تب‌های پس‌زمینه */
+        body.tab-hidden *,
+        body.tab-hidden *::before,
+        body.tab-hidden *::after {
+            animation-play-state: paused !important;
+        }
     </style>
 </head>
 <body class="py-4 portal-layout-{{ portal_layout or 'classic' }}">
@@ -8105,6 +8112,7 @@ async function sendPortalChatMessage(e) {
 function startChatPolling() {
     if (chatPollTimer) clearInterval(chatPollTimer);
     chatPollTimer = setInterval(() => {
+        if (document.hidden) return;
         const ticketId = chatActiveTicket ? chatActiveTicket.id : '';
         fetch(`/api/portal/${PORTAL_TOKEN}/chat/poll?ticket_id=${ticketId}&last_msg_id=${chatLastMessageId}`)
             .then(res => res.json())
@@ -10231,6 +10239,32 @@ document.addEventListener('DOMContentLoaded', function() {
             initJalaliDatePicker();
         });
     }
+
+    function handlePortalVisibility() {
+        if (document.hidden) {
+            document.body.classList.add('tab-hidden');
+        } else {
+            document.body.classList.remove('tab-hidden');
+            if (typeof chatActiveTicket !== 'undefined' && chatActiveTicket && typeof PORTAL_TOKEN !== 'undefined' && PORTAL_TOKEN) {
+                const ticketId = chatActiveTicket.id || '';
+                fetch(`/api/portal/${PORTAL_TOKEN}/chat/poll?ticket_id=${ticketId}&last_msg_id=${chatLastMessageId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.success && data.new_messages && data.new_messages.length > 0) {
+                            data.new_messages.forEach(m => {
+                                if (m.id > chatLastMessageId) {
+                                    appendChatMessageBubble(m);
+                                    chatLastMessageId = m.id;
+                                }
+                            });
+                        }
+                    })
+                    .catch(err => console.debug("Chat resume sync:", err));
+            }
+        }
+    }
+    document.addEventListener('visibilitychange', handlePortalVisibility);
+    handlePortalVisibility();
 });
 </script>
 </body>
