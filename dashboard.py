@@ -15473,11 +15473,17 @@ def settings():
             palette_intensity = request.form.get("palette_intensity", "normal").strip()
             palette_animation = request.form.get("palette_animation", "static").strip()
             portal_palette = request.form.get("portal_palette", "inherit").strip()
+            system_card_style = request.form.get("system_card_style", "border_accent").strip()
+            portal_card_style = request.form.get("portal_card_style", "inherit").strip()
+            border_substyle = request.form.get("border_substyle", "minimal").strip()
 
             db.save_setting("active_palette", active_palette)
             db.save_setting("palette_intensity", palette_intensity)
             db.save_setting("palette_animation", palette_animation)
             db.save_setting("portal_palette", portal_palette)
+            db.save_setting("system_card_style", system_card_style)
+            db.save_setting("portal_card_style", portal_card_style)
+            db.save_setting("border_substyle", border_substyle)
 
             # در صورت تیک زدن همگام‌سازی رنگ سازمانی، رنگ شاخص نیز مطابق پالت تنظیم شود
             sync_primary = request.form.get("sync_primary_color")
@@ -15485,7 +15491,7 @@ def settings():
                 pal_data = get_palette(active_palette)
                 db.save_setting("store_primary_color", pal_data["primary_color"])
 
-            flash("تنظیمات پالت‌های رنگی، هاله‌های نوری و افکت شیشه‌ای مات با موفقیت ذخیره شد.", "success")
+            flash("تنظیمات پالت‌های رنگی، سبک کارت‌ها و حاشیه‌ها با موفقیت ذخیره شد.", "success")
             return redirect(url_for("settings"))
         elif action == "save_chat_settings":
             chat_button_style = request.form.get("chat_button_style", "modern_pill").strip()
@@ -15675,7 +15681,10 @@ def settings():
         "active_palette": db.get_setting("active_palette", "vps_aurora"),
         "palette_intensity": db.get_setting("palette_intensity", "normal"),
         "palette_animation": db.get_setting("palette_animation", "static"),
-        "portal_palette": db.get_setting("portal_palette", "inherit")
+        "portal_palette": db.get_setting("portal_palette", "inherit"),
+        "system_card_style": db.get_setting("system_card_style", "border_accent"),
+        "portal_card_style": db.get_setting("portal_card_style", "inherit"),
+        "border_substyle": db.get_setting("border_substyle", "minimal"),
     }
     chat_settings = db.get_chat_settings()
     raw_admin_splash = db.get_setting("mini_app_splash_image", "")

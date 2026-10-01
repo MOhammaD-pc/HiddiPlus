@@ -1468,12 +1468,140 @@ document.addEventListener('DOMContentLoaded', function() {
                 {% endfor %}
             </div>
 
-            <!-- گزینه‌های تکمیلی پالت -->
+            <!-- ۲. انتخاب سبک نمایش کارت‌ها و پنجره‌ها (Card & Window Render Mode) -->
+            <div class="mb-4">
+                <label class="form-label fw-bold small mb-2 d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="fas fa-shapes me-1 text-primary"></i> سبک رندرینگ کارت‌ها و پنجره‌ها (Card Render Mode):
+                    </span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle small px-2 py-1">
+                        انتخاب بین شیشه‌ای، حاشیه رنگی یا تخت
+                    </span>
+                </label>
+                <p class="text-muted small mb-3" style="font-size: 0.8rem;">
+                    شما می‌توانید نحوه نمایش کارت‌ها و پنجره‌ها را تنظیم کنید. در حالت‌های «حاشیه رنگی» و «تخت»، مصرف کارت گرافیک دقیقاً ۰٪ است و رنگ‌های پالت انتخابی به بوردرها و المان‌ها اعمال می‌گردد.
+                </p>
+
+                <div class="row g-3 mb-3">
+                    <!-- گزینه ۱: حاشیه با رنگ ثابت (Border Accent) -->
+                    <div class="col-md-4">
+                        <label class="card h-100 p-3 rounded-4 border cursor-pointer card-render-style-card {% if palette_settings.system_card_style == 'border_accent' or not palette_settings.system_card_style %}border-primary shadow bg-white{% else %}bg-light opacity-75{% endif %}" style="cursor: pointer; transition: all 0.25s ease;">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fas fa-bolt text-warning fs-5"></i>
+                                    <strong class="small text-dark">حاشیه با رنگ ثابت (Border)</strong>
+                                </div>
+                                <input class="form-check-input mt-0" type="radio" name="system_card_style" value="border_accent" {% if palette_settings.system_card_style == 'border_accent' or not palette_settings.system_card_style %}checked{% endif %} onchange="toggleBorderSubstyleSection(this.value)">
+                            </div>
+                            <span class="badge bg-success text-white small align-self-start mb-2"><i class="fas fa-leaf me-1"></i>مصرف ۰٪ سخت‌افزار - پیشنهادی</span>
+                            <p class="small text-muted mb-0" style="font-size: 0.78rem; line-height: 1.5;">
+                                کارت‌های مات و کدر با حاشیه رنگی زیبا و شفاف از پالت فعال، بدون بلور شیشه‌ای، فوق‌العاده سبک، مدرن و روان.
+                            </p>
+                        </label>
+                    </div>
+
+                    <!-- گزینه ۲: شیشه‌ای مات و بلورین (Glassmorphism) -->
+                    <div class="col-md-4">
+                        <label class="card h-100 p-3 rounded-4 border cursor-pointer card-render-style-card {% if palette_settings.system_card_style == 'glass' %}border-primary shadow bg-white{% else %}bg-light opacity-75{% endif %}" style="cursor: pointer; transition: all 0.25s ease;">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fas fa-gem text-info fs-5"></i>
+                                    <strong class="small text-dark">شیشه‌ای مات (Glassmorphism)</strong>
+                                </div>
+                                <input class="form-check-input mt-0" type="radio" name="system_card_style" value="glass" {% if palette_settings.system_card_style == 'glass' %}checked{% endif %} onchange="toggleBorderSubstyleSection(this.value)">
+                            </div>
+                            <span class="badge bg-info text-white small align-self-start mb-2"><i class="fas fa-sparkles me-1"></i>لوکس با انعکاس نور</span>
+                            <p class="small text-muted mb-0" style="font-size: 0.78rem; line-height: 1.5;">
+                                جلوه شیشه‌ای با شفافیت و بلور پس‌زمینه (Glass Frosting)؛ ظاهری لوکس که نیازمند توان پردازشی کارت گرافیک است.
+                            </p>
+                        </label>
+                    </div>
+
+                    <!-- گزینه ۳: مات و ساده تخت (Flat Clean) -->
+                    <div class="col-md-4">
+                        <label class="card h-100 p-3 rounded-4 border cursor-pointer card-render-style-card {% if palette_settings.system_card_style == 'flat' %}border-primary shadow bg-white{% else %}bg-light opacity-75{% endif %}" style="cursor: pointer; transition: all 0.25s ease;">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fas fa-file-lines text-secondary fs-5"></i>
+                                    <strong class="small text-dark">تخت و مینیمال (Flat Clean)</strong>
+                                </div>
+                                <input class="form-check-input mt-0" type="radio" name="system_card_style" value="flat" {% if palette_settings.system_card_style == 'flat' %}checked{% endif %} onchange="toggleBorderSubstyleSection(this.value)">
+                            </div>
+                            <span class="badge bg-secondary text-white small align-self-start mb-2"><i class="fas fa-gauge-high me-1"></i>رسمی و فوق‌العاده سبک</span>
+                            <p class="small text-muted mb-0" style="font-size: 0.78rem; line-height: 1.5;">
+                                طراحی تخت و کاملاً کدر مشابه پنل‌های استاندارد شرکتی، بدون شیشه و بدون هاله‌های نوری، حداکثر سرعت ممکن.
+                            </p>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- گزینه‌های جذاب مدل حاشیه (Border Substyles) -->
+                <div id="borderSubstyleBox" class="p-3 border rounded-3 bg-white mb-3" style="{% if palette_settings.system_card_style in ['glass', 'flat'] %}display: none;{% endif %}">
+                    <label class="form-label fw-bold small mb-2 text-primary">
+                        <i class="fas fa-border-all me-1"></i> انتخاب مدل طراحی حاشیه کارت‌ها (Border Style):
+                    </label>
+                    <div class="row g-2">
+                        <!-- مدل ۱: خط باریک ظریف تمام‌دور -->
+                        <div class="col-6 col-md-3">
+                            <label class="border rounded-3 p-2 d-block cursor-pointer border-substyle-opt {% if palette_settings.border_substyle == 'minimal' or not palette_settings.border_substyle %}border-primary bg-primary-subtle text-primary fw-bold{% else %}bg-light text-muted{% endif %}" style="cursor: pointer;">
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input" type="radio" name="border_substyle" value="minimal" {% if palette_settings.border_substyle == 'minimal' or not palette_settings.border_substyle %}checked{% endif %} onchange="updateBorderSubstyleUI(this)">
+                                    <span class="small">خط باریک ظریف</span>
+                                </div>
+                                <div class="border border-primary rounded-2 p-1 text-center font-monospace" style="font-size: 0.7rem; border-width: 1.5px !important;">
+                                    کارت با خط دور
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- مدل ۲: گرادیان دو رنگه متالیک -->
+                        <div class="col-6 col-md-3">
+                            <label class="border rounded-3 p-2 d-block cursor-pointer border-substyle-opt {% if palette_settings.border_substyle == 'gradient' %}border-primary bg-primary-subtle text-primary fw-bold{% else %}bg-light text-muted{% endif %}" style="cursor: pointer;">
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input" type="radio" name="border_substyle" value="gradient" {% if palette_settings.border_substyle == 'gradient' %}checked{% endif %} onchange="updateBorderSubstyleUI(this)">
+                                    <span class="small">گرادیان متالیک</span>
+                                </div>
+                                <div class="rounded-2 p-1 text-center font-monospace" style="font-size: 0.7rem; border: 1.5px solid transparent; background: linear-gradient(#fff,#fff) padding-box, linear-gradient(135deg, #2563eb, #00d2ff) border-box;">
+                                    حاشیه دو رنگه
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- مدل ۳: خط شاخص بالایی -->
+                        <div class="col-6 col-md-3">
+                            <label class="border rounded-3 p-2 d-block cursor-pointer border-substyle-opt {% if palette_settings.border_substyle == 'top_line' %}border-primary bg-primary-subtle text-primary fw-bold{% else %}bg-light text-muted{% endif %}" style="cursor: pointer;">
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input" type="radio" name="border_substyle" value="top_line" {% if palette_settings.border_substyle == 'top_line' %}checked{% endif %} onchange="updateBorderSubstyleUI(this)">
+                                    <span class="small">خط شاخص بالایی</span>
+                                </div>
+                                <div class="border rounded-2 p-1 text-center font-monospace" style="font-size: 0.7rem; border-top: 3.5px solid #2563eb !important;">
+                                    خط نئونی بالا
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- مدل ۴: شب‌تاب نئونی ملایم -->
+                        <div class="col-6 col-md-3">
+                            <label class="border rounded-3 p-2 d-block cursor-pointer border-substyle-opt {% if palette_settings.border_substyle == 'neon_glow' %}border-primary bg-primary-subtle text-primary fw-bold{% else %}bg-light text-muted{% endif %}" style="cursor: pointer;">
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input" type="radio" name="border_substyle" value="neon_glow" {% if palette_settings.border_substyle == 'neon_glow' %}checked{% endif %} onchange="updateBorderSubstyleUI(this)">
+                                    <span class="small">شب‌تاب نئونی</span>
+                                </div>
+                                <div class="border border-primary rounded-2 p-1 text-center font-monospace" style="font-size: 0.7rem; box-shadow: 0 0 10px rgba(37,99,235,0.35);">
+                                    درخشش نوری
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ۳. گزینه‌های تکمیلی پالت و پورتال -->
             <div class="p-3 border rounded-4 bg-light mb-4">
                 <div class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label fw-bold small">
-                            <i class="fas fa-sun-plant-wilt me-1 text-primary"></i> شدت افکت بلور و درخشش هاله نوری:
+                            <i class="fas fa-sun-plant-wilt me-1 text-primary"></i> شدت درخشش هاله‌های نوری:
                         </label>
                         <select name="palette_intensity" class="form-select form-select-sm">
                             <option value="high" {% if palette_settings.palette_intensity == 'high' %}selected{% endif %}>درخشان و پررنگ (High Glow)</option>
@@ -1481,22 +1609,22 @@ document.addEventListener('DOMContentLoaded', function() {
                             <option value="subtle" {% if palette_settings.palette_intensity == 'subtle' %}selected{% endif %}>ملایم و لطیف (Subtle Glow)</option>
                             <option value="off" {% if palette_settings.palette_intensity == 'off' %}selected{% endif %}>خاموش (فقط کارت مات بدون هاله)</option>
                         </select>
-                        <div class="form-text small">میزان بلور و میزان تیرگی/روشنی هاله‌ها در پس‌زمینه.</div>
+                        <div class="form-text small">تنظیم برای حالت شیشه‌ای.</div>
                     </div>
 
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label fw-bold small">
-                            <i class="fas fa-wind me-1 text-primary"></i> انیمیشن حرکت هاله‌های نوری:
+                            <i class="fas fa-wind me-1 text-primary"></i> انیمیشن حرکت هاله‌ها:
                         </label>
                         <select name="palette_animation" class="form-select form-select-sm">
-                            <option value="static" {% if palette_settings.palette_animation == 'static' %}selected{% endif %}>هاله نوری ثابت و سبک (پیش‌فرض پیشنهادی - مصرف ۰٪ کارت گرافیک)</option>
-                            <option value="float" {% if palette_settings.palette_animation == 'float' %}selected{% endif %}>شناور و متحرک گوشه‌ها (نیازمند توان پردازش بیشتر)</option>
-                            <option value="off" {% if palette_settings.palette_animation == 'off' %}selected{% endif %}>غیرفعال کامل انیمیشن و هاله‌ها</option>
+                            <option value="static" {% if palette_settings.palette_animation == 'static' %}selected{% endif %}>هاله ثابت و سبک (مصرف ۰٪ گرافیک)</option>
+                            <option value="float" {% if palette_settings.palette_animation == 'float' %}selected{% endif %}>شناور و متحرک (نیازمند توان گرافیکی)</option>
+                            <option value="off" {% if palette_settings.palette_animation == 'off' %}selected{% endif %}>غیرفعال کامل انیمیشن</option>
                         </select>
-                        <div class="form-text small">حالت ثابت جلوه نوری را با مصرف ۰٪ سخت‌افزار حفظ می‌کند.</div>
+                        <div class="form-text small">حالت ثابت مصرف گرافیک را ۰٪ نگه می‌دارد.</div>
                     </div>
 
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label fw-bold small">
                             <i class="fas fa-mobile-screen-button me-1 text-primary"></i> پالت اختصاصی پورتال مشتری:
                         </label>
@@ -1506,7 +1634,20 @@ document.addEventListener('DOMContentLoaded', function() {
                             <option value="{{ pid }}" {% if palette_settings.portal_palette == pid %}selected{% endif %}>اختصاصی: {{ pal.name }}</option>
                             {% endfor %}
                         </select>
-                        <div class="form-text small">می‌توانید پورتال مشتری را هماهنگ یا با پالت مجزا اجرا کنید.</div>
+                        <div class="form-text small">پالت رنگی مستقل پورتال مشتری.</div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold small">
+                            <i class="fas fa-shapes me-1 text-primary"></i> سبک کارت‌های پورتال مشتری:
+                        </label>
+                        <select name="portal_card_style" class="form-select form-select-sm">
+                            <option value="inherit" {% if palette_settings.portal_card_style == 'inherit' or not palette_settings.portal_card_style %}selected{% endif %}>هماهنگ با پنل مدیریت (پیش‌فرض)</option>
+                            <option value="border_accent" {% if palette_settings.portal_card_style == 'border_accent' %}selected{% endif %}>⚡ حاشیه با رنگ ثابت (Border Accent)</option>
+                            <option value="glass" {% if palette_settings.portal_card_style == 'glass' %}selected{% endif %}>💎 شیشه‌ای مات (Glassmorphism)</option>
+                            <option value="flat" {% if palette_settings.portal_card_style == 'flat' %}selected{% endif %}>📄 تخت و ساده (Flat Clean)</option>
+                        </select>
+                        <div class="form-text small">امکان انتخاب سبک کارت مستقل برای پورتال.</div>
                     </div>
 
                     <div class="col-12 mt-2">
@@ -1544,6 +1685,35 @@ function selectPalette(pid) {
     if (currentCard) {
         currentCard.classList.add('selected', 'border-primary', 'shadow');
         currentCard.classList.remove('border-secondary', 'border-opacity-25');
+    }
+}
+
+function toggleBorderSubstyleSection(val) {
+    const box = document.getElementById('borderSubstyleBox');
+    if (box) {
+        box.style.display = (val === 'border_accent') ? 'block' : 'none';
+    }
+    document.querySelectorAll('.card-render-style-card').forEach(card => {
+        const radio = card.querySelector('input[type="radio"]');
+        if (radio && radio.value === val) {
+            card.classList.add('border-primary', 'shadow', 'bg-white');
+            card.classList.remove('bg-light', 'opacity-75');
+        } else {
+            card.classList.remove('border-primary', 'shadow', 'bg-white');
+            card.classList.add('bg-light', 'opacity-75');
+        }
+    });
+}
+
+function updateBorderSubstyleUI(input) {
+    document.querySelectorAll('.border-substyle-opt').forEach(opt => {
+        opt.classList.remove('border-primary', 'bg-primary-subtle', 'text-primary', 'fw-bold');
+        opt.classList.add('bg-light', 'text-muted');
+    });
+    const selectedLabel = input.closest('.border-substyle-opt');
+    if (selectedLabel) {
+        selectedLabel.classList.add('border-primary', 'bg-primary-subtle', 'text-primary', 'fw-bold');
+        selectedLabel.classList.remove('bg-light', 'text-muted');
     }
 }
 </script>

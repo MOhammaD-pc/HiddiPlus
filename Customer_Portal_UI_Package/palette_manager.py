@@ -513,6 +513,15 @@ def get_active_palette_config(db_instance, context: str = "system", reseller_id:
     intensity = db_instance.get_setting("palette_intensity", "normal") # high, normal, subtle, off
     animation = db_instance.get_setting("palette_animation", "static") # static (پیش‌فرض بهینه ۰٪ گرافیک), float, off
     
+    system_card_style = db_instance.get_setting("system_card_style", "border_accent") # border_accent, glass, flat
+    portal_card_style = db_instance.get_setting("portal_card_style", "inherit") # inherit, border_accent, glass, flat
+    border_substyle = db_instance.get_setting("border_substyle", "minimal") # minimal, gradient, top_line, neon_glow
+
+    if context == "portal" and portal_card_style != "inherit":
+        active_card_style = portal_card_style
+    else:
+        active_card_style = system_card_style
+
     palette_data = get_palette(palette_id)
 
     return {
@@ -520,8 +529,25 @@ def get_active_palette_config(db_instance, context: str = "system", reseller_id:
         "intensity": intensity,
         "animation": animation,
         "portal_palette": portal_setting,
+        "system_card_style": system_card_style,
+        "portal_card_style": portal_card_style,
+        "card_style": active_card_style,
+        "border_substyle": border_substyle,
         "data": palette_data
     }
+
+
+def hex_to_rgb(hex_str: str) -> str:
+    hex_str = str(hex_str or "").lstrip("#")
+    if len(hex_str) == 3:
+        hex_str = "".join([c * 2 for c in hex_str])
+    try:
+        r = int(hex_str[0:2], 16)
+        g = int(hex_str[2:4], 16)
+        b = int(hex_str[4:6], 16)
+        return f"{r}, {g}, {b}"
+    except Exception:
+        return "24, 87, 242"
 
 
 def generate_palette_css(palette_config: Dict[str, Any]) -> str:
@@ -600,12 +626,19 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
     l = data.get("light") or PALETTES["vps_aurora"]["light"]
     d = data.get("dark") or PALETTES["vps_aurora"]["dark"]
 
+    brand_rgb = hex_to_rgb(data.get('primary_color', '#1857f2'))
+
     css = f"""
     /* ─── پالت اختصاصی: {data.get('name', 'VPS Aurora')} ─── */
     :root {{
         --palette-primary: {data['primary_color']};
         --palette-primary-hover: {data['primary_hover']};
         --palette-accent: {data['accent_color']};
+        --hiddi-brand: {data['primary_color']};
+        --hiddi-brand-hover: {data['primary_hover']};
+        --hiddi-brand-rgb: {brand_rgb};
+        --hiddi-brand-glow: rgba({brand_rgb}, 0.35);
+        --hiddi-accent: {data['accent_color']};
         --aura-blur: {blur_val};
         --glass-blur: {glass_blur};
         
@@ -664,4 +697,128 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
     }}
     {minimal_mesh_css}
     """
-    return css
+
+    card_style = str(palette_config.get("card_style") or "border_accent").strip()
+    border_substyle = str(palette_config.get("border_substyle") or "minimal").strip()
+
+    if card_style == "flat":
+        card_style_css = """
+    /* ─── سبک کارت: تخت و مات خالص (Flat Clean - مصرف ۰٪ گرافیک) ─── */
+    .aura-mesh-container, .hiddi-ambient-bg {
+        display: none !important;
+    }
+    .card, .bento-card, .glass-card, .modal-content, .topbar, .sidebar, .dropdown-menu {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {
+        background-color: #111827 !important;
+        border: 1px solid rgba(255, 255, 255, 0.09) !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+    }
+    [data-bs-theme="light"] .card, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+    }
+    .modal-backdrop.show {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        opacity: 0.65 !important;
+    }
+    """
+    elif card_style == "border_accent":
+        base_border_reset = f"""
+    /* ─── سبک کارت: حاشیه با رنگ ثابت پالت (Border Accent - مصرف ۰٪ گرافیک) ─── */
+    .aura-mesh-container, .hiddi-ambient-bg {{
+        display: none !important;
+    }}
+    .card, .bento-card, .glass-card, .modal-content, .topbar, .sidebar, .dropdown-menu {{
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }}
+    .modal-backdrop.show {{
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        opacity: 0.65 !important;
+    }}
+    """
+        if border_substyle == "gradient":
+            sub_css = """
+    /* زیرسبک حاشیه: گرادیان دو رنگه متالیک */
+    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {
+        background: linear-gradient(#111827, #111827) padding-box, linear-gradient(135deg, var(--palette-primary), var(--palette-accent)) border-box !important;
+        border: 1.5px solid transparent !important;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35) !important;
+    }
+    [data-bs-theme="light"] .card, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {
+        background: linear-gradient(#ffffff, #ffffff) padding-box, linear-gradient(135deg, var(--palette-primary), var(--palette-accent)) border-box !important;
+        border: 1.5px solid transparent !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
+    }
+    """
+        elif border_substyle == "top_line":
+            sub_css = """
+    /* زیرسبک حاشیه: خط شاخص بالای کارت */
+    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {
+        background-color: #111827 !important;
+        border: 1px solid rgba(255, 255, 255, 0.09) !important;
+        border-top: 3.5px solid var(--palette-primary) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+    }
+    [data-bs-theme="light"] .card, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-top: 3.5px solid var(--palette-primary) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+    }
+    [data-bs-theme="dark"] .card:hover, [data-bs-theme="dark"] .bento-card:hover {
+        border-top-color: var(--palette-accent) !important;
+    }
+    """
+        elif border_substyle == "neon_glow":
+            sub_css = f"""
+    /* زیرسبک حاشیه: شب‌تاب نئونی ملایم */
+    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {{
+        background-color: #111827 !important;
+        border: 1.5px solid var(--palette-primary) !important;
+        box-shadow: 0 0 16px rgba({brand_rgb}, 0.22), 0 4px 18px rgba(0, 0, 0, 0.4) !important;
+    }}
+    [data-bs-theme="light"] .card, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {{
+        background-color: #ffffff !important;
+        border: 1.5px solid var(--palette-primary) !important;
+        box-shadow: 0 0 14px rgba({brand_rgb}, 0.16), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+    }}
+    [data-bs-theme="dark"] .card:hover, [data-bs-theme="dark"] .bento-card:hover {{
+        border-color: var(--palette-accent) !important;
+        box-shadow: 0 0 22px rgba({brand_rgb}, 0.32), 0 6px 22px rgba(0, 0, 0, 0.45) !important;
+    }}
+    """
+        else: # minimal
+            sub_css = """
+    /* زیرسبک حاشیه: خط باریک ظریف تمام‌دور */
+    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {
+        background-color: #111827 !important;
+        border: 1.5px solid var(--palette-primary) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+    }
+    [data-bs-theme="light"] .card, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {
+        background-color: #ffffff !important;
+        border: 1.5px solid var(--palette-primary) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+    }
+    [data-bs-theme="dark"] .card:hover, [data-bs-theme="dark"] .bento-card:hover {
+        border-color: var(--palette-accent) !important;
+    }
+    """
+        card_style_css = base_border_reset + sub_css
+    else: # glass
+        card_style_css = """
+    /* ─── سبک کارت: شیشه‌ای مات و بلورین (Glassmorphism) ─── */
+    .card, .bento-card, .glass-card {
+        backdrop-filter: blur(var(--glass-blur, 14px)) saturate(160%) !important;
+        -webkit-backdrop-filter: blur(var(--glass-blur, 14px)) saturate(160%) !important;
+    }
+    """
+
+    return css + "\n" + card_style_css
