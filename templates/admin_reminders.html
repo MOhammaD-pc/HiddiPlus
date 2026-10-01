@@ -281,7 +281,7 @@
                             </label>
 
                             <!-- کادر خلاصه تاریخ انتخاب‌شده -->
-                            <div class="dual-date-display-box p-3 rounded-3 border bg-light position-relative mb-2" onclick="DualDatePicker.toggleCalendar()">
+                            <div class="dual-date-display-box p-3 rounded-3 border bg-light position-relative mb-2" onclick="ReminderCalendar.toggleCalendar()">
                                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="calendar-icon-pill p-2 rounded-3 bg-primary text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 44px; height: 44px;">
@@ -301,7 +301,7 @@
                                         <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill shadow-sm" id="displayTimeBadge">
                                             <i class="bi bi-clock me-1"></i> ساعت ۱۲:۰۰
                                         </span>
-                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="toggleCalendarBtn" onclick="event.stopPropagation(); DualDatePicker.toggleCalendar();">
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="toggleCalendarBtn" onclick="event.stopPropagation(); ReminderCalendar.toggleCalendar();">
                                             <i class="bi bi-calendar-week me-1"></i> تقویم
                                         </button>
                                     </div>
@@ -319,18 +319,18 @@
                                 <div class="card-header bg-white py-2.5 px-3 border-bottom">
                                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                                         <div class="d-flex align-items-center gap-1">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle p-1 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="DualDatePicker.prevMonth()" title="ماه قبل">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle p-1 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="ReminderCalendar.prevMonth()" title="ماه قبل">
                                                 <i class="bi bi-chevron-right"></i>
                                             </button>
                                             <div class="d-flex align-items-center gap-1 mx-1">
-                                                <select class="form-select form-select-sm fw-bold border-0 bg-light" id="calMonthSelect" onchange="DualDatePicker.onMonthChange(this.value)">
+                                                <select class="form-select form-select-sm fw-bold border-0 bg-light" id="calMonthSelect" onchange="ReminderCalendar.onMonthChange(this.value)">
                                                     <!-- ۱۲ ماه شمسی -->
                                                 </select>
-                                                <select class="form-select form-select-sm fw-bold border-0 bg-light" id="calYearSelect" onchange="DualDatePicker.onYearChange(this.value)">
+                                                <select class="form-select form-select-sm fw-bold border-0 bg-light" id="calYearSelect" onchange="ReminderCalendar.onYearChange(this.value)">
                                                     <!-- سال‌های شمسی -->
                                                 </select>
                                             </div>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle p-1 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="DualDatePicker.nextMonth()" title="ماه بعد">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle p-1 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="ReminderCalendar.nextMonth()" title="ماه بعد">
                                                 <i class="bi bi-chevron-left"></i>
                                             </button>
                                         </div>
@@ -339,7 +339,7 @@
                                             <span class="badge bg-secondary-subtle text-secondary border px-2 py-1.5" id="calGregorianRangeBadge" style="font-size: 0.78rem;">
                                                 <!-- معادل ماه‌های میلادی -->
                                             </span>
-                                            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 text-primary small fw-semibold" onclick="DualDatePicker.goToToday()">
+                                            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 text-primary small fw-semibold" onclick="ReminderCalendar.goToToday()">
                                                 <i class="bi bi-arrow-repeat me-1"></i>امروز
                                             </button>
                                         </div>
@@ -349,13 +349,13 @@
                                 <!-- نوار میانبرهای سریع روزها -->
                                 <div class="bg-light py-1.5 px-3 border-bottom d-flex align-items-center gap-2 overflow-auto" style="font-size: 0.8rem;">
                                     <span class="text-muted small fw-semibold text-nowrap"><i class="bi bi-lightning-charge text-warning me-1"></i>میانبر:</span>
-                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(0)">امروز</button>
-                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(1)">فردا</button>
-                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(3)">۳ روز بعد</button>
-                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(7)">۱ هفته بعد</button>
-                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(14)">۲ هفته بعد</button>
-                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(30)">۱ ماه بعد</button>
-                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(90)">۳ ماه بعد</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="ReminderCalendar.setRelative(0)">امروز</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="ReminderCalendar.setRelative(1)">فردا</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="ReminderCalendar.setRelative(3)">۳ روز بعد</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="ReminderCalendar.setRelative(7)">۱ هفته بعد</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="ReminderCalendar.setRelative(14)">۲ هفته بعد</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="ReminderCalendar.setRelative(30)">۱ ماه بعد</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="ReminderCalendar.setRelative(90)">۳ ماه بعد</button>
                                 </div>
 
                                 <div class="card-body p-2 p-sm-3">
@@ -392,22 +392,22 @@
                                             <div class="d-flex align-items-center justify-content-md-end gap-2 flex-wrap">
                                                 <div class="d-flex align-items-center gap-1">
                                                     <label class="small text-muted mb-0">ساعت:</label>
-                                                    <select class="form-select form-select-sm font-monospace text-center fw-bold" style="width: 75px;" id="calHourSelect" onchange="DualDatePicker.onTimeChange()">
+                                                    <select class="form-select form-select-sm font-monospace text-center fw-bold" style="width: 75px;" id="calHourSelect" onchange="ReminderCalendar.onTimeChange()">
                                                         <!-- 00 to 23 -->
                                                     </select>
                                                 </div>
                                                 <span class="fw-bold text-muted">:</span>
                                                 <div class="d-flex align-items-center gap-1">
                                                     <label class="small text-muted mb-0">دقیقه:</label>
-                                                    <select class="form-select form-select-sm font-monospace text-center fw-bold" style="width: 75px;" id="calMinuteSelect" onchange="DualDatePicker.onTimeChange()">
+                                                    <select class="form-select form-select-sm font-monospace text-center fw-bold" style="width: 75px;" id="calMinuteSelect" onchange="ReminderCalendar.onTimeChange()">
                                                         <!-- 00 to 59 -->
                                                     </select>
                                                 </div>
                                                 <div class="btn-group btn-group-sm ms-1">
-                                                    <button type="button" class="btn btn-outline-secondary" onclick="DualDatePicker.setTimePreset(9, 0)">۰۹:۰۰</button>
-                                                    <button type="button" class="btn btn-outline-secondary" onclick="DualDatePicker.setTimePreset(12, 0)">۱۲:۰۰</button>
-                                                    <button type="button" class="btn btn-outline-secondary" onclick="DualDatePicker.setTimePreset(18, 0)">۱۸:۰۰</button>
-                                                    <button type="button" class="btn btn-outline-secondary" onclick="DualDatePicker.setTimePreset(21, 0)">۲۱:۰۰</button>
+                                                    <button type="button" class="btn btn-outline-secondary" onclick="ReminderCalendar.setTimePreset(9, 0)">۰۹:۰۰</button>
+                                                    <button type="button" class="btn btn-outline-secondary" onclick="ReminderCalendar.setTimePreset(12, 0)">۱۲:۰۰</button>
+                                                    <button type="button" class="btn btn-outline-secondary" onclick="ReminderCalendar.setTimePreset(18, 0)">۱۸:۰۰</button>
+                                                    <button type="button" class="btn btn-outline-secondary" onclick="ReminderCalendar.setTimePreset(21, 0)">۲۱:۰۰</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -505,7 +505,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ─── ابزار پیشرفته تقویم دوگانه شمسی - میلادی با محوریت تقویم شمسی ───
-const DualDatePicker = {
+const ReminderCalendar = {
     shamsiMonths: ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'],
     shamsiWeekDays: ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'],
     gregorianMonths: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
@@ -955,7 +955,7 @@ function openAddModal() {
     toggleTelegramTarget();
     
     // راه‌اندازی تقویم دوگانه با تاریخ فردا
-    DualDatePicker.init(null);
+    ReminderCalendar.init(null);
     
     reminderModal.show();
 }
@@ -969,7 +969,7 @@ function openEditModal(r) {
     document.getElementById('description').value = r.description || '';
     
     // راه‌اندازی تقویم دوگانه با تاریخ سررسید موجود
-    DualDatePicker.init(r.target_date || null);
+    ReminderCalendar.init(r.target_date || null);
     
     document.getElementById('target_traffic').value = r.target_traffic || '';
     document.getElementById('threshold_percent').value = r.threshold_percent || '80';

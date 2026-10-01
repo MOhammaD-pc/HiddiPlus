@@ -477,7 +477,9 @@ def calculate_debt_auto_disable_at(
     days_val: Union[int, str, None] = 3,
     shamsi_date_str: Optional[str] = None,
     base_dt: Optional[datetime] = None
-) -> str:
+) -> Optional[str]:
+    if str(days_val).strip().lower() in ('disabled', 'none', 'disable', 'off', '0'):
+        return None
     """
     محاسبه تاریخ و زمان دقیق انقضا و قطع خودکار اشتراک بدهکار.
     ساعت، دقیقه و ثانیه دقیقا مطابق با لحظه تنظیم فرم (base_dt) حفظ می‌گردد.

@@ -62,9 +62,14 @@
                                 <span class="badge bg-light text-secondary border"><i class="fas fa-layer-group me-1"></i>همه بسته‌ها</span>
                             {% endif %}
                         </td>
-                        <td data-value="{{ d.get('max_uses') or 99999 }}">{{ d.get('max_uses') if d.get('max_uses') > 0 else 'نامحدود' }}</td>
-                        <td data-value="{{ d.get('used_count', 0) }}"><span class="badge bg-secondary font-monospace">{{ d.get('used_count', 0) }} بار</span></td>
-                        <td data-value="{{ d.get('valid_until') or '' }}"><small class="text-muted font-monospace">{{ d.get('valid_until') or 'همیشگی' }}</small></td>
+                        <td data-value="{{ d.get('valid_until') or '' }}">
+                            {% if d.get('valid_until') %}
+                                <div class="fw-bold">{{ d.get('valid_until') | shamsi_date }}</div>
+                                <span class="badge bg-light text-muted border font-monospace mt-0.5" style="font-size: 0.7rem;">{{ d.get('valid_until')[:10] }}</span>
+                            {% else %}
+                                <small class="text-muted">همیشگی</small>
+                            {% endif %}
+                        </td>
                         <td data-value="{{ 1 if d.get('is_active') else 0 }}">
                             {% if d.get('is_active') %}
                                 <span class="badge bg-success bg-opacity-10 text-success border border-success">فعال</span>
@@ -139,8 +144,8 @@
                             <input type="number" class="form-control" name="max_uses" placeholder="0 برای نامحدود" min="0" value="0">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">تاریخ انقضا (اختیاری)</label>
-                            <input type="date" class="form-control" name="valid_until">
+                            <label class="form-label fw-bold">تاریخ انقضا (شمسی و میلادی):</label>
+                            <input type="text" class="form-control font-monospace" name="valid_until" data-dual-picker="date" placeholder="انتخاب تاریخ انقضا...">
                         </div>
                     </div>
                     <div class="mb-3 mt-3">
@@ -205,8 +210,8 @@
                             <input type="number" class="form-control font-monospace" name="max_uses" min="0" value="{{ d.get('max_uses') or 0 }}">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">تاریخ انقضا (اختیاری)</label>
-                            <input type="date" class="form-control font-monospace" name="valid_until" value="{{ d.get('valid_until') or '' }}">
+                            <label class="form-label fw-bold">تاریخ انقضا (شمسی و میلادی):</label>
+                            <input type="text" class="form-control font-monospace" name="valid_until" data-dual-picker="date" value="{{ d.get('valid_until') or '' }}" placeholder="انتخاب تاریخ انقضا...">
                         </div>
                     </div>
                     <div class="form-check form-switch mb-3 p-2 bg-light rounded border">

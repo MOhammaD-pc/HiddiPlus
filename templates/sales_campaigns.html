@@ -174,11 +174,11 @@
                                 {% endif %}
                             </td>
                             <td class="py-3">
-                                <div class="small font-monospace">
+                                <div class="small">
                                     {% if c.end_at %}
-                                    <div class="text-light"><i class="fas fa-hourglass-half text-warning me-1"></i>تا: {{ c.end_at }}</div>
+                                    <div class="text-light fw-bold"><i class="fas fa-hourglass-half text-warning me-1"></i>تا: {{ c.end_at | shamsi_date }} <span class="badge bg-secondary bg-opacity-25 text-light font-monospace ms-1" style="font-size: 0.68rem;">{{ c.end_at }}</span></div>
                                     {% if c.start_at %}
-                                    <small class="text-muted">از: {{ c.start_at }}</small>
+                                    <small class="text-muted d-block mt-0.5">از: {{ c.start_at | shamsi_date }} <span class="font-monospace opacity-75">({{ c.start_at }})</span></small>
                                     {% endif %}
                                     {% else %}
                                     <span class="badge bg-info bg-opacity-20 text-info">همیشگی / نامحدود</span>
@@ -351,9 +351,9 @@
                         <!-- فیلد ۴: تاریخ شروع -->
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-white mb-1">
-                                <i class="fas fa-calendar-plus text-success me-1"></i>تاریخ و ساعت شروع:
+                                <i class="fas fa-calendar-plus text-success me-1"></i>تاریخ و ساعت شروع (شمسی و میلادی):
                             </label>
-                            <input type="datetime-local" class="form-control bg-dark text-white border-secondary font-monospace" id="campStartAt" name="start_at">
+                            <input type="text" class="form-control bg-dark text-white border-secondary font-monospace" id="campStartAt" name="start_at" data-dual-picker="datetime" placeholder="انتخاب زمان شروع...">
                         </div>
 
                         <!-- فیلد ۵: تاریخ پایان (جهت تایمر معکوس) -->
@@ -361,7 +361,7 @@
                             <label class="form-label small fw-bold text-white mb-1">
                                 <i class="fas fa-stopwatch text-danger me-1"></i>تاریخ و ساعت پایان (تایمر معکوس زنده): <span class="text-danger">*</span>
                             </label>
-                            <input type="datetime-local" class="form-control bg-dark text-white border-secondary font-monospace" id="campEndAt" name="end_at" required>
+                            <input type="text" class="form-control bg-dark text-white border-secondary font-monospace" id="campEndAt" name="end_at" data-dual-picker="datetime" placeholder="انتخاب زمان پایان و انقضا..." required>
                             <div class="form-text text-secondary small">ساعت و دقیقه انقضای جشنواره جهت شمارش معکوس زنده.</div>
                         </div>
 
@@ -607,8 +607,12 @@ function openNewCampaignModal() {
     const end = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
     const endStr = new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
-    document.getElementById('campStartAt').value = startStr;
-    document.getElementById('campEndAt').value = endStr;
+    const startInput = document.getElementById('campStartAt');
+    const endInput = document.getElementById('campEndAt');
+    if (startInput.__dualDatePicker) startInput.__dualDatePicker.setValueFromIso(startStr);
+    else startInput.value = startStr;
+    if (endInput.__dualDatePicker) endInput.__dualDatePicker.setValueFromIso(endStr);
+    else endInput.value = endStr;
 
     const modal = new bootstrap.Modal(document.getElementById('campaignModal'));
     modal.show();
@@ -622,8 +626,15 @@ function editCampaign(camp) {
     document.getElementById('campSubtitle').value = camp.subtitle || '';
     document.getElementById('campDiscountCode').value = camp.discount_code || '';
     document.getElementById('campDiscountPercent').value = camp.discount_percent || '';
-    document.getElementById('campStartAt').value = (camp.start_at || '').replace(' ', 'T').slice(0, 16);
-    document.getElementById('campEndAt').value = (camp.end_at || '').replace(' ', 'T').slice(0, 16);
+
+    const startVal = (camp.start_at || '').replace(' ', 'T').slice(0, 16);
+    const endVal = (camp.end_at || '').replace(' ', 'T').slice(0, 16);
+    const startInput = document.getElementById('campStartAt');
+    const endInput = document.getElementById('campEndAt');
+    if (startInput.__dualDatePicker) startInput.__dualDatePicker.setValueFromIso(startVal);
+    else startInput.value = startVal;
+    if (endInput.__dualDatePicker) endInput.__dualDatePicker.setValueFromIso(endVal);
+    else endInput.value = endVal;
     document.getElementById('campPosition').value = camp.position || 'below_hero';
     document.getElementById('campBannerStyle').value = camp.banner_style || 'autumn_glow';
     setBeamPreset(camp.beam_color || '#38bdf8');

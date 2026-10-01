@@ -8147,11 +8147,15 @@ def admin_subscription_renew(sub_id: int):
         debt_due_mode = request.form.get("debt_due_mode", "days").strip()
         debt_due_days = request.form.get("debt_due_days", 3)
         debt_due_date_shamsi = request.form.get("debt_due_date_shamsi", "").strip()
-        debt_auto_disable_at = calculate_debt_auto_disable_at(
-            days_val=debt_due_days if debt_due_mode == "days" else None,
-            shamsi_date_str=debt_due_date_shamsi if debt_due_mode == "calendar" else None,
-            base_dt=get_now_naive()
-        )
+        is_auto_disable_active = (request.form.get("debt_auto_disable_active", "1") not in ("0", "false", "False")) and (debt_due_mode not in ("disabled", "none"))
+        if not is_auto_disable_active:
+            debt_auto_disable_at = None
+        else:
+            debt_auto_disable_at = calculate_debt_auto_disable_at(
+                days_val=debt_due_days if debt_due_mode == "days" else None,
+                shamsi_date_str=debt_due_date_shamsi if debt_due_mode == "calendar" else None,
+                base_dt=get_now_naive()
+            )
     else:
         this_period_debt = 0
         debt_status = "paid"
@@ -11924,24 +11928,68 @@ def reject_quota_change(ticket_id):
 @app.route("/admin/subscription/<int:sub_id>/clear-debt", methods=["POST"])
 @permission_required("sub_manage")
 def admin_subscription_clear_debt(sub_id):
-    """تسویه کامل و سریع بدهی اشتراک توسط مدیر با واریز به کارت مقصد انتخابی"""
+    """تسویه کامل و سریع بدهی اشتراک توسط مدیر با واریز به کارت مقصد انتخابی و فعال‌سازی فوری در صورت تایید"""
     settled_by = session.get("username") or "admin"
-    raw_card = request.form.get("target_card_id") or (request.json.get("target_card_id") if request.is_json else None)
+    req_json = request.json if request.is_json else {}
+    raw_card = request.form.get("target_card_id") or req_json.get("target_card_id")
     target_card_id = int(raw_card) if (raw_card and str(raw_card).isdigit()) else None
 
+    # بررسی درخواست فعال‌سازی مشتری
+    reactivate = req_json.get("reactivate")
+    if reactivate is None:
+        raw_r = request.form.get("reactivate")
+        reactivate = (raw_r in ("1", "true", "True", True, "on")) if raw_r is not None else True
+    else:
+        reactivate = bool(reactivate)
+
     res = db.clear_subscription_debt(sub_id, settled_by=settled_by, target_card_id=target_card_id)
+    reactivated_info = False
     if res.get("success"):
         try:
             from services.debt_restriction_service import re_enable_if_restricted
             re_enable_if_restricted(sub_id, db, hidify_sync_update_user)
         except Exception:
             pass
+
+        if reactivate:
+            try:
+                sub = db.get_subscription(sub_id)
+                if sub and (sub.get("status") == "disabled" or sub.get("debt_restricted_until")):
+                    if sub.get("hidify_uuid"):
+                        try:
+                            hidify_sync_update_user(sub["hidify_uuid"], enable=True, is_active=True, reseller_id=sub.get("reseller_id"))
+                        except Exception as e_hid:
+                            logger.warning(f"Error enabling Hiddify user {sub.get('hidify_uuid')}: {e_hid}")
+                    conn = db.get_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        UPDATE subscriptions SET
+                            status = 'active',
+                            disable_reason = NULL,
+                            debt_auto_disable_at = NULL,
+                            in_debt_restriction = 0,
+                            debt_restricted_until = NULL,
+                            debt_restriction_session_start = NULL,
+                            updated_at = ?
+                        WHERE id = ?
+                    """, (get_now_iso(), sub_id))
+                    conn.commit()
+                    conn.close()
+                    reactivated_info = True
+            except Exception as e_react:
+                logger.warning(f"Error reactivating subscription #{sub_id}: {e_react}")
+
+    reactivated_msg = " و اشتراک مشتری با موفقیت مجدداً در هیدیفای فعال گردید" if reactivated_info else ""
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
         if res.get("success"):
-            return jsonify({"success": True, "message": "تمام بدهی‌های مشتری با موفقیت تسویه و در حساب مقصد ثبت شد."})
+            return jsonify({
+                "success": True,
+                "message": f"تمام بدهی‌های مشتری با موفقیت تسویه شد{reactivated_msg} و در حساب مقصد ثبت گردید.",
+                "reactivated": reactivated_info
+            })
         return jsonify({"success": False, "error": res.get("error", "خطا در تسویه بدهی")}), 400
     if res.get("success"):
-        flash("تمام بدهی‌های مشتری با موفقیت تسویه شد و اشتراک به عنوان پرداخت شده علامت‌گذاری گردید.", "success")
+        flash(f"تمام بدهی‌های مشتری با موفقیت تسویه شد{reactivated_msg} و اشتراک به عنوان پرداخت شده علامت‌گذاری گردید.", "success")
     else:
         flash(f"خطا در تسویه بدهی: {res.get('error')}", "danger")
     return redirect(request.form.get("redirect_url") or request.form.get("next") or request.referrer or url_for("subscriptions"))
@@ -11950,25 +11998,69 @@ def admin_subscription_clear_debt(sub_id):
 @app.route("/reseller/subscription/<int:sub_id>/clear-debt", methods=["POST"])
 @reseller_required
 def reseller_subscription_clear_debt(sub_id):
-    """تسویه کامل و سریع بدهی مشتری توسط نماینده با واریز به کارت مقصد انتخابی"""
+    """تسویه کامل و سریع بدهی مشتری توسط نماینده با واریز به کارت مقصد انتخابی و فعال‌سازی فوری در صورت تایید"""
     reseller_id = session.get("reseller_id")
     settled_by = session.get("username") or f"reseller_{reseller_id}"
-    raw_card = request.form.get("target_card_id") or (request.json.get("target_card_id") if request.is_json else None)
+    req_json = request.json if request.is_json else {}
+    raw_card = request.form.get("target_card_id") or req_json.get("target_card_id")
     target_card_id = int(raw_card) if (raw_card and str(raw_card).isdigit()) else None
 
+    # بررسی درخواست فعال‌سازی مشتری
+    reactivate = req_json.get("reactivate")
+    if reactivate is None:
+        raw_r = request.form.get("reactivate")
+        reactivate = (raw_r in ("1", "true", "True", True, "on")) if raw_r is not None else True
+    else:
+        reactivate = bool(reactivate)
+
     res = db.clear_subscription_debt(sub_id, reseller_id=reseller_id, settled_by=settled_by, target_card_id=target_card_id)
+    reactivated_info = False
     if res.get("success"):
         try:
             from services.debt_restriction_service import re_enable_if_restricted
             re_enable_if_restricted(sub_id, db, hidify_sync_update_user)
         except Exception:
             pass
+
+        if reactivate:
+            try:
+                sub = db.get_reseller_subscription(reseller_id, sub_id)
+                if sub and (sub.get("status") == "disabled" or sub.get("debt_restricted_until")):
+                    if sub.get("hidify_uuid"):
+                        try:
+                            hidify_sync_update_user(sub["hidify_uuid"], enable=True, is_active=True, reseller_id=reseller_id)
+                        except Exception as e_hid:
+                            logger.warning(f"Error enabling Hiddify user {sub.get('hidify_uuid')}: {e_hid}")
+                    conn = db.get_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        UPDATE subscriptions SET
+                            status = 'active',
+                            disable_reason = NULL,
+                            debt_auto_disable_at = NULL,
+                            in_debt_restriction = 0,
+                            debt_restricted_until = NULL,
+                            debt_restriction_session_start = NULL,
+                            updated_at = ?
+                        WHERE id = ? AND reseller_id = ?
+                    """, (get_now_iso(), sub_id, reseller_id))
+                    conn.commit()
+                    conn.close()
+                    reactivated_info = True
+            except Exception as e_react:
+                logger.warning(f"Error reactivating reseller subscription #{sub_id}: {e_react}")
+
+    reactivated_msg = " و اشتراک مشتری با موفقیت مجدداً در هیدیفای فعال گردید" if reactivated_info else ""
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
         if res.get("success"):
-            return jsonify({"success": True, "message": "تمام بدهی‌های مشتری با موفقیت تسویه و در حساب ثبت شد."})
+            return jsonify({
+                "success": True,
+                "message": f"تمام بدهی‌های مشتری با موفقیت تسویه شد{reactivated_msg} و در حساب ثبت گردید.",
+                "reactivated": reactivated_info
+            })
         return jsonify({"success": False, "error": res.get("error", "خطا در تسویه بدهی")}), 400
     if res.get("success"):
-        flash("تمام بدهی‌های مشتری با موفقیت تسویه شد و وضعیت اشتراک به پرداخت شده تغییر یافت.", "success")
+        flash(f"تمام بدهی‌های مشتری با موفقیت تسویه شد{reactivated_msg} و وضعیت اشتراک به پرداخت شده تغییر یافت.", "success")
     else:
         flash(f"خطا در تسویه بدهی: {res.get('error')}", "danger")
     return redirect(request.form.get("redirect_url") or request.form.get("next") or request.referrer or url_for("reseller_users"))
@@ -12082,7 +12174,14 @@ def api_customer_debt_report(sub_id: int):
             "account_name": sub.get("account_name"),
             "debt_amount": sub.get("debt_amount", 0),
             "payment_status": sub.get("payment_status", "paid"),
-            "debt_notes": sub.get("debt_notes")
+            "debt_notes": sub.get("debt_notes"),
+            "status": sub.get("status", "active"),
+            "disable_reason": sub.get("disable_reason"),
+            "is_debt_disabled": bool(
+                sub.get("status") == "disabled" or
+                sub.get("debt_restricted_until") or
+                "بدهی" in str(sub.get("disable_reason") or "")
+            )
         },
         "report": report
     })
@@ -12102,6 +12201,31 @@ def admin_settle_debt_record(sub_id: int, record_id: int):
 
     res = db.settle_customer_debt_record(sub_id, record_id=record_id, settled_by=settled_by, target_card_id=target_card_id)
     if res.get("success"):
+        req_json = request.json if request.is_json else {}
+        reactivate = req_json.get("reactivate")
+        if reactivate:
+            try:
+                sub_now = db.get_subscription(sub_id)
+                if sub_now and (sub_now.get("status") == "disabled" or sub_now.get("debt_restricted_until")):
+                    if sub_now.get("hidify_uuid"):
+                        hidify_sync_update_user(sub_now["hidify_uuid"], enable=True, is_active=True, reseller_id=sub_now.get("reseller_id"))
+                    conn = db.get_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        UPDATE subscriptions SET
+                            status = 'active',
+                            disable_reason = NULL,
+                            debt_auto_disable_at = NULL,
+                            in_debt_restriction = 0,
+                            debt_restricted_until = NULL,
+                            debt_restriction_session_start = NULL,
+                            updated_at = ?
+                        WHERE id = ?
+                    """, (get_now_iso(), sub_id))
+                    conn.commit()
+                    conn.close()
+            except Exception as e_rec_react:
+                logger.warning(f"Error reactivating sub #{sub_id} on settle record: {e_rec_react}")
         return jsonify({"success": True, "message": "رسید بدهی با موفقیت تسویه شد.", "data": res})
     else:
         return jsonify({"success": False, "error": res.get("error", "خطا در تسویه بدهی")}), 400
@@ -12430,6 +12554,31 @@ def reseller_settle_debt_record(sub_id: int, record_id: int):
 
     res = db.settle_customer_debt_record(sub_id, record_id=record_id, settled_by=settled_by, target_card_id=target_card_id)
     if res.get("success"):
+        req_json = request.json if request.is_json else {}
+        reactivate = req_json.get("reactivate")
+        if reactivate:
+            try:
+                sub_now = db.get_reseller_subscription(reseller_id, sub_id)
+                if sub_now and (sub_now.get("status") == "disabled" or sub_now.get("debt_restricted_until")):
+                    if sub_now.get("hidify_uuid"):
+                        hidify_sync_update_user(sub_now["hidify_uuid"], enable=True, is_active=True, reseller_id=reseller_id)
+                    conn = db.get_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        UPDATE subscriptions SET
+                            status = 'active',
+                            disable_reason = NULL,
+                            debt_auto_disable_at = NULL,
+                            in_debt_restriction = 0,
+                            debt_restricted_until = NULL,
+                            debt_restriction_session_start = NULL,
+                            updated_at = ?
+                        WHERE id = ? AND reseller_id = ?
+                    """, (get_now_iso(), sub_id, reseller_id))
+                    conn.commit()
+                    conn.close()
+            except Exception as e_rec_react:
+                logger.warning(f"Error reactivating sub #{sub_id} on reseller settle record: {e_rec_react}")
         return jsonify({"success": True, "message": "رسید بدهی با موفقیت تسویه شد.", "data": res})
     else:
         return jsonify({"success": False, "error": res.get("error", "خطا در تسویه بدهی")}), 400
@@ -13945,8 +14094,8 @@ def admin_discounts_page():
         allowed_plans_list = request.form.getlist("allowed_plans")
         allowed_plans = ",".join(allowed_plans_list) if allowed_plans_list else ""
 
-        valid_until = None
-        if valid_days and int(valid_days) > 0:
+        valid_until = request.form.get("valid_until", "").strip() or None
+        if not valid_until and valid_days and int(valid_days) > 0:
             valid_until = (get_now_naive() + timedelta(days=int(valid_days))).isoformat()
 
         if code and (percent > 0 or amount > 0):
@@ -16773,11 +16922,15 @@ def reseller_create_user():
             debt_due_mode = request.form.get("debt_due_mode", "days").strip()
             debt_due_days = request.form.get("debt_due_days", 3)
             debt_due_date_shamsi = request.form.get("debt_due_date_shamsi", "").strip()
-            debt_auto_disable_at = calculate_debt_auto_disable_at(
-                days_val=debt_due_days if debt_due_mode == "days" else None,
-                shamsi_date_str=debt_due_date_shamsi if debt_due_mode == "calendar" else None,
-                base_dt=get_now_naive()
-            )
+            is_auto_disable_active = (request.form.get("debt_auto_disable_active", "1") not in ("0", "false", "False")) and (debt_due_mode not in ("disabled", "none"))
+            if not is_auto_disable_active:
+                debt_auto_disable_at = None
+            else:
+                debt_auto_disable_at = calculate_debt_auto_disable_at(
+                    days_val=debt_due_days if debt_due_mode == "days" else None,
+                    shamsi_date_str=debt_due_date_shamsi if debt_due_mode == "calendar" else None,
+                    base_dt=get_now_naive()
+                )
         else:
             debt_amount = 0
             debt_auto_disable_at = None
@@ -17642,11 +17795,15 @@ def reseller_renew_user(sub_id: int):
             debt_due_mode = request.form.get("debt_due_mode", "days").strip()
             debt_due_days = request.form.get("debt_due_days", 3)
             debt_due_date_shamsi = request.form.get("debt_due_date_shamsi", "").strip()
-            debt_auto_disable_at = calculate_debt_auto_disable_at(
-                days_val=debt_due_days if debt_due_mode == "days" else None,
-                shamsi_date_str=debt_due_date_shamsi if debt_due_mode == "calendar" else None,
-                base_dt=get_now_naive()
-            )
+            is_auto_disable_active = (request.form.get("debt_auto_disable_active", "1") not in ("0", "false", "False")) and (debt_due_mode not in ("disabled", "none"))
+            if not is_auto_disable_active:
+                debt_auto_disable_at = None
+            else:
+                debt_auto_disable_at = calculate_debt_auto_disable_at(
+                    days_val=debt_due_days if debt_due_mode == "days" else None,
+                    shamsi_date_str=debt_due_date_shamsi if debt_due_mode == "calendar" else None,
+                    base_dt=get_now_naive()
+                )
         else:
             debt_amount = 0
             debt_status = "paid"
@@ -21615,11 +21772,15 @@ def admin_create_customer():
             debt_due_mode = request.form.get("debt_due_mode", "days").strip()
             debt_due_days = request.form.get("debt_due_days", 3)
             debt_due_date_shamsi = request.form.get("debt_due_date_shamsi", "").strip()
-            debt_auto_disable_at = calculate_debt_auto_disable_at(
-                days_val=debt_due_days if debt_due_mode == "days" else None,
-                shamsi_date_str=debt_due_date_shamsi if debt_due_mode == "calendar" else None,
-                base_dt=now_naive
-            )
+            is_auto_disable_active = (request.form.get("debt_auto_disable_active", "1") not in ("0", "false", "False")) and (debt_due_mode not in ("disabled", "none"))
+            if not is_auto_disable_active:
+                debt_auto_disable_at = None
+            else:
+                debt_auto_disable_at = calculate_debt_auto_disable_at(
+                    days_val=debt_due_days if debt_due_mode == "days" else None,
+                    shamsi_date_str=debt_due_date_shamsi if debt_due_mode == "calendar" else None,
+                    base_dt=now_naive
+                )
         else:
             payment_status = "paid"
             debt_amount = 0

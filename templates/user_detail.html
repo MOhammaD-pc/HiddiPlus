@@ -696,8 +696,8 @@ function openSubscriptionHistory(subId, accountName) {
                                         </div>
 
                                         <div class="col-md-6 col-12">
-                                            <label class="form-label small fw-bold mb-1">تاریخ پایان دوره / تمدید (اختیاری):</label>
-                                            <input type="datetime-local" class="form-control form-control-sm font-monospace" id="histRenewedAt">
+                                            <label class="form-label small fw-bold mb-1">تاریخ پایان دوره / تمدید (شمسی و میلادی):</label>
+                                            <input type="text" class="form-control form-control-sm font-monospace" id="histRenewedAt" data-dual-picker="datetime" placeholder="انتخاب تاریخ و ساعت...">
                                             <small class="text-muted" style="font-size: 11px;">در صورت خالی گذاشتن، تاریخ جاری ثبت می‌شود.</small>
                                         </div>
                                         <div class="col-md-6 col-12">
@@ -913,6 +913,7 @@ function openSubscriptionHistory(subId, accountName) {
             `;
 
             body.innerHTML = html;
+            if (window.DualDatePicker) DualDatePicker.initAll(body);
         })
         .catch(err => {
             body.innerHTML = '<div class="alert alert-danger my-3"><i class="fas fa-triangle-exclamation me-2"></i>خطا در بارگذاری اطلاعات پرونده: ' + err + '</div>';

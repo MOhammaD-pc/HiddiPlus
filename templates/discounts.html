@@ -78,7 +78,8 @@
                         </td>
                         <td data-value="{{ d.valid_until or '' }}">
                             {% if d.valid_until %}
-                                <span class="font-monospace">{{ d.valid_until[:10] }}</span>
+                                <div class="fw-bold">{{ d.valid_until | shamsi_date }}</div>
+                                <span class="badge bg-light text-muted border font-monospace mt-0.5" style="font-size: 0.7rem;">{{ d.valid_until[:10] }}</span>
                             {% else %}
                                 <span class="text-muted">بدون انقضا</span>
                             {% endif %}
@@ -144,13 +145,19 @@
                             </div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">حداکثر تعداد مجاز استفاده (0 = نامحدود)</label>
-                        <input type="number" name="max_uses" class="form-control" value="0" min="0">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">مدت اعتبار (تعداد روز از الان)</label>
-                        <input type="number" name="valid_days" class="form-control" placeholder="مثال: 30 (اختیاری)" min="1">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">حداکثر دفعات استفاده (0 = نامحدود)</label>
+                            <input type="number" name="max_uses" class="form-control" value="0" min="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">مدت اعتبار دستی (روز از الان)</label>
+                            <input type="number" name="valid_days" class="form-control" placeholder="مثال: 30 (اختیاری)" min="1">
+                        </div>
+                        <div class="col-12 mt-2">
+                            <label class="form-label fw-semibold">یا تعیین دقیق تاریخ انقضا (شمسی و میلادی):</label>
+                            <input type="text" name="valid_until" class="form-control font-monospace" data-dual-picker="date" placeholder="انتخاب تاریخ انقضا بر اساس تقویم...">
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">بسته‌های مجاز (اختیاری - در صورت عدم انتخاب برای همه اعمال می‌شود):</label>
@@ -212,13 +219,13 @@
                         </div>
                     </div>
                     <div class="row g-3 mb-3">
-                        <div class="col-6">
+                        <div class="col-12 col-md-5">
                             <label class="form-label fw-bold">سقف استفاده (0 = نامحدود):</label>
                             <input type="number" name="max_uses" class="form-control font-monospace" value="{{ d.max_uses or 0 }}" min="0">
                         </div>
-                        <div class="col-6">
-                            <label class="form-label fw-bold">تاریخ انقضا (اختیاری):</label>
-                            <input type="date" name="valid_until" class="form-control font-monospace" value="{{ d.valid_until[:10] if d.valid_until else '' }}">
+                        <div class="col-12 col-md-7">
+                            <label class="form-label fw-bold">تاریخ انقضا (شمسی و میلادی):</label>
+                            <input type="text" name="valid_until" class="form-control font-monospace" data-dual-picker="date" value="{{ d.valid_until[:10] if d.valid_until else '' }}" placeholder="انتخاب تاریخ انقضا...">
                         </div>
                     </div>
                     <div class="form-check form-switch mb-3 p-2 bg-light rounded border">

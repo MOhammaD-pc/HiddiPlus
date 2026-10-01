@@ -153,8 +153,10 @@
                             </td>
                             <td>{{ rec.title }}</td>
                             <td><span class="badge bg-secondary">{{ rec.category }}</span></td>
-                            <td class="{% if rec.type == 'income' %}text-success{% else %}text-danger{% endif %} fw-bold">{{ "{:,}".format(rec.amount) }}</td>
-                            <td dir="ltr">{{ rec.date }}</td>
+                            <td dir="rtl">
+                                <div class="fw-bold text-light">{{ rec.date | shamsi_date }}</div>
+                                <small class="text-white-50 font-monospace" dir="ltr" style="font-size: 0.72rem;">{{ rec.date }}</small>
+                            </td>
                             <td>
                                 <a href="{{ url_for('accounting_delete_record', record_id=rec.id) }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('آیا از حذف این رکورد اطمینان دارید؟');"><i class="fas fa-trash"></i></a>
                             </td>
@@ -200,9 +202,9 @@
                     <input type="number" name="amount" class="form-control bg-dark text-white border-secondary" placeholder="مثال: 500000" min="1" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label text-white-50">تاریخ (اختیاری)</label>
-                    <input type="date" name="date" class="form-control bg-dark text-white border-secondary">
-                    <small class="text-muted d-block mt-1">در صورت خالی بودن، تاریخ امروز ثبت می‌شود.</small>
+                    <label class="form-label text-white-50">تاریخ سند (شمسی و میلادی):</label>
+                    <input type="text" name="date" class="form-control bg-dark text-white border-secondary font-monospace" data-dual-picker="date" placeholder="انتخاب تاریخ سند...">
+                    <small class="text-white-50 d-block mt-1" style="font-size: 0.75rem;">در صورت خالی بودن، تاریخ امروز ثبت می‌شود.</small>
                 </div>
                 <div class="mb-3">
                     <label class="form-label text-white-50">توضیحات تکمیلی</label>
