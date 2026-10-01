@@ -4111,6 +4111,118 @@
         function syncDebtDueCalendar(uid) { DebtDuePicker.updateFromCalendar(uid); }
         function setDebtDueQuickDays(uid, days) { DebtDuePicker.setQuickDays(uid, days); }
 
+        // ─── توابع مدیریت و مستثنی کردن مهلت تسویه بدهی مشتری در مودال گزارش بدهی ───
+        function toggleDebtDeadlineEditor(subId, forceState) {
+            const el = document.getElementById('debtDeadlineEditor_' + subId);
+            if (!el) return;
+            if (forceState !== undefined) {
+                el.style.display = forceState ? 'block' : 'none';
+            } else {
+                el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+            }
+        }
+
+        function setDebtDeadlineEditorDays(subId, days, btn) {
+            const input = document.getElementById('debtDeadlineDaysInput_' + subId);
+            if (input) input.value = days;
+            if (btn && btn.parentElement) {
+                btn.parentElement.querySelectorAll('button').forEach(b => {
+                    b.classList.remove('btn-outline-danger', 'active', 'fw-bold');
+                    b.classList.add('btn-outline-secondary');
+                });
+                btn.classList.add('btn-outline-danger', 'active', 'fw-bold');
+                btn.classList.remove('btn-outline-secondary');
+            }
+        }
+
+        function setCustomerExemptAction(subId, accountName, isCurrentlyDisabled) {
+            let reactivate = false;
+            if (isCurrentlyDisabled) {
+                const conf = confirm(
+                    'این مشتری در حال حاضر قطع/غیرفعال می‌باشد.\n\n' +
+                    'آیا مایلید با مستثنی کردن مشتری، اشتراک وی فوراً در سرور هیدیفای و پنل نیز فعال و متصل گردد؟\n\n' +
+                    '[OK] = مستثنی کردن و فعال‌سازی فوری اشتراک\n' +
+                    '[Cancel] = فقط مستثنی کردن (بدون فعال‌سازی)'
+                );
+                reactivate = Boolean(conf);
+            }
+
+            fetch(`/api/subscription/${subId}/update-debt-deadline`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    exempt: true,
+                    reactivate: reactivate
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + (data.message || 'مشتری با موفقیت مستثنی شد.'));
+                    if (reactivate || data.reactivated) {
+                        window._debtSettledReloadNeeded = true;
+                    }
+                    if (typeof loadCustomerDebtReportData === 'function') {
+                        loadCustomerDebtReportData(subId, accountName);
+                    }
+                } else {
+                    alert('❌ خطا: ' + (data.error || 'خطای نامشخص'));
+                }
+            })
+            .catch(err => {
+                alert('❌ خطای ارتباط با سرور: ' + err.message);
+            });
+        }
+
+        function submitUpdateDebtDeadline(subId, isExempt, accountName) {
+            const daysInput = document.getElementById('debtDeadlineDaysInput_' + subId);
+            const days = daysInput ? parseInt(daysInput.value) || 3 : 3;
+
+            const btn = document.getElementById('btnSaveDeadline_' + subId);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> در حال ذخیره...';
+            }
+
+            fetch(`/api/subscription/${subId}/update-debt-deadline`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    exempt: false,
+                    days: days,
+                    reactivate: false
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + (data.message || 'مهلت تسویه با موفقیت تنظیم شد.'));
+                    if (typeof loadCustomerDebtReportData === 'function') {
+                        loadCustomerDebtReportData(subId, accountName);
+                    }
+                } else {
+                    alert('❌ خطا: ' + (data.error || 'خطای نامشخص'));
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-save me-1"></i> ذخیره مهلت';
+                    }
+                }
+            })
+            .catch(err => {
+                alert('❌ خطای ارتباط با سرور: ' + err.message);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-save me-1"></i> ذخیره مهلت';
+                }
+            });
+        }
+
         // ─── تابع عمومی نمایش بارکد QR و لینک ───
         let currentQrCodeInstance = null;
         function showQrModal(url, title, type) {

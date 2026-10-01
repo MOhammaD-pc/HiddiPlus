@@ -12167,6 +12167,30 @@ def api_customer_debt_report(sub_id: int):
                 r["created_at_shamsi"] = filter_shamsi_date(c_str)
                 r["jalali_date"] = filter_shamsi_date(c_str, "%Y/%m/%d")
                 r["jalali_time"] = filter_shamsi_date(c_str, "%H:%M") if len(c_str) > 10 else ""
+
+    debt_auto_at = sub.get("debt_auto_disable_at")
+    debt_auto_shamsi = filter_shamsi_date(debt_auto_at) if debt_auto_at else None
+    is_expired = False
+    rem_text = ""
+    if debt_auto_at:
+        try:
+            d_dt = datetime.fromisoformat(str(debt_auto_at))
+            now_dt = get_now_naive()
+            diff_sec = (d_dt - now_dt).total_seconds()
+            if diff_sec <= 0:
+                is_expired = True
+                rem_text = "مهلت منقضی شده"
+            else:
+                total_hrs = int(diff_sec // 3600)
+                days_left = total_hrs // 24
+                rem_hrs = total_hrs % 24
+                if days_left > 0:
+                    rem_text = f"{days_left} روز و {rem_hrs} ساعت مانده"
+                else:
+                    rem_text = f"{total_hrs} ساعت مانده"
+        except Exception:
+            pass
+
     return jsonify({
         "success": True,
         "subscription": {
@@ -12177,6 +12201,11 @@ def api_customer_debt_report(sub_id: int):
             "debt_notes": sub.get("debt_notes"),
             "status": sub.get("status", "active"),
             "disable_reason": sub.get("disable_reason"),
+            "debt_auto_disable_at": debt_auto_at,
+            "debt_auto_disable_at_shamsi": debt_auto_shamsi,
+            "is_deadline_expired": is_expired,
+            "remaining_days_text": rem_text,
+            "is_exempt": (debt_auto_at is None),
             "is_debt_disabled": bool(
                 sub.get("status") == "disabled" or
                 sub.get("debt_restricted_until") or
@@ -12184,6 +12213,109 @@ def api_customer_debt_report(sub_id: int):
             )
         },
         "report": report
+    })
+
+
+@app.route("/api/subscription/<int:sub_id>/update-debt-deadline", methods=["POST"])
+def api_subscription_update_debt_deadline(sub_id: int):
+    """بروزرسانی مهلت تسویه بدهی و قطع خودکار یا مستثنی کردن مشتری توسط مدیر یا نماینده"""
+    is_admin = bool(session.get("logged_in") and (session.get("role") in ("admin", "super_admin", "partner") or session.get("is_admin")))
+    reseller_id = session.get("reseller_id")
+    if not is_admin and not reseller_id:
+        return jsonify({"success": False, "error": "دسترسی غیرمجاز"}), 403
+
+    sub = db.get_subscription(sub_id)
+    if not sub:
+        return jsonify({"success": False, "error": "اشتراک یافت نشد"}), 404
+
+    if not is_admin and reseller_id and sub.get("reseller_id") != reseller_id:
+        return jsonify({"success": False, "error": "دسترسی غیرمجاز به این اشتراک"}), 403
+
+    req_data = (request.get_json(silent=True) if request.is_json else None) or request.form or {}
+    exempt = bool(req_data.get("exempt"))
+    reactivate = bool(req_data.get("reactivate"))
+    days = req_data.get("days")
+    shamsi_date = req_data.get("shamsi_date")
+
+    now_iso = get_now_iso()
+    actor_name = session.get("name") or session.get("username") or ("مدیریت" if is_admin else f"نماینده #{reseller_id}")
+
+    new_deadline = None
+    if not exempt:
+        new_deadline = calculate_debt_auto_disable_at(
+            days_val=days or 3,
+            shamsi_date_str=shamsi_date,
+            base_dt=get_now_naive()
+        )
+
+    conn = db.get_connection()
+    cursor = conn.cursor()
+
+    reactivated_info = False
+    if reactivate:
+        try:
+            if sub.get("hidify_uuid"):
+                hidify_sync_update_user(sub["hidify_uuid"], enable=True, is_active=True, reseller_id=sub.get("reseller_id"))
+        except Exception as e_hid:
+            logger.warning(f"Error enabling Hiddify user {sub.get('hidify_uuid')} on debt deadline update: {e_hid}")
+
+        cursor.execute("""
+            UPDATE subscriptions SET
+                debt_auto_disable_at = ?,
+                status = 'active',
+                disable_reason = NULL,
+                in_debt_restriction = 0,
+                debt_restricted_until = NULL,
+                debt_restriction_session_start = NULL,
+                updated_at = ?
+            WHERE id = ?
+        """, (new_deadline, now_iso, sub_id))
+        reactivated_info = True
+    else:
+        cursor.execute("""
+            UPDATE subscriptions SET
+                debt_auto_disable_at = ?,
+                updated_at = ?
+            WHERE id = ?
+        """, (new_deadline, now_iso, sub_id))
+
+    conn.commit()
+    conn.close()
+
+    try:
+        acc_name = sub.get("account_name") or f"sub_{sub_id}"
+        log_title = f"مستثنی کردن اشتراک «{acc_name}» از قطع خودکار" if exempt else f"تنظیم مهلت تسویه اشتراک «{acc_name}»"
+        deadline_text = filter_shamsi_date(new_deadline) if new_deadline else "مستثنی (بدون قطع خودکار)"
+        log_desc = f"توسط {actor_name}. وضعیت مهلت: {deadline_text}"
+        if reactivated_info:
+            log_desc += " — اشتراک همزمان مجدداً فعال شد."
+        if hasattr(db, "add_system_log"):
+            db.add_system_log(
+                category="debt",
+                action="update_deadline",
+                title=log_title,
+                description=log_desc,
+                actor_type="admin" if is_admin else "reseller",
+                actor_id=session.get("user_id") or reseller_id or 0,
+                actor_name=actor_name,
+                details={"sub_id": sub_id, "exempt": exempt, "deadline": new_deadline, "reactivated": reactivated_info}
+            )
+    except Exception:
+        pass
+
+    shamsi_formatted = filter_shamsi_date(new_deadline) if new_deadline else None
+    msg = "مشتری با موفقیت مستثنی شد و قطع خودکار سرویس حذف گردید." if exempt else f"مهلت تسویه حساب با موفقیت تنظیم شد."
+    if reactivated_info:
+        msg += " همچنین اشتراک مشتری با موفقیت در هیدیفای فعال گردید."
+
+    return jsonify({
+        "success": True,
+        "message": msg,
+        "is_exempt": exempt,
+        "debt_auto_disable_at": new_deadline,
+        "debt_auto_disable_at_shamsi": shamsi_formatted,
+        "status": "active" if reactivated_info else sub.get("status"),
+        "reactivated": reactivated_info
     })
 
 
