@@ -85,17 +85,17 @@
                 </select>
             </div>
             <!-- فرم جستجوی زنده سرور و کلاینت مشتریان نماینده -->
-            <form method="GET" action="{{ url_for('reseller_users') }}" class="d-flex align-items-center m-0 live-server-search-form" id="resellerCustomerSearchForm">
+            <form method="GET" action="{{ url_for('reseller_users') }}" class="d-flex align-items-center m-0 flex-grow-1 flex-md-grow-0 live-server-search-form" id="resellerCustomerSearchForm">
                 <input type="hidden" name="status" value="{{ status_filter or 'all' }}">
                 <input type="hidden" name="per_page" value="{{ per_page or '25' }}">
-                <div class="input-group input-group-sm" style="min-width: 280px;">
-                    <input type="text" name="search" id="resellerCustomerSearchInput" class="form-control form-control-sm live-server-search" data-table="resellerUsersTable" placeholder="جستجو در تمام مشتریان (نام، شماره، پلن...)" value="{{ search or '' }}">
+                <div class="customer-search-group w-100">
+                    <input type="text" name="search" id="resellerCustomerSearchInput" class="customer-search-input live-server-search" data-table="resellerUsersTable" placeholder="جستجو در تمام مشتریان (نام، شماره، پلن...)" value="{{ search or '' }}">
                     {% if search %}
-                    <a href="{{ url_for('reseller_users', status=status_filter or 'all', per_page=per_page or '25') }}" class="btn btn-outline-secondary btn-sm" title="پاک کردن جستجو">
-                        <i class="fas fa-times"></i>
+                    <a href="{{ url_for('reseller_users', status=status_filter or 'all', per_page=per_page or '25') }}" class="search-clear-btn" title="پاک کردن جستجو">
+                        <i class="fas fa-times-circle"></i>
                     </a>
                     {% endif %}
-                    <button type="submit" class="btn btn-primary btn-sm px-3" title="جستجو در کل مشتریان">
+                    <button type="submit" class="btn btn-primary btn-sm search-submit-btn" title="جستجو در کل مشتریان">
                         <i class="fas fa-search me-1"></i> جستجو
                     </button>
                 </div>
@@ -275,11 +275,13 @@
                                         <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-white rounded-circle" title="آنلاین"></span>
                                     {% endif %}
                                     {% if sub.get('loyalty_tier') == 'gold' %}
-                                        <span class="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-warning text-dark border border-white shadow-sm p-1" style="font-size: 8px; line-height: 1;" title="سطح طلایی"><i class="fas fa-crown"></i></span>
+                                        <span class="avatar-tier-badge tier-gold" title="سطح طلایی (VIP)"><i class="fas fa-crown"></i></span>
                                     {% elif sub.get('loyalty_tier') == 'silver' %}
-                                        <span class="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-secondary text-white border border-white shadow-sm p-1" style="font-size: 8px; line-height: 1;" title="سطح نقره‌ای"><i class="fas fa-star"></i></span>
+                                        <span class="avatar-tier-badge tier-silver" title="سطح نقره‌ای"><i class="fas fa-star"></i></span>
                                     {% elif sub.get('loyalty_tier') == 'bronze' %}
-                                        <span class="position-absolute top-0 start-0 translate-middle badge rounded-pill text-white border border-white shadow-sm p-1" style="background: #cd7f32; font-size: 8px; line-height: 1;" title="سطح برنزی"><i class="fas fa-medal"></i></span>
+                                        <span class="avatar-tier-badge tier-bronze" title="سطح برنزی"><i class="fas fa-medal"></i></span>
+                                    {% elif sub.get('is_vip') %}
+                                        <span class="avatar-tier-badge tier-vip" title="مشتری طلایی (VIP)"><i class="fas fa-crown"></i></span>
                                     {% endif %}
                                 </div>
                                 <div>
@@ -287,20 +289,11 @@
                                         <span class="text-primary text-decoration-underline-hover cursor-pointer" role="button" data-bs-toggle="modal" data-bs-target="#customerDetailModal{{ sub['id'] }}" title="مشاهده جزئیات، بارکدها و مدیریت (سطح: {{ sub.get('loyalty_title') or 'عادی' }})">{{ sub['account_name'] or 'بدون نام' }}</span>
                                         {% set has_res_note = true if (sub.get('reseller_note') or sub.get('customer_note')) else false %}
                                         <button type="button" 
-                                                class="btn btn-link p-0 text-decoration-none sub-note-btn ms-1 {% if has_res_note %}text-warning{% else %}text-muted opacity-50{% endif %}" 
+                                                class="sub-note-btn ms-1 {% if has_res_note %}has-note text-warning{% else %}opacity-50{% endif %}" 
                                                 onclick="event.stopPropagation(); openQuickSubNote('{{ sub['id'] }}', '{{ sub['account_name']|default('', true)|e }}', this);" 
                                                 title="{% if sub.get('reseller_note') %}یادداشت: {{ sub['reseller_note']|striptags|truncate(50) }}{% elif sub.get('customer_note') %}پیام به مشتری: {{ sub['customer_note']|striptags|truncate(50) }}{% else %}افزودن یادداشت / پیام به مشتری{% endif %}">
                                             <i class="fas {% if has_res_note %}fa-note-sticky text-warning{% else %}fa-note-sticky{% endif %}" style="font-size: 0.85rem;"></i>
                                         </button>
-                                        {% if sub.get('loyalty_tier') == 'gold' %}
-                                             <span class="badge badge-vip py-0 px-1 shadow-sm" style="font-size: 0.7rem;" title="سطح طلایی (VIP)"><i class="fas fa-crown me-1"></i>طلایی</span>
-                                        {% elif sub.get('loyalty_tier') == 'silver' %}
-                                             <span class="badge text-dark py-0 px-1 shadow-sm border border-secondary" style="background: #e2e8f0; font-size: 0.7rem;" title="سطح نقره‌ای"><i class="fas fa-star text-secondary me-1"></i>نقره‌ای</span>
-                                        {% elif sub.get('loyalty_tier') == 'bronze' %}
-                                             <span class="badge text-white py-0 px-1 shadow-sm" style="background: #cd7f32; border-color: #b45309; font-size: 0.7rem;" title="سطح برنزی"><i class="fas fa-medal me-1"></i>برنزی</span>
-                                        {% elif sub.get('is_vip') %}
-                                             <span class="badge badge-vip py-0 px-1" title="مشتری طلایی (VIP)"><i class="fas fa-crown"></i> VIP</span>
-                                        {% endif %}
                                         {% if sub.get('has_queue') %}
                                             {% set q_cnt = sub.get('queue_count') or (sub.get('pending_queues')|length if sub.get('pending_queues') else 1) %}
                                             <span class="badge bg-info text-dark py-0 px-2 shadow-sm cursor-pointer" role="button" data-bs-toggle="modal" data-bs-target="#customerQueueModal{{ sub['id'] }}" style="font-size: 0.7rem;" title="مشاهده و مدیریت صف تمدید ({{ q_cnt }} بسته در نوبت)">

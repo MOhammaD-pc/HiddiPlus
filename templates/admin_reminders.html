@@ -1,5 +1,159 @@
 {% extends "base.html" %}
 {% block title %}سیستم یادآوری{% endblock %}
+
+{% block styles %}
+<style>
+/* ─── تقویم دوگانه شمسی و میلادی (Dual Shamsi-Gregorian Calendar) ─── */
+.dual-date-display-box {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0 !important;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+.dual-date-display-box:hover {
+    background: #f1f5f9;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+[data-bs-theme="dark"] .dual-date-display-box {
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+[data-bs-theme="dark"] .dual-date-display-box:hover {
+    background: #24344d !important;
+    border-color: #60a5fa !important;
+}
+
+.dual-calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    gap: 4px;
+}
+.weekday-cell {
+    font-size: 0.82rem;
+    padding: 6px 0;
+    user-select: none;
+}
+
+.dual-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+.dual-day-cell {
+    position: relative;
+    min-height: 48px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    user-select: none;
+    padding: 4px 2px;
+}
+[data-bs-theme="dark"] .dual-day-cell {
+    background: #0f172a !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #e2e8f0 !important;
+}
+.dual-day-cell:hover {
+    border-color: #3b82f6 !important;
+    background: rgba(59, 130, 246, 0.08) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+}
+[data-bs-theme="dark"] .dual-day-cell:hover {
+    background: rgba(59, 130, 246, 0.22) !important;
+}
+
+/* عدد تاریخ شمسی: بزرگ، پررنگ و برجسته */
+.dual-day-cell .day-shamsi-number {
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: inherit;
+    font-feature-settings: "ss01";
+}
+
+/* عدد تاریخ میلادی: کوچک، ریز و ظریف */
+.dual-day-cell .day-gregorian-number {
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1;
+    color: #64748b;
+    margin-top: 3px;
+    opacity: 0.85;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+}
+[data-bs-theme="dark"] .dual-day-cell .day-gregorian-number {
+    color: #94a3b8;
+}
+
+/* روز جاری (امروز) */
+.dual-day-cell.is-today {
+    border: 1.5px solid #2563eb !important;
+}
+.dual-day-cell.is-today::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #2563eb;
+}
+
+/* جمعه (روز تعطیل) */
+.dual-day-cell.is-friday:not(.is-selected) .day-shamsi-number {
+    color: #dc2626 !important;
+}
+
+/* روز انتخاب شده */
+.dual-day-cell.is-selected {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    color: #ffffff !important;
+    border-color: #1d4ed8 !important;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35) !important;
+    transform: scale(1.02);
+}
+.dual-day-cell.is-selected .day-shamsi-number {
+    color: #ffffff !important;
+}
+.dual-day-cell.is-selected .day-gregorian-number {
+    color: rgba(255, 255, 255, 0.88) !important;
+    opacity: 1 !important;
+}
+
+/* سلول خالی قبل از شروع روز اول ماه */
+.dual-day-cell.is-empty {
+    visibility: hidden;
+    pointer-events: none;
+    border: none !important;
+    background: transparent !important;
+}
+
+@media (max-width: 576px) {
+    .dual-day-cell {
+        min-height: 44px;
+        padding: 2px 1px;
+    }
+    .dual-day-cell .day-shamsi-number {
+        font-size: 0.95rem;
+    }
+    .dual-day-cell .day-gregorian-number {
+        font-size: 0.62rem;
+        margin-top: 2px;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -43,8 +197,17 @@
                         </td>
                         <td>
                             {% if r.type == 'date' %}
-                                <span class="fw-semibold text-dark" title="{{ r.target_date }}">{{ r.target_date_shamsi if r.target_date_shamsi else r.target_date[:16] }}</span>
-                                <br><small class="text-muted"><i class="bi bi-clock me-1"></i>به وقت تهران</small>
+                                <div class="d-flex flex-column gap-1">
+                                    <span class="fw-bold text-dark" title="تاریخ سررسید شمسی: {{ r.target_date_shamsi if r.target_date_shamsi else r.target_date[:16] }}">
+                                        <i class="bi bi-calendar2-check text-primary me-1"></i>{{ r.target_date_shamsi if r.target_date_shamsi else r.target_date[:16] }}
+                                    </span>
+                                    <div class="d-flex align-items-center gap-1 text-muted small" style="font-size: 0.75rem;">
+                                        <span class="badge bg-light text-secondary border font-monospace px-1.5 py-0.5" title="معادل تقویم میلادی">
+                                            {{ r.target_date[:16].replace('T', ' ') if r.target_date else '-' }}
+                                        </span>
+                                        <span><i class="bi bi-clock ms-1"></i>به وقت تهران</span>
+                                    </div>
+                                </div>
                             {% else %}
                                 {{ "%.2f"|format(r.current_traffic|default(0)) }} / {{ r.target_traffic }} GB
                             {% endif %}
@@ -104,10 +267,168 @@
                         <textarea class="form-control" id="description" rows="2"></textarea>
                     </div>
                     
-                    <div id="dateFields" class="row">
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">تاریخ و ساعت سررسید <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1"><i class="bi bi-clock me-1"></i>به وقت تهران</span></label>
-                            <input type="datetime-local" class="form-control" id="target_date">
+                    <!-- فیلد تاریخ و تقویم دوگانه شمسی - میلادی -->
+                    <div id="dateFields" class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold d-flex justify-content-between align-items-center mb-2">
+                                <span>
+                                    <i class="bi bi-calendar3 text-primary me-1"></i>
+                                    تاریخ و ساعت سررسید (تقویم شمسی با معادل میلادی)
+                                </span>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                    <i class="bi bi-clock me-1"></i>به وقت تهران
+                                </span>
+                            </label>
+
+                            <!-- کادر خلاصه تاریخ انتخاب‌شده -->
+                            <div class="dual-date-display-box p-3 rounded-3 border bg-light position-relative mb-2" onclick="DualDatePicker.toggleCalendar()">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="calendar-icon-pill p-2 rounded-3 bg-primary text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 44px; height: 44px;">
+                                            <i class="bi bi-calendar-event fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold fs-6 text-dark" id="displayShamsiFull">
+                                                -- انتخاب تاریخ شمسی --
+                                            </div>
+                                            <div class="text-muted small d-flex align-items-center gap-1 mt-0.5" id="displayGregorianFull">
+                                                <i class="bi bi-globe2 text-secondary"></i>
+                                                <span>معادل میلادی: --</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill shadow-sm" id="displayTimeBadge">
+                                            <i class="bi bi-clock me-1"></i> ساعت ۱۲:۰۰
+                                        </span>
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="toggleCalendarBtn" onclick="event.stopPropagation(); DualDatePicker.toggleCalendar();">
+                                            <i class="bi bi-calendar-week me-1"></i> تقویم
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- مقدار مخفی جهت ارسال به سرور با فرمت استاندارد ISO -->
+                            <input type="hidden" id="target_date" name="target_date" value="">
+                        </div>
+
+                        <!-- کارت کامل تقویم دوگانه ماهانه و انتخاب‌گر زمان -->
+                        <div class="col-12" id="dualCalendarContainer">
+                            <div class="card shadow-sm border border-primary-subtle rounded-3 overflow-hidden">
+                                <!-- هدر تقویم: سال، ماه، ناوبری و برچسب ماه میلادی -->
+                                <div class="card-header bg-white py-2.5 px-3 border-bottom">
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div class="d-flex align-items-center gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle p-1 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="DualDatePicker.prevMonth()" title="ماه قبل">
+                                                <i class="bi bi-chevron-right"></i>
+                                            </button>
+                                            <div class="d-flex align-items-center gap-1 mx-1">
+                                                <select class="form-select form-select-sm fw-bold border-0 bg-light" id="calMonthSelect" onchange="DualDatePicker.onMonthChange(this.value)">
+                                                    <!-- ۱۲ ماه شمسی -->
+                                                </select>
+                                                <select class="form-select form-select-sm fw-bold border-0 bg-light" id="calYearSelect" onchange="DualDatePicker.onYearChange(this.value)">
+                                                    <!-- سال‌های شمسی -->
+                                                </select>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle p-1 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="DualDatePicker.nextMonth()" title="ماه بعد">
+                                                <i class="bi bi-chevron-left"></i>
+                                            </button>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1.5" id="calGregorianRangeBadge" style="font-size: 0.78rem;">
+                                                <!-- معادل ماه‌های میلادی -->
+                                            </span>
+                                            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 text-primary small fw-semibold" onclick="DualDatePicker.goToToday()">
+                                                <i class="bi bi-arrow-repeat me-1"></i>امروز
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- نوار میانبرهای سریع روزها -->
+                                <div class="bg-light py-1.5 px-3 border-bottom d-flex align-items-center gap-2 overflow-auto" style="font-size: 0.8rem;">
+                                    <span class="text-muted small fw-semibold text-nowrap"><i class="bi bi-lightning-charge text-warning me-1"></i>میانبر:</span>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(0)">امروز</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(1)">فردا</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(3)">۳ روز بعد</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(7)">۱ هفته بعد</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(14)">۲ هفته بعد</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(30)">۱ ماه بعد</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded-pill text-nowrap" onclick="DualDatePicker.setRelative(90)">۳ ماه بعد</button>
+                                </div>
+
+                                <div class="card-body p-2 p-sm-3">
+                                    <!-- نام روزهای هفته (شنبه تا جمعه) -->
+                                    <div class="dual-calendar-weekdays mb-2">
+                                        <div class="weekday-cell text-muted fw-bold">ش</div>
+                                        <div class="weekday-cell text-muted fw-bold">ی</div>
+                                        <div class="weekday-cell text-muted fw-bold">د</div>
+                                        <div class="weekday-cell text-muted fw-bold">س</div>
+                                        <div class="weekday-cell text-muted fw-bold">چ</div>
+                                        <div class="weekday-cell text-muted fw-bold">پ</div>
+                                        <div class="weekday-cell text-danger fw-bold">ج</div>
+                                    </div>
+
+                                    <!-- جدول شبکه‌ای روزها (عدد شمسی درشت + عدد میلادی ریز) -->
+                                    <div class="dual-calendar-grid" id="dualCalendarGrid">
+                                        <!-- خانه‌های روز به صورت پویا با جاوااسکریپت تولید می‌شوند -->
+                                    </div>
+
+                                    <hr class="my-3 opacity-50">
+
+                                    <!-- انتخاب ساعت و دقیقه به وقت تهران -->
+                                    <div class="row align-items-center g-2 pt-1">
+                                        <div class="col-12 col-md-5">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="bi bi-clock-history text-primary fs-5"></i>
+                                                <div>
+                                                    <div class="fw-bold small text-dark">ساعت و دقیقه سررسید:</div>
+                                                    <div class="text-muted" style="font-size: 0.72rem;">اعلان در این ساعت فعال و ارسال می‌شود</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-md-7">
+                                            <div class="d-flex align-items-center justify-content-md-end gap-2 flex-wrap">
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <label class="small text-muted mb-0">ساعت:</label>
+                                                    <select class="form-select form-select-sm font-monospace text-center fw-bold" style="width: 75px;" id="calHourSelect" onchange="DualDatePicker.onTimeChange()">
+                                                        <!-- 00 to 23 -->
+                                                    </select>
+                                                </div>
+                                                <span class="fw-bold text-muted">:</span>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <label class="small text-muted mb-0">دقیقه:</label>
+                                                    <select class="form-select form-select-sm font-monospace text-center fw-bold" style="width: 75px;" id="calMinuteSelect" onchange="DualDatePicker.onTimeChange()">
+                                                        <!-- 00 to 59 -->
+                                                    </select>
+                                                </div>
+                                                <div class="btn-group btn-group-sm ms-1">
+                                                    <button type="button" class="btn btn-outline-secondary" onclick="DualDatePicker.setTimePreset(9, 0)">۰۹:۰۰</button>
+                                                    <button type="button" class="btn btn-outline-secondary" onclick="DualDatePicker.setTimePreset(12, 0)">۱۲:۰۰</button>
+                                                    <button type="button" class="btn btn-outline-secondary" onclick="DualDatePicker.setTimePreset(18, 0)">۱۸:۰۰</button>
+                                                    <button type="button" class="btn btn-outline-secondary" onclick="DualDatePicker.setTimePreset(21, 0)">۲۱:۰۰</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- پاورقی تقویم: خلاصه انتخاب و زمان باقی‌مانده -->
+                                <div class="card-footer bg-light py-2 px-3 border-top">
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 small">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                <i class="bi bi-check2-circle me-1"></i>انتخاب شده:
+                                            </span>
+                                            <span class="fw-bold text-dark" id="calFooterSummary">--</span>
+                                        </div>
+                                        <div class="text-muted" id="calRemainingTime">
+                                            <!-- مانده تا سررسید -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -183,6 +504,416 @@ document.addEventListener('DOMContentLoaded', function() {
     reminderModal = new bootstrap.Modal(document.getElementById('reminderModal'));
 });
 
+// ─── ابزار پیشرفته تقویم دوگانه شمسی - میلادی با محوریت تقویم شمسی ───
+const DualDatePicker = {
+    shamsiMonths: ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'],
+    shamsiWeekDays: ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'],
+    gregorianMonths: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    gregorianMonthsShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    gregorianMonthsFa: ['ژانویه', 'فوریه', 'مارس', 'آوریل', 'مه', 'ژوئن', 'ژوئیه', 'اوت', 'سپتامبر', 'اکتبر', 'نوامبر', 'دسامبر'],
+    gregorianWeekDays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    
+    g_days_in_month: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
+    j_days_in_month: [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29],
+
+    viewJy: 1405,
+    viewJm: 7,
+    selectedJy: 1405,
+    selectedJm: 7,
+    selectedJd: 1,
+    selectedHour: 12,
+    selectedMinute: 0,
+    isCalendarOpen: true,
+
+    toPersianDigits: function(num) {
+        if (num === null || num === undefined) return '';
+        const faDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        return String(num).replace(/\d/g, d => faDigits[parseInt(d)]);
+    },
+
+    gregorianToJalali: function(gyear, gmonth, gday) {
+        const gy = gyear - 1600;
+        const gm = gmonth - 1;
+        let j_day_no = 365 * gy + Math.floor((gy + 3) / 4) - Math.floor((gy + 99) / 100) + Math.floor((gy + 399) / 400) + gday - 1 - 79;
+        for (let i = 0; i < gm; i++) j_day_no += this.g_days_in_month[i];
+        if (gm > 1 && ((gyear % 4 === 0 && gyear % 100 !== 0) || (gyear % 400 === 0))) j_day_no += 1;
+        const j_np = Math.floor(j_day_no / 12053);
+        j_day_no %= 12053;
+        let jy = 979 + 33 * j_np + 4 * Math.floor(j_day_no / 1461);
+        j_day_no %= 1461;
+        if (j_day_no >= 366) {
+            j_day_no -= 1;
+            jy += Math.floor(j_day_no / 365);
+            j_day_no %= 365;
+        }
+        let i = 0;
+        for (i = 0; i < 11; i++) {
+            if (j_day_no < this.j_days_in_month[i]) break;
+            j_day_no -= this.j_days_in_month[i];
+        }
+        return { jy: jy, jm: i + 1, jd: j_day_no + 1 };
+    },
+
+    jalaliToGregorian: function(jyear, jmonth, jday) {
+        const jy = jyear - 979;
+        let g_day_no = 365 * jy + Math.floor(jy / 33) * 8 + Math.floor((jy % 33 + 3) / 4) + jday - 1 + 79;
+        for (let i = 0; i < jmonth - 1; i++) g_day_no += this.j_days_in_month[i];
+        let gy = 1600 + 400 * Math.floor(g_day_no / 146097);
+        g_day_no %= 146097;
+        let leap = 1;
+        if (g_day_no >= 36525) {
+            g_day_no -= 1;
+            gy += 100 * Math.floor(g_day_no / 36524);
+            g_day_no %= 36524;
+            if (g_day_no >= 365) gy++, leap = 0; else leap = 0;
+        }
+        gy += 4 * Math.floor(g_day_no / 1461);
+        g_day_no %= 1461;
+        if (g_day_no >= 366) {
+            leap = 0;
+            g_day_no -= 1;
+            gy += Math.floor(g_day_no / 365);
+            g_day_no %= 365;
+        }
+        let i = 0;
+        while (g_day_no >= this.g_days_in_month[i] + (i === 1 && leap ? 1 : 0)) {
+            g_day_no -= this.g_days_in_month[i] + (i === 1 && leap ? 1 : 0);
+            i++;
+        }
+        return { gy: gy, gm: i + 1, gd: g_day_no + 1 };
+    },
+
+    getDaysInJalaliMonth: function(jy, jm) {
+        if (jm <= 6) return 31;
+        if (jm <= 11) return 30;
+        const g30 = this.jalaliToGregorian(jy, 12, 30);
+        const jBack = this.gregorianToJalali(g30.gy, g30.gm, g30.gd);
+        return (jBack.jy === jy && jBack.jm === 12 && jBack.jd === 30) ? 30 : 29;
+    },
+
+    parseIsoDate: function(str) {
+        if (!str) return null;
+        const m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{1,2}))?/);
+        if (!m) return null;
+        return {
+            gy: parseInt(m[1]),
+            gm: parseInt(m[2]),
+            gd: parseInt(m[3]),
+            hh: m[4] !== undefined ? parseInt(m[4]) : 12,
+            mm: m[5] !== undefined ? parseInt(m[5]) : 0
+        };
+    },
+
+    init: function(isoDateStr) {
+        let p = this.parseIsoDate(isoDateStr);
+        if (!p) {
+            // پیش‌فرض: فردا ساعت ۱۲:۰۰ ظهر
+            const now = new Date();
+            const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            p = {
+                gy: tomorrow.getFullYear(),
+                gm: tomorrow.getMonth() + 1,
+                gd: tomorrow.getDate(),
+                hh: 12,
+                mm: 0
+            };
+        }
+
+        const j = this.gregorianToJalali(p.gy, p.gm, p.gd);
+        this.selectedJy = j.jy;
+        this.selectedJm = j.jm;
+        this.selectedJd = j.jd;
+        this.viewJy = j.jy;
+        this.viewJm = j.jm;
+        this.selectedHour = p.hh;
+        this.selectedMinute = p.mm;
+
+        this.initDropdowns();
+        this.isCalendarOpen = true;
+        document.getElementById('dualCalendarContainer').style.display = 'block';
+        const toggleBtn = document.getElementById('toggleCalendarBtn');
+        if (toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-chevron-up me-1"></i>بستن تقویم';
+
+        this.render();
+    },
+
+    initDropdowns: function() {
+        // ۱۲ ماه شمسی
+        const mSel = document.getElementById('calMonthSelect');
+        if (mSel && mSel.options.length === 0) {
+            this.shamsiMonths.forEach((m, idx) => {
+                mSel.add(new Option((idx + 1) + ' - ' + m, idx + 1));
+            });
+        }
+
+        // سال‌های شمسی (از سال جاری - ۲ تا سال جاری + ۶)
+        const ySel = document.getElementById('calYearSelect');
+        if (ySel) {
+            ySel.innerHTML = '';
+            for (let y = this.viewJy - 2; y <= this.viewJy + 6; y++) {
+                ySel.add(new Option(y + ' هـ.ش', y));
+            }
+        }
+
+        // ساعت (۰۰ تا ۲۳)
+        const hSel = document.getElementById('calHourSelect');
+        if (hSel && hSel.options.length === 0) {
+            for (let h = 0; h < 24; h++) {
+                const text = String(h).padStart(2, '0');
+                hSel.add(new Option(text, h));
+            }
+        }
+
+        // دقیقه (۰۰ تا ۵۹)
+        const minSel = document.getElementById('calMinuteSelect');
+        if (minSel && minSel.options.length === 0) {
+            for (let m = 0; m < 60; m++) {
+                const text = String(m).padStart(2, '0');
+                minSel.add(new Option(text, m));
+            }
+        }
+    },
+
+    toggleCalendar: function() {
+        const cont = document.getElementById('dualCalendarContainer');
+        const btn = document.getElementById('toggleCalendarBtn');
+        if (!cont) return;
+        this.isCalendarOpen = (cont.style.display !== 'none');
+        if (this.isCalendarOpen) {
+            cont.style.display = 'none';
+            if (btn) btn.innerHTML = '<i class="bi bi-calendar-week me-1"></i>تقویم';
+        } else {
+            cont.style.display = 'block';
+            if (btn) btn.innerHTML = '<i class="bi bi-chevron-up me-1"></i>بستن تقویم';
+            this.render();
+        }
+    },
+
+    onMonthChange: function(newJm) {
+        this.viewJm = parseInt(newJm);
+        this.render();
+    },
+
+    onYearChange: function(newJy) {
+        this.viewJy = parseInt(newJy);
+        this.render();
+    },
+
+    prevMonth: function() {
+        this.viewJm--;
+        if (this.viewJm < 1) {
+            this.viewJm = 12;
+            this.viewJy--;
+        }
+        this.render();
+    },
+
+    nextMonth: function() {
+        this.viewJm++;
+        if (this.viewJm > 12) {
+            this.viewJm = 1;
+            this.viewJy++;
+        }
+        this.render();
+    },
+
+    onTimeChange: function() {
+        const hSel = document.getElementById('calHourSelect');
+        const minSel = document.getElementById('calMinuteSelect');
+        if (hSel) this.selectedHour = parseInt(hSel.value);
+        if (minSel) this.selectedMinute = parseInt(minSel.value);
+        this.updateSyncAndPreview();
+    },
+
+    setTimePreset: function(h, m) {
+        this.selectedHour = h;
+        this.selectedMinute = m;
+        const hSel = document.getElementById('calHourSelect');
+        const minSel = document.getElementById('calMinuteSelect');
+        if (hSel) hSel.value = h;
+        if (minSel) minSel.value = m;
+        this.updateSyncAndPreview();
+    },
+
+    setRelative: function(days) {
+        const now = new Date();
+        const target = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+        const j = this.gregorianToJalali(target.getFullYear(), target.getMonth() + 1, target.getDate());
+        this.selectedJy = j.jy;
+        this.selectedJm = j.jm;
+        this.selectedJd = j.jd;
+        this.viewJy = j.jy;
+        this.viewJm = j.jm;
+        this.render();
+    },
+
+    goToToday: function() {
+        const now = new Date();
+        const j = this.gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+        this.selectedJy = j.jy;
+        this.selectedJm = j.jm;
+        this.selectedJd = j.jd;
+        this.viewJy = j.jy;
+        this.viewJm = j.jm;
+        this.render();
+    },
+
+    selectDay: function(jy, jm, jd) {
+        this.selectedJy = jy;
+        this.selectedJm = jm;
+        this.selectedJd = jd;
+        this.render();
+    },
+
+    render: function() {
+        // بروزرسانی سلکت‌های ماه و سال
+        const mSel = document.getElementById('calMonthSelect');
+        const ySel = document.getElementById('calYearSelect');
+        if (mSel) mSel.value = this.viewJm;
+        if (ySel) {
+            // اطمینان از وجود سال در سلکت
+            let exists = false;
+            for (let i = 0; i < ySel.options.length; i++) {
+                if (parseInt(ySel.options[i].value) === this.viewJy) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                ySel.add(new Option(this.viewJy + ' هـ.ش', this.viewJy));
+            }
+            ySel.value = this.viewJy;
+        }
+
+        // بروزرسانی سلکت‌های ساعت و دقیقه
+        const hSel = document.getElementById('calHourSelect');
+        const minSel = document.getElementById('calMinuteSelect');
+        if (hSel) hSel.value = this.selectedHour;
+        if (minSel) minSel.value = this.selectedMinute;
+
+        // محاسبه بازه ماه‌های میلادی معادل این ماه شمسی
+        const daysInMonth = this.getDaysInJalaliMonth(this.viewJy, this.viewJm);
+        const gStart = this.jalaliToGregorian(this.viewJy, this.viewJm, 1);
+        const gEnd = this.jalaliToGregorian(this.viewJy, this.viewJm, daysInMonth);
+        const gBadge = document.getElementById('calGregorianRangeBadge');
+        if (gBadge) {
+            const mText = this.gregorianMonthsFa[gStart.gm - 1] + ' - ' + this.gregorianMonthsFa[gEnd.gm - 1];
+            const mEng = this.gregorianMonthsShort[gStart.gm - 1] + ' - ' + this.gregorianMonthsShort[gEnd.gm - 1];
+            const yText = (gStart.gy === gEnd.gy) ? gStart.gy : (gStart.gy + '/' + gEnd.gy);
+            gBadge.innerHTML = `<i class="bi bi-globe2 me-1 text-primary"></i>${mText} ${yText} <span class="opacity-75">(${mEng})</span>`;
+        }
+
+        // ساخت جدول تقویم
+        const grid = document.getElementById('dualCalendarGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        // محاسبه روز شروع هفته برای روز اول این ماه شمسی (۰ = شنبه، ۶ = جمعه)
+        const startDayOfWeek = (new Date(gStart.gy, gStart.gm - 1, gStart.gd).getDay() + 1) % 7;
+
+        // سلول‌های خالی قبل از روز اول
+        for (let i = 0; i < startDayOfWeek; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'dual-day-cell is-empty';
+            grid.appendChild(emptyCell);
+        }
+
+        // امروز
+        const now = new Date();
+        const todayJ = this.gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+
+        // تولید خانه‌های روزهای ماه
+        for (let jd = 1; jd <= daysInMonth; jd++) {
+            const gDay = this.jalaliToGregorian(this.viewJy, this.viewJm, jd);
+            const isToday = (todayJ.jy === this.viewJy && todayJ.jm === this.viewJm && todayJ.jd === jd);
+            const isSelected = (this.selectedJy === this.viewJy && this.selectedJm === this.viewJm && this.selectedJd === jd);
+            
+            // روز هفته (جمعه = ۶)
+            const dOfWeek = (new Date(gDay.gy, gDay.gm - 1, gDay.gd).getDay() + 1) % 7;
+            const isFriday = (dOfWeek === 6);
+
+            const cell = document.createElement('div');
+            cell.className = 'dual-day-cell' + 
+                (isSelected ? ' is-selected' : '') + 
+                (isToday ? ' is-today' : '') + 
+                (isFriday ? ' is-friday' : '');
+
+            // عنوان راهنما
+            cell.title = `شمسی: ${jd} ${this.shamsiMonths[this.viewJm - 1]} ${this.viewJy} | میلادی: ${gDay.gd} ${this.gregorianMonths[gDay.gm - 1]} ${gDay.gy}`;
+            cell.onclick = () => this.selectDay(this.viewJy, this.viewJm, jd);
+
+            // در صورتی که روز اول ماه میلادی باشد، نام اختصاری ماه میلادی نیز در کنار عدد میلادی نمایش می‌یابد
+            const gregLabel = (gDay.gd === 1) ? `1 ${this.gregorianMonthsShort[gDay.gm - 1]}` : `${gDay.gd}`;
+
+            cell.innerHTML = `
+                <div class="day-shamsi-number">${this.toPersianDigits(jd)}</div>
+                <div class="day-gregorian-number">${gregLabel}</div>
+            `;
+
+            grid.appendChild(cell);
+        }
+
+        this.updateSyncAndPreview();
+    },
+
+    updateSyncAndPreview: function() {
+        const gSel = this.jalaliToGregorian(this.selectedJy, this.selectedJm, this.selectedJd);
+        const isoDate = `${gSel.gy}-${String(gSel.gm).padStart(2, '0')}-${String(gSel.gd).padStart(2, '0')}T${String(this.selectedHour).padStart(2, '0')}:${String(this.selectedMinute).padStart(2, '0')}`;
+        
+        // همگام‌سازی ورودی فرم
+        const targetInput = document.getElementById('target_date');
+        if (targetInput) targetInput.value = isoDate;
+
+        // محاسبه روز هفته
+        const selDateObj = new Date(gSel.gy, gSel.gm - 1, gSel.gd, this.selectedHour, this.selectedMinute);
+        const dayIdx = (selDateObj.getDay() + 1) % 7;
+        const shamsiDayName = this.shamsiWeekDays[dayIdx];
+        const gregDayName = this.gregorianWeekDays[selDateObj.getDay()];
+
+        const timeStr = `${String(this.selectedHour).padStart(2, '0')}:${String(this.selectedMinute).padStart(2, '0')}`;
+        const timeStrFa = this.toPersianDigits(timeStr);
+
+        // نمایش بنر خلاصه
+        const shamsiEl = document.getElementById('displayShamsiFull');
+        if (shamsiEl) {
+            shamsiEl.textContent = `${shamsiDayName}، ${this.toPersianDigits(this.selectedJd)} ${this.shamsiMonths[this.selectedJm - 1]} ${this.toPersianDigits(this.selectedJy)}`;
+        }
+
+        const gregEl = document.getElementById('displayGregorianFull');
+        if (gEl = gregEl) {
+            gEl.innerHTML = `<i class="bi bi-globe2 text-secondary"></i><span>معادل میلادی: <strong>${gregDayName}, ${gSel.gd} ${this.gregorianMonths[gSel.gm - 1]} ${gSel.gy}</strong></span>`;
+        }
+
+        const timeBadge = document.getElementById('displayTimeBadge');
+        if (timeBadge) {
+            timeBadge.innerHTML = `<i class="bi bi-clock me-1"></i>ساعت ${timeStrFa}`;
+        }
+
+        // پاورقی تقویم
+        const footerSum = document.getElementById('calFooterSummary');
+        if (footerSum) {
+            footerSum.textContent = `${shamsiDayName}، ${this.toPersianDigits(this.selectedJd)} ${this.shamsiMonths[this.selectedJm - 1]} ${this.toPersianDigits(this.selectedJy)} - ساعت ${timeStrFa} (${gSel.gd} ${this.gregorianMonthsShort[gSel.gm - 1]} ${gSel.gy})`;
+        }
+
+        // محاسبه فاصله زمانی باقی‌مانده
+        const remainEl = document.getElementById('calRemainingTime');
+        if (remainEl) {
+            const now = new Date();
+            const diffMs = selDateObj.getTime() - now.getTime();
+            if (diffMs > 0) {
+                const diffDays = Math.floor(diffMs / (24 * 3600 * 1000));
+                const diffHours = Math.floor((diffMs % (24 * 3600 * 1000)) / (3600 * 1000));
+                let remStr = 'مانده تا سررسید: ';
+                if (diffDays > 0) remStr += `${this.toPersianDigits(diffDays)} روز و `;
+                remStr += `${this.toPersianDigits(diffHours)} ساعت`;
+                remainEl.innerHTML = `<i class="bi bi-hourglass-split text-primary me-1"></i>${remStr}`;
+            } else {
+                remainEl.innerHTML = `<span class="text-danger fw-semibold"><i class="bi bi-exclamation-triangle me-1"></i>زمان گذشته (سررسید منقضی شده)</span>`;
+            }
+        }
+    }
+};
+
 function toggleFields() {
     const type = document.getElementById('type').value;
     if (type === 'date') {
@@ -223,6 +954,9 @@ function openAddModal() {
     toggleSms();
     toggleTelegramTarget();
     
+    // راه‌اندازی تقویم دوگانه با تاریخ فردا
+    DualDatePicker.init(null);
+    
     reminderModal.show();
 }
 
@@ -234,9 +968,8 @@ function openEditModal(r) {
     document.getElementById('type').value = r.type;
     document.getElementById('description').value = r.description || '';
     
-    if (r.target_date) {
-        document.getElementById('target_date').value = r.target_date.substring(0, 16);
-    }
+    // راه‌اندازی تقویم دوگانه با تاریخ سررسید موجود
+    DualDatePicker.init(r.target_date || null);
     
     document.getElementById('target_traffic').value = r.target_traffic || '';
     document.getElementById('threshold_percent').value = r.threshold_percent || '80';
@@ -283,7 +1016,6 @@ function saveReminder() {
         is_active: document.getElementById('is_active').checked
     };
     
-    // مقدار target_date مستقیماً با ساعت محلی تهران ارسال می‌شود تا سرور بدون تغییر ساعت آن را پردازش کند
     const url = editId ? '/api/admin/reminders/edit/' + editId : '/api/admin/reminders/add';
     
     fetch(url, {
@@ -296,8 +1028,11 @@ function saveReminder() {
         if (res.success) {
             location.reload();
         } else {
-            alert('خطا در ثبت یادآوری');
+            alert('خطا در ثبت یادآوری: ' + (res.error || 'خطای نامشخص'));
         }
+    })
+    .catch(err => {
+        alert('خطا در ارتباط با سرور');
     });
 }
 

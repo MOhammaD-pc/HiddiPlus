@@ -171,7 +171,7 @@
                                 <span>{{ sub['account_name'] or '-' }}</span>
                                 {% set has_sub_note = true if (sub.get('admin_note') or sub.get('customer_note')) else false %}
                                 <button type="button" 
-                                        class="btn btn-link p-0 text-decoration-none sub-note-btn {% if has_sub_note %}text-warning{% else %}text-muted opacity-50{% endif %}" 
+                                        class="sub-note-btn ms-1 {% if has_sub_note %}has-note text-warning{% else %}opacity-50{% endif %}" 
                                         onclick="event.stopPropagation(); openQuickSubNote('{{ sub['id'] }}', '{{ sub['account_name']|default('', true)|e }}', this);" 
                                         title="{% if sub.get('admin_note') %}یادداشت: {{ sub['admin_note']|striptags|truncate(50) }}{% elif sub.get('customer_note') %}پیام به مشتری: {{ sub['customer_note']|striptags|truncate(50) }}{% else %}افزودن یادداشت / پیام به مشتری{% endif %}">
                                     <i class="fas {% if has_sub_note %}fa-note-sticky text-warning{% else %}fa-note-sticky{% endif %}" style="font-size: 0.82rem;"></i>

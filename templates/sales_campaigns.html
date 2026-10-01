@@ -58,11 +58,16 @@
     <div class="card border-0 rounded-4 p-3 p-md-4 mb-4 shadow-lg position-relative overflow-hidden" 
          style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(24, 87, 242, 0.08) 100%); border: 1.5px solid rgba(245, 158, 11, 0.3) !important;">
         <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
                 <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 px-2.5 py-1 rounded-pill small">
                     <i class="fas fa-circle-dot me-1 fa-beat" style="--fa-animation-duration: 1.5s;"></i>کمپین هم‌اکنون فعال در پرتال
                 </span>
                 <span class="text-secondary small font-monospace">موقعیت: {{ 'زیر مشخصات اشتراک' if active_camp.position == 'below_hero' else ('بالای هدر' if active_camp.position == 'top_header' else ('بالای پلن‌ها' if active_camp.position == 'above_plans' else 'پایین فوتر')) }}</span>
+                {% if active_camp.is_dismissible is not defined or (active_camp.is_dismissible != 0 and active_camp.is_dismissible != '0') %}
+                <span class="badge bg-secondary bg-opacity-25 text-light small"><i class="fas fa-xmark text-warning me-1"></i>قابلیت بستن توسط کاربر: فعال</span>
+                {% else %}
+                <span class="badge bg-danger bg-opacity-20 text-danger border border-danger border-opacity-30 small"><i class="fas fa-lock me-1"></i>بنر ثابت (غیرقابل بستن)</span>
+                {% endif %}
             </div>
             <div class="d-flex align-items-center gap-2">
                 <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-3" onclick='editCampaign({{ active_camp|tojson }})'>
@@ -95,6 +100,11 @@
                     <span class="badge bg-primary px-3 py-2 rounded-pill font-monospace">
                         {{ active_camp.cta_text or 'خرید و تمدید' }} <i class="fas fa-arrow-left ms-1"></i>
                     </span>
+                    {% if active_camp.is_dismissible is not defined or (active_camp.is_dismissible != 0 and active_camp.is_dismissible != '0') %}
+                    <span class="badge bg-secondary bg-opacity-30 text-secondary p-2 rounded-circle" title="دکمه ضربدر بستن بنر فعال است">
+                        <i class="fas fa-xmark"></i>
+                    </span>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -177,12 +187,23 @@
                             </td>
                             <td class="py-3">
                                 <div class="small">
-                                    <span class="badge bg-secondary bg-opacity-25 text-light mb-1 d-inline-block">
-                                        {% if c.position == 'top_header' %}بالای هدر
-                                        {% elif c.position == 'above_plans' %}بالای بسته‌ها
-                                        {% elif c.position == 'bottom_footer' %}پایین فوتر
-                                        {% else %}زیر مشخصات{% endif %}
-                                    </span>
+                                    <div class="d-flex align-items-center gap-1.5 flex-wrap mb-1">
+                                        <span class="badge bg-secondary bg-opacity-25 text-light d-inline-block">
+                                            {% if c.position == 'top_header' %}بالای هدر
+                                            {% elif c.position == 'above_plans' %}بالای بسته‌ها
+                                            {% elif c.position == 'bottom_footer' %}پایین فوتر
+                                            {% else %}زیر مشخصات{% endif %}
+                                        </span>
+                                        {% if c.is_dismissible is not defined or (c.is_dismissible != 0 and c.is_dismissible != '0') %}
+                                        <span class="badge bg-secondary bg-opacity-25 text-light" style="font-size: 0.68rem;" title="کاربر می‌تواند با دکمه ضربدر بنر را ببندد">
+                                            <i class="fas fa-xmark text-warning me-1"></i>قابل بستن
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-danger bg-opacity-20 text-danger border border-danger border-opacity-30" style="font-size: 0.68rem;" title="بنر دائمی است و دکمه ضربدر ندارد">
+                                            <i class="fas fa-lock me-1"></i>ثابت
+                                        </span>
+                                        {% endif %}
+                                    </div>
                                     <span class="text-secondary d-flex align-items-center gap-1.5" style="font-size: 0.72rem;">
                                         تم: {{ 'پاییزه' if c.banner_style == 'autumn_glow' else ('یاقوت' if c.banner_style == 'royal_sapphire' else ('زمرد' if c.banner_style == 'emerald_growth' else 'سایبر')) }}
                                         <span class="rounded-circle d-inline-block ms-1" style="width: 8px; height: 8px; background-color: {{ c.beam_color or '#38bdf8' }}; box-shadow: 0 0 6px {{ c.beam_color or '#38bdf8' }};" title="رنگ رقص نور: {{ c.beam_color or '#38bdf8' }}"></span>
@@ -409,10 +430,25 @@
                         <!-- سوییچ وضعیت فعال/غیرفعال -->
                         <div class="col-12 mt-3">
                             <div class="form-check form-switch d-flex align-items-center gap-3 p-0">
-                                <label class="form-check-label fw-bold text-white" for="campIsActive">
+                                <label class="form-check-label fw-bold text-white" for="campIsActive" style="cursor: pointer;">
                                     <i class="fas fa-power-off text-success me-1"></i>فعال‌سازی فوری کمپین در پرتال مشتریان
                                 </label>
-                                <input class="form-check-input ms-0" type="checkbox" role="switch" id="campIsActive" name="is_active" value="1" checked style="width: 2.6em; height: 1.4em;">
+                                <input class="form-check-input ms-0" type="checkbox" role="switch" id="campIsActive" name="is_active" value="1" checked style="width: 2.6em; height: 1.4em; cursor: pointer;">
+                            </div>
+                        </div>
+
+                        <!-- سوییچ امکان بستن بنر توسط کاربر -->
+                        <div class="col-12 mt-2">
+                            <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08);">
+                                <div class="form-check form-switch d-flex align-items-center justify-content-between p-0 mb-1">
+                                    <label class="form-check-label fw-bold text-white mb-0" for="campIsDismissible" style="cursor: pointer;">
+                                        <i class="fas fa-xmark text-warning me-1.5 fs-6"></i>امکان بستن بنر توسط کاربر (نمایش دکمه ضربدر)
+                                    </label>
+                                    <input class="form-check-input ms-0" type="checkbox" role="switch" id="campIsDismissible" name="is_dismissible" value="1" checked style="width: 2.6em; height: 1.4em; cursor: pointer;">
+                                </div>
+                                <div class="form-text text-secondary small mb-0">
+                                    در صورت فعال بودن، کاربر دکمه ضربدر (بستن) را مشاهده کرده و می‌تواند بنر را موقتاً ببندد (با رفرش یا بازکردن مجدد پرتال، بنر دوباره نمایش داده می‌شود). در صورت غیرفعال بودن، بنر به صورت دائمی و ثابت نمایش یافته و دکمه ضربدر حذف می‌گردد.
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -562,6 +598,7 @@ function openNewCampaignModal() {
     document.getElementById('campaignId').value = '';
     document.getElementById('campaignModalTitle').textContent = 'تعریف کمپین فروش و بنر جشنواره';
     document.getElementById('campIsActive').checked = true;
+    document.getElementById('campIsDismissible').checked = true;
     setBeamPreset('#38bdf8');
 
     // پیش‌فرض زمان پایان: ۷ روز بعد
@@ -593,6 +630,7 @@ function editCampaign(camp) {
     document.getElementById('campCtaText').value = camp.cta_text || 'خرید و تمدید';
     document.getElementById('campCtaLink').value = camp.cta_link || '#plansSection';
     document.getElementById('campIsActive').checked = Boolean(camp.is_active);
+    document.getElementById('campIsDismissible').checked = camp.is_dismissible !== 0 && camp.is_dismissible !== '0' && camp.is_dismissible !== false;
 
     document.getElementById('campaignModalTitle').textContent = 'ویرایش کمپین: ' + (camp.title || '');
 

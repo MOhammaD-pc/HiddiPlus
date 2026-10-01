@@ -4149,10 +4149,12 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                 </a>
 
-                <!-- دکمه بستن بنر -->
-                <button class="promo-dismiss-btn" type="button" onclick="dismissPromoBanner()" aria-label="بستن بنر">
+                <!-- دکمه بستن بنر (فقط در صورتی که در پنل مجاز شده باشد) -->
+                {% if sales_campaign.is_dismissible is not defined or (sales_campaign.is_dismissible != 0 and sales_campaign.is_dismissible != '0') %}
+                <button class="promo-dismiss-btn" type="button" onclick="dismissPromoBanner()" aria-label="بستن بنر" title="بستن بنر">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -4203,7 +4205,6 @@
                 banner.style.pointerEvents = 'none';
                 setTimeout(() => banner.remove(), 400);
             }, 50);
-            sessionStorage.setItem('autumn_promo_dismissed', 'true');
         }
     }
 
@@ -4212,11 +4213,10 @@
     }
 
     (function initPromoCountdown() {
-        if (sessionStorage.getItem('autumn_promo_dismissed') === 'true') {
-            const banner = document.getElementById('autumnPromoBanner');
-            if (banner) banner.style.display = 'none';
-            return;
-        }
+        try {
+            sessionStorage.removeItem('autumn_promo_dismissed');
+            localStorage.removeItem('autumn_promo_dismissed');
+        } catch(e) {}
         const banner = document.getElementById('autumnPromoBanner');
         let targetTime = 0;
         if (banner && banner.dataset.endAt) {

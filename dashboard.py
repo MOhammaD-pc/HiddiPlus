@@ -14083,6 +14083,7 @@ def admin_campaigns_page():
         banner_style = request.form.get("banner_style", "autumn_glow").strip()
         beam_color = request.form.get("beam_color", "#38bdf8").strip()
         is_active = 1 if request.form.get("is_active") in ("1", "on", "true") else 0
+        is_dismissible = 1 if request.form.get("is_dismissible") in ("1", "on", "true") else 0
 
         if not title:
             flash("عنوان کمپین الزامی است.", "warning")
@@ -14105,6 +14106,7 @@ def admin_campaigns_page():
                 "position": position,
                 "banner_style": banner_style,
                 "beam_color": beam_color,
+                "is_dismissible": is_dismissible,
                 "is_active": is_active
             })
             flash(f"کمپین فروش «{title}» با موفقیت ذخیره شد.", "success")
@@ -21083,6 +21085,7 @@ def reseller_campaigns_page():
         banner_style = request.form.get("banner_style", "autumn_glow").strip()
         beam_color = request.form.get("beam_color", "#38bdf8").strip()
         is_active = 1 if request.form.get("is_active") in ("1", "on", "true") else 0
+        is_dismissible = 1 if request.form.get("is_dismissible") in ("1", "on", "true") else 0
 
         if not title:
             flash("عنوان کمپین الزامی است.", "warning")
@@ -21105,6 +21108,7 @@ def reseller_campaigns_page():
                 "position": position,
                 "banner_style": banner_style,
                 "beam_color": beam_color,
+                "is_dismissible": is_dismissible,
                 "is_active": is_active
             })
             flash(f"کمپین فروش «{title}» با موفقیت ذخیره شد.", "success")

@@ -504,6 +504,7 @@ class Database:
                 position TEXT DEFAULT 'below_hero',
                 banner_style TEXT DEFAULT 'autumn_glow',
                 beam_color TEXT DEFAULT '#38bdf8',
+                is_dismissible INTEGER DEFAULT 1,
                 is_active INTEGER DEFAULT 1,
                 created_at TEXT,
                 updated_at TEXT
@@ -511,6 +512,10 @@ class Database:
         """)
         try:
             cursor.execute("ALTER TABLE sales_campaigns ADD COLUMN beam_color TEXT DEFAULT '#38bdf8'")
+        except Exception:
+            pass
+        try:
+            cursor.execute("ALTER TABLE sales_campaigns ADD COLUMN is_dismissible INTEGER DEFAULT 1")
         except Exception:
             pass
         try:
@@ -9937,6 +9942,10 @@ class Database:
             if not beam_color:
                 beam_color = "#38bdf8"
             is_active = 1 if data.get("is_active") in (1, "1", True, "on") else 0
+            if "is_dismissible" in data:
+                is_dismissible = 1 if data.get("is_dismissible") in (1, "1", True, "on", "true") else 0
+            else:
+                is_dismissible = 1
 
             if cid and int(cid) > 0:
                 conn.execute(
@@ -9944,13 +9953,14 @@ class Database:
                     UPDATE sales_campaigns SET
                         title = ?, badge_text = ?, subtitle = ?, discount_code = ?,
                         discount_percent = ?, start_at = ?, end_at = ?, cta_text = ?,
-                        cta_link = ?, position = ?, banner_style = ?, beam_color = ?, is_active = ?,
+                        cta_link = ?, position = ?, banner_style = ?, beam_color = ?,
+                        is_dismissible = ?, is_active = ?,
                         updated_at = ?
                     WHERE id = ? AND owner_type = ? AND owner_id = ?
                     """,
                     (title, badge_text, subtitle, discount_code, discount_percent,
                      start_at, end_at, cta_text, cta_link, position, banner_style, beam_color,
-                     is_active, now_str, int(cid), owner_type, owner_id)
+                     is_dismissible, is_active, now_str, int(cid), owner_type, owner_id)
                 )
                 conn.commit()
                 return int(cid)
@@ -9960,13 +9970,15 @@ class Database:
                     INSERT INTO sales_campaigns (
                         owner_type, owner_id, title, badge_text, subtitle,
                         discount_code, discount_percent, start_at, end_at,
-                        cta_text, cta_link, position, banner_style, beam_color, is_active,
+                        cta_text, cta_link, position, banner_style, beam_color,
+                        is_dismissible, is_active,
                         created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (owner_type, owner_id, title, badge_text, subtitle,
                      discount_code, discount_percent, start_at, end_at,
-                     cta_text, cta_link, position, banner_style, beam_color, is_active,
+                     cta_text, cta_link, position, banner_style, beam_color,
+                     is_dismissible, is_active,
                      now_str, now_str)
                 )
                 conn.commit()

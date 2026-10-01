@@ -1606,13 +1606,90 @@
             display: block;
         }
 
+        /* ══════════════════════════════════════════════════════════════
+           نوار بالای موبایل با پشتیبانی کامل از Safe Area، ناچ و داینامیک آیلند آیفون
+           ══════════════════════════════════════════════════════════════ */
         .mobile-top-bar {
-            background: var(--card-bg);
-            border-color: var(--card-border) !important;
+            background: var(--card-bg) !important;
+            border-bottom: 1px solid var(--card-border) !important;
             position: sticky;
             top: 0;
             z-index: 1020;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+            /* تنظیم اصولی پدینگ براساس Safe Area اینست‌های iOS برای جلوگیری از تداخل با بریدگی ناچ، جزیره پویا و آیکون باتری */
+            padding-top: max(env(safe-area-inset-top, 0px), 12px) !important;
+            padding-bottom: 10px !important;
+            padding-right: max(env(safe-area-inset-right, 0px), 14px) !important;
+            padding-left: max(env(safe-area-inset-left, 0px), 14px) !important;
+            min-height: calc(56px + env(safe-area-inset-top, 0px));
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            box-sizing: border-box;
+            transition: all 0.25s ease;
+        }
+
+        /* دکمه منوی همبرگری موبایل با ابعاد استاندارد لمسی (Apple HIG Touch Target 44x44px) */
+        .mobile-nav-toggle-btn {
+            width: 44px !important;
+            height: 44px !important;
+            min-width: 44px !important;
+            min-height: 44px !important;
+            padding: 0 !important;
+            border-radius: 12px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            touch-action: manipulation !important;
+            -webkit-tap-highlight-color: transparent !important;
+            cursor: pointer !important;
+            font-size: 1.25rem !important;
+            border: 1px solid var(--card-border) !important;
+            background: var(--card-bg) !important;
+            color: var(--text-main, currentColor) !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+            user-select: none;
+            -webkit-user-select: none;
+            transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .mobile-nav-toggle-btn:active {
+            transform: scale(0.92);
+            background: var(--sidebar-hover-bg) !important;
+        }
+
+        /* دکمه‌های اکشن بالای موبایل (تغییر تم و نصب اپ) */
+        .mobile-top-action-btn {
+            height: 44px !important;
+            min-height: 44px !important;
+            border-radius: 12px !important;
+            touch-action: manipulation !important;
+            -webkit-tap-highlight-color: transparent !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+            user-select: none;
+            -webkit-user-select: none;
+            transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+
+        .mobile-top-action-btn:active {
+            transform: scale(0.92);
+        }
+
+        .mobile-top-action-btn.theme-toggle-btn {
+            width: 44px !important;
+            min-width: 44px !important;
+            padding: 0 !important;
+            font-size: 1.15rem !important;
+            border: 1px solid var(--card-border) !important;
+            background: var(--card-bg) !important;
+            color: var(--text-main, currentColor) !important;
+        }
+
+        .mobile-top-action-btn.theme-toggle-btn:active {
+            background: var(--sidebar-hover-bg) !important;
         }
 
         .user-pill {
@@ -1844,7 +1921,7 @@
         /* ─── نوار ابزار شناور مدیریت گروهی (Bulk Actions Toolbar) ─── */
         .bulk-actions-bar {
             position: fixed;
-            bottom: 24px;
+            bottom: calc(24px + env(safe-area-inset-bottom, 0px));
             left: 50%;
             transform: translateX(-50%) translateY(120px);
             z-index: 1040;
@@ -1900,6 +1977,10 @@
                 right: -285px !important;
                 transform: none !important;
                 box-shadow: none !important;
+                padding-top: max(env(safe-area-inset-top, 0px), 0px) !important;
+                padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px) !important;
+                padding-right: max(env(safe-area-inset-right, 0px), 0px) !important;
+                padding-left: max(env(safe-area-inset-left, 0px), 0px) !important;
             }
             .sidebar.show {
                 right: 0 !important;
@@ -2700,6 +2781,171 @@
         border-color: #cbd5e1 !important;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   استایل‌های مدرن و هماهنگ جدول مشتریان (Customer Table UI Enhancements)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ۱. نشان سطح مشتری روی آواتار (کاملاً شاخص و واضح در هر دو تم روشن و تاریک) */
+.avatar-tier-badge {
+    position: absolute !important;
+    top: -3px !important;
+    left: -3px !important;
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 9px !important;
+    line-height: 1 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+    border: 2px solid #ffffff !important;
+    z-index: 3 !important;
+}
+
+[data-bs-theme="dark"] .avatar-tier-badge {
+    border-color: #0f172a !important;
+}
+
+.avatar-tier-badge.tier-gold {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(217, 119, 6, 0.45) !important;
+}
+
+.avatar-tier-badge.tier-silver {
+    background: linear-gradient(135deg, #64748b, #475569) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(100, 116, 139, 0.45) !important;
+}
+
+.avatar-tier-badge.tier-bronze {
+    background: linear-gradient(135deg, #b45309, #78350f) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(180, 83, 9, 0.45) !important;
+}
+
+.avatar-tier-badge.tier-vip {
+    background: linear-gradient(135deg, #8b5cf6, #ec4899) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(139, 92, 246, 0.45) !important;
+}
+
+/* ۲. آیکون یادداشت مشتری (بدون کپسول، شیشه یا کادر اضافی) */
+.sub-note-btn {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 4px !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    vertical-align: middle !important;
+    line-height: 1 !important;
+    color: var(--text-muted, #94a3b8) !important;
+    transition: transform 0.15s ease, color 0.15s ease, opacity 0.15s ease !important;
+}
+
+.sub-note-btn.has-note, .sub-note-btn.text-warning {
+    color: #f59e0b !important;
+    opacity: 1 !important;
+}
+
+.sub-note-btn:hover {
+    transform: scale(1.25) !important;
+    color: #f59e0b !important;
+    opacity: 1 !important;
+}
+
+/* ۳. کادر جستجوی کپسولی شیک در موبایل و دسکتاپ (Capsule Search Box) */
+.customer-search-group {
+    border-radius: 50rem !important;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15)) !important;
+    background: var(--card-bg, #ffffff) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 2px 4px 2px 2px !important;
+    min-width: 260px !important;
+    max-width: 100% !important;
+    transition: all 0.2s ease !important;
+    overflow: hidden !important;
+}
+
+[data-bs-theme="light"] .customer-search-group {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+}
+
+[data-bs-theme="dark"] .customer-search-group {
+    background: rgba(15, 23, 42, 0.75) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.customer-search-group:focus-within {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+.customer-search-group .customer-search-input {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding-right: 14px !important;
+    padding-left: 8px !important;
+    font-size: 0.85rem !important;
+    color: inherit !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    outline: none !important;
+}
+
+.customer-search-group .customer-search-input:focus {
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+.customer-search-group .search-submit-btn {
+    border-radius: 50rem !important;
+    padding: 4px 14px !important;
+    font-size: 0.82rem !important;
+    flex-shrink: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    box-shadow: none !important;
+}
+
+.customer-search-group .search-clear-btn {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--text-muted, #94a3b8) !important;
+    padding: 0 6px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    cursor: pointer !important;
+    font-size: 0.85rem !important;
+}
+
+.customer-search-group .search-clear-btn:hover {
+    color: #ef4444 !important;
+}
+
+@media (max-width: 768px) {
+    .customer-search-group {
+        min-width: 100% !important;
+        width: 100% !important;
+    }
+}
 </style>
     {% block styles %}{% endblock %}
     {% block extra_head %}{% endblock %}
@@ -2716,23 +2962,23 @@
 
     {% if session.get('logged_in') %}
     <!-- Mobile Top Header Bar -->
-    <div class="mobile-top-bar d-lg-none d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
-        <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1" onclick="toggleSidebar()" aria-label="منوی پنل">
-            <i class="fas fa-bars fs-5"></i>
+    <div class="mobile-top-bar d-lg-none d-flex align-items-center justify-content-between border-bottom">
+        <button type="button" class="btn mobile-nav-toggle-btn" onclick="toggleSidebar()" aria-label="منوی پنل" title="منوی پنل">
+            <i class="fas fa-bars"></i>
         </button>
-        <div class="fw-bold d-flex align-items-center gap-2">
+        <div class="fw-bold d-flex align-items-center gap-2" style="font-size: 0.95rem;">
             {% if branding.get('logo_url') %}
-                <img src="{{ branding.get('logo_url') }}" alt="لوگو" style="width: 26px; height: 26px; object-fit: contain; border-radius: 6px;">
+                <img src="{{ branding.get('logo_url') }}" alt="لوگو" style="width: 28px; height: 28px; object-fit: contain; border-radius: 7px;">
             {% else %}
-                <i class="fas fa-shield-halved text-primary"></i>
+                <i class="fas fa-shield-halved text-primary fs-5"></i>
             {% endif %}
-            <span class="small">{{ branding.get('brand_title') or 'پنل مدیریت VPN' }}</span>
+            <span class="text-truncate" style="max-width: 170px;">{{ branding.get('brand_title') or 'پنل مدیریت VPN' }}</span>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-sm btn-outline-primary px-2 py-1" id="baseMobilePwaInstallBtn" onclick="handleBasePwaInstall()" style="display: none;" title="نصب وب‌اپلیکیشن">
-                <i class="fas fa-download me-1"></i> <span class="small">نصب اپ</span>
+            <button type="button" class="btn btn-outline-primary mobile-top-action-btn px-3" id="baseMobilePwaInstallBtn" onclick="handleBasePwaInstall()" style="display: none;" title="نصب وب‌اپلیکیشن">
+                <i class="fas fa-download me-1"></i> <span class="small fw-semibold">نصب اپ</span>
             </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1" onclick="toggleTheme()" aria-label="تغییر تم">
+            <button type="button" class="btn mobile-top-action-btn theme-toggle-btn" onclick="toggleTheme()" aria-label="تغییر تم" title="تغییر تم">
                 <i class="fas fa-circle-half-stroke"></i>
             </button>
         </div>
@@ -2760,6 +3006,14 @@
                     <div class="brand-title text-truncate" title="{{ branding.get('brand_title') or 'پنل مدیریت VPN' }}">{{ branding.get('brand_title') or 'پنل مدیریت VPN' }}</div>
                 </div>
             </a>
+        </div>
+
+        <!-- دکمه بستن سایدبار در حالت موبایل -->
+        <div class="d-flex d-lg-none align-items-center justify-content-between px-3 py-2 border-bottom" style="border-color: var(--sidebar-border) !important; min-height: 44px;">
+            <span class="small fw-bold" style="color: var(--sidebar-text-muted);">منوی ناوبری</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center" onclick="toggleSidebar()" aria-label="بستن منو" title="بستن منو" style="width: 36px; height: 36px; min-width: 36px; min-height: 36px; border-radius: 10px; touch-action: manipulation;">
+                <i class="fas fa-xmark fs-5"></i>
+            </button>
         </div>
 
         <!-- نوار کنترل جمع‌شدن سایدبار در حالت دسکتاپ -->
@@ -3890,8 +4144,12 @@
             const backdrop = document.getElementById('sidebarBackdrop');
             if (sidebar) {
                 sidebar.classList.toggle('show');
+                const isOpen = sidebar.classList.contains('show');
                 if (backdrop) {
-                    backdrop.classList.toggle('show', sidebar.classList.contains('show'));
+                    backdrop.classList.toggle('show', isOpen);
+                }
+                if (window.innerWidth < 992) {
+                    document.body.style.overflow = isOpen ? 'hidden' : '';
                 }
             }
         }
