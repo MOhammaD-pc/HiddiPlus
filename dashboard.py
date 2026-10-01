@@ -15469,7 +15469,11 @@ def settings():
             flash("تنظیمات امنیت ورود، پروکسی پچ دسترسی و استایل صفحه لاگین با موفقیت ذخیره شد.", "success")
             return redirect(url_for("settings"))
         elif action == "save_palette_settings":
-            active_palette = request.form.get("active_palette", "vps_aurora").strip()
+            active_palette = request.form.get("active_palette")
+            if not active_palette:
+                active_palette = db.get_setting("active_palette", "vps_aurora")
+            else:
+                active_palette = active_palette.strip()
             palette_intensity = request.form.get("palette_intensity", "normal").strip()
             palette_animation = request.form.get("palette_animation", "static").strip()
             portal_palette = request.form.get("portal_palette", "inherit").strip()
