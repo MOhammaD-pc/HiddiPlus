@@ -68,7 +68,7 @@
                 {% endif %}
 
                 <div class="login-brand-logo mb-3">
-                    {% if active_style == 'swiss_minimal' %}<!-- No Logo Icon -->{% elif branding.get('logo_url') %}
+                                        {% if active_style == 'swiss_minimal' %}<!-- No Logo Icon -->{% elif branding.get('logo_url') %}
                         <div class="logo-wrapper d-inline-flex p-2 rounded-4 shadow-sm">
                             <img src="{{ branding.get('logo_url') }}" alt="لوگو" style="max-height: 60px; max-width: 60px; object-fit: contain;">
                         </div>
@@ -81,11 +81,20 @@
                             {% elif active_style == 'ios_lockscreen' %}
                                 <i class="fab fa-apple fs-2 text-secondary" style="color: #cbd5e1 !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></i>
                             {% elif active_style == 'neumorphic_3d' %}
-                            <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="font-weight: 700; font-size: 1.1rem; color: #f8fafc; font-family: -apple-system, sans-serif;">
-                                ورود به حساب کاربری
-                            </div>
-                        
-                        {% elif active_style == 'swiss_minimal' %}<span style='font-weight: 400; font-size: 1.8rem; letter-spacing: 0.5px;'>AURA<br>Access</span>{% else %}{{ login_page_title or branding.get('brand_title') or 'سامانه هوشمند VPN' }}{% endif %}
+                                <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="font-weight: 700; font-size: 1.1rem; color: #f8fafc; font-family: -apple-system, sans-serif;">
+                                    ورود
+                                </div>
+                            {% else %}
+                                <i class="fas fa-shield-alt fs-2 text-primary"></i>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <h4 class="fw-black mb-1 login-brand-title">
+                    {% if active_style == 'hacker_terminal' %}
+                        <span class="font-monospace text-success">[ AUTH_SYS_V2.0 ]</span>
+                    {% elif active_style == 'swiss_minimal' %}<span style='font-weight: 400; font-size: 1.8rem; letter-spacing: 0.5px;'>AURA<br>Access</span>{% else %}{{ login_page_title or branding.get('brand_title') or 'پروکسی تلگرام VPN' }}{% endif %}
                 </h4>
                 
                 <p class="small mb-2 login-brand-subtitle opacity-75">
@@ -109,8 +118,24 @@
     </div>
 </div>
 {% elif active_style == 'stealth_tactical' %}
-                        دسترسی فقط برای پرسنل مجاز
-                    {% elif active_style == 'swiss_minimal' %}
+                          <div class="text-center mb-1 mt-4">
+                              <div style="font-size: 0.7rem; font-weight: 700; color: #94a3b8; letter-spacing: 2px;">کد امنیتی (VERIFICATION CODE)</div>
+                          </div>
+                          <div class="stealth-captcha-hud p-2 position-relative d-flex flex-column align-items-center" style="border: 2px solid #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.2), inset 0 0 10px rgba(245, 158, 11, 0.2); border-radius: 4px; margin-bottom: 25px; background: rgba(245, 158, 11, 0.05);">
+                              <div class="corner top-left" style="position: absolute; top: -2px; left: -2px; width: 15px; height: 15px; border-top: 3px solid #fff; border-left: 3px solid #fff;"></div>
+                              <div class="corner top-right" style="position: absolute; top: -2px; right: -2px; width: 15px; height: 15px; border-top: 3px solid #fff; border-right: 3px solid #fff;"></div>
+                              <div class="corner bottom-left" style="position: absolute; bottom: -2px; left: -2px; width: 15px; height: 15px; border-bottom: 3px solid #fff; border-left: 3px solid #fff;"></div>
+                              <div class="corner bottom-right" style="position: absolute; bottom: -2px; right: -2px; width: 15px; height: 15px; border-bottom: 3px solid #fff; border-right: 3px solid #fff;"></div>
+                              
+                              <div class="d-flex w-100 justify-content-center align-items-center" style="height: 50px; cursor: pointer;" onclick="refreshCaptcha()">
+                                  <img id="captchaImg" src="{{ url_for('captcha_image') }}" style="height: 100%; filter: invert(1) sepia(1) saturate(5) hue-rotate(350deg) brightness(1.2) contrast(1.5);">
+                                  <i class="fas fa-rotate ms-3 text-warning opacity-75 fs-5"></i>
+                              </div>
+                              <div class="mt-2 w-100 d-flex justify-content-center px-3 mb-1">
+                                  <input type="text" name="captcha" id="captchaInputField2" maxlength="5" autocomplete="off" required style="background: rgba(0,0,0,0.5); border: 1px solid rgba(245, 158, 11, 0.3); color: #fff; font-size: 1.5rem; font-family: monospace; letter-spacing: 10px; text-align: center; width: 100%; outline: none; padding: 2px;" placeholder="[ TYPE CODE ]" onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='rgba(245, 158, 11, 0.3)'">
+                              </div>
+                          </div>
+                        {% elif active_style == 'swiss_minimal' %}
                         خوش آمدید.<br>برای ادامه وارد شوید.
                     {% else %}
                         {{ login_page_subtitle or 'ورود مدیران و همکاران فروش' }}
@@ -366,8 +391,8 @@
                             <i class="fas fa-terminal"></i>
                             <span class="font-monospace">[ {{ _('ورود') if _ else 'ورود' }} // {{ _('تایید هویت') if _ else 'تایید هویت' }} ]</span>
                         {% elif active_style == 'stealth_tactical' %}
-                            <div class="stealth-btn-inner w-100 h-100 d-flex align-items-center justify-content-center">
-                                <span style="letter-spacing: 2px; font-weight: 900; font-size: 1.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">تایید هویت</span>
+                            <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="background: linear-gradient(to bottom, #7a8293, #434853); border-radius: 8px; clip-path: polygon(15px 0, calc(100% - 15px) 0, 100% 15px, 100% calc(100% - 15px), calc(100% - 15px) 100%, 15px 100%, 0 calc(100% - 15px), 0 15px); padding: 12px 0;">
+                                <span style="font-weight: 900; font-size: 1.4rem; letter-spacing: 4px; color: #111; text-shadow: 1px 1px 0px rgba(255,255,255,0.3);">تایید هویت</span>
                             </div>
                         {% elif active_style == 'ios_lockscreen' %}
                             <span>ورود</span>
