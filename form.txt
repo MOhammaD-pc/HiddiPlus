@@ -1,0 +1,168 @@
+<form method="POST" autocomplete="on" id="mainLoginForm">
+                    <!-- نام کاربری -->
+                    <div class="mb-3">
+                        {% if active_style == 'stealth_tactical' %}
+                        <div class="stealth-input-wrapper d-flex align-items-stretch" style="height: 64px;">
+                            <div class="stealth-hexagon-icon flex-shrink-0 d-flex align-items-center justify-content-center">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="stealth-input-body-wrap flex-grow-1 d-flex">
+                                <div class="stealth-input-body flex-grow-1 d-flex flex-column justify-content-center">
+                                    <span class="stealth-floating-label">شناسه کاربری (OPERATIVE)</span>
+                                    <input type="text" class="stealth-form-control font-monospace" name="username" placeholder="OPERATIVE-97" required autofocus style="direction: ltr; text-align: left;">
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <label class="form-label small fw-bold mb-1">
+                            {% if active_style == 'hacker_terminal' %}
+                                <span class="font-monospace text-success">[USER_ID] نام کاربری:</span>
+                            {% elif active_style == 'swiss_minimal' %}
+                                <span>نام کاربری:</span>
+                            {% else %}
+                                <i class="fas fa-user-circle me-1 opacity-75"></i> نام کاربری:
+                            {% endif %}
+                        </label>
+                        <div class="input-group login-input-group">
+                            <span class="input-group-text border-start-0">
+                                {% if active_style == 'hacker_terminal' %}<i class="fas fa-terminal text-success"></i>
+                                {% elif active_style == 'ios_lockscreen' %}<i class="fas fa-expand text-secondary fs-5"></i>
+                                {% elif active_style == 'swiss_minimal' %}<i class="far fa-user text-muted"></i>
+                                {% else %}<i class="fas fa-user text-muted"></i>
+                                {% endif %}
+                            </span>
+                            <input type="text" class="form-control border-start-0 ps-1 font-monospace" name="username" placeholder="{% if active_style == 'hacker_terminal' %}root_user{% elif active_style == 'ios_lockscreen' %}Your Name{% else %}Username{% endif %}" required autofocus style="direction: ltr; text-align: left;">
+                            {% if active_style == 'ios_lockscreen' %}
+                            <span class="input-group-text border-start-0 bg-transparent text-secondary">
+                                <i class="fas fa-user-circle fs-5"></i>
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- کلمه عبور -->
+                    <div class="mb-3">
+                        {% if active_style == 'stealth_tactical' %}
+                        <div class="stealth-input-wrapper d-flex align-items-stretch" style="height: 64px;">
+                            <div class="stealth-hexagon-icon flex-shrink-0 d-flex align-items-center justify-content-center">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <div class="stealth-input-body-wrap flex-grow-1 d-flex">
+                                <div class="stealth-input-body flex-grow-1 position-relative d-flex flex-column justify-content-center">
+                                    <span class="stealth-floating-label">کلید دسترسی (ACCESS KEY)</span>
+                                    <input type="password" name="password" id="loginPasswordInput" class="stealth-form-control pe-5 font-monospace" placeholder="••••••••••••" required style="direction: ltr; text-align: left;">
+                                    <button type="button" class="position-absolute start-0 top-50 translate-middle-y bg-transparent border-0 text-warning opacity-75 ms-3 cursor-pointer" onclick="togglePasswordVisibility()">
+                                        <i class="fas fa-eye" id="passwordToggleIcon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <label class="form-label small fw-bold mb-1">
+                            {% if active_style == 'hacker_terminal' %}
+                                <span class="font-monospace text-success">[ENCRYPTED_KEY] رمز عبور:</span>
+                            {% elif active_style == 'swiss_minimal' %}
+                                <span>رمز عبور:</span>
+                            {% else %}
+                                <i class="fas fa-key me-1 opacity-75"></i> رمز عبور:
+                            {% endif %}
+                        </label>
+                        <div class="input-group login-input-group">
+                            <span class="input-group-text border-start-0">
+                                {% if active_style == 'hacker_terminal' %}<i class="fas fa-key text-success"></i>
+                                {% elif active_style == 'ios_lockscreen' %}<i class="fas fa-lock text-secondary fs-5"></i>
+                                {% elif active_style == 'swiss_minimal' %}<i class="fas fa-key text-muted"></i>
+                                {% else %}<i class="fas fa-lock text-muted"></i>
+                                {% endif %}
+                            </span>
+                            <input type="password" id="loginPasswordInput" class="form-control border-start-0 border-start-0 px-1 font-monospace" name="password" placeholder="••••••••" required style="direction: ltr; {% if active_style == 'ios_lockscreen' %}text-align: left;{% endif %}">
+                            <button type="button" class="input-group-text border-start-0 bg-transparent cursor-pointer" onclick="togglePasswordVisibility()" title="نمایش/مخفی‌سازی رمز">
+                                <i class="fas fa-eye {% if active_style == 'ios_lockscreen' %}text-secondary fs-5{% else %}text-muted{% endif %}" id="passwordToggleIcon"></i>
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- کد کپچا امنیتی -->
+                    <div class="mb-4">
+                        {% if active_style == 'ios_lockscreen' %}
+                        <div class="input-group login-input-group align-items-center p-1" style="height: 56px;">
+                            <span class="input-group-text border-0 bg-transparent ps-3 pe-2 text-secondary">
+                                <i class="fas fa-key fs-5"></i>
+                            </span>
+                            <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control border-0 bg-transparent font-monospace fs-5 text-white" name="captcha" id="captchaInputField" placeholder="کد ۵ رقمی" maxlength="5" autocomplete="off" required style="letter-spacing: 4px; text-align: left;">
+                            <div class="captcha-img-box rounded-pill overflow-hidden border border-secondary border-opacity-25 ms-1 me-1 cursor-pointer" onclick="refreshCaptcha()" style="height: 38px; width: 110px; flex-shrink: 0; background: rgba(0,0,0,0.2) !important;">
+                                <img id="captchaImg" src="{{ url_for('captcha_image') }}" alt="کپچا" class="w-100 h-100 d-block" style="object-fit: cover; filter: invert(0.9) hue-rotate(180deg);">
+                            </div>
+                            <button type="button" class="input-group-text border-0 bg-transparent text-secondary pe-3 ps-2 cursor-pointer" onclick="refreshCaptcha()">
+                                <i class="fas fa-rotate fs-5"></i>
+                            </button>
+                        </div>
+                        {% elif active_style == 'stealth_tactical' %}
+                        <div class="stealth-captcha-wrapper">
+                            <div class="text-center mb-1">
+                                <span class="stealth-floating-label" style="position: static; font-size: 0.8rem; letter-spacing: 2px;">کد تأیید امنیتی (HUD)</span>
+                            </div>
+                            <div class="stealth-captcha-hud p-3 position-relative d-flex flex-column align-items-center gap-2">
+                                <div class="stealth-hud-corners"></div>
+                                <div class="d-flex align-items-center justify-content-center gap-3 w-100 px-3">
+                                    <div class="captcha-img-box stealth-captcha-img cursor-pointer flex-grow-1 border border-warning" onclick="refreshCaptcha()" style="height: 48px; filter: invert(1) sepia(1) saturate(5) hue-rotate(350deg) brightness(1.2) contrast(1.2);">
+                                        <img id="captchaImg" src="{{ url_for('captcha_image') }}" alt="کپچا" class="w-100 h-100 d-block" style="object-fit: cover;">
+                                    </div>
+                                    <button type="button" class="btn btn-warning rounded-1 stealth-rotate-btn d-flex align-items-center justify-content-center" onclick="refreshCaptcha()" style="height: 48px; width: 48px;">
+                                        <i class="fas fa-rotate fs-5 text-dark"></i>
+                                    </button>
+                                </div>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" class="stealth-captcha-input text-center font-monospace w-100 mt-2" name="captcha" id="captchaInputField2" placeholder="[ ورود کد ]" maxlength="5" autocomplete="off" required>
+                            </div>
+                        </div>
+                        {% else %}
+                        <label class="form-label small fw-bold mb-1 d-flex justify-content-between align-items-center">
+                            <span>
+                                {% if active_style == 'hacker_terminal' %}
+                                    <span class="font-monospace text-success">[VERIFICATION_TOKEN] کد امنیتی:</span>
+                                {% elif active_style == 'swiss_minimal' %}
+                                    <span>کد امنیتی:</span>
+                                {% else %}
+                                    <i class="fas fa-shield-check me-1 opacity-75"></i> کد امنیتی (کپچا):
+                                {% endif %}
+                            </span>
+                            {% if active_style not in ['hacker_terminal', 'stealth_tactical', 'swiss_minimal'] %}
+                            <small class="text-muted cursor-pointer" onclick="refreshCaptcha()" style="font-size: 0.75rem;">
+                                <i class="fas fa-rotate fs-6"></i>
+                            </small>
+                            {% endif %}
+                        </label>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <div class="captcha-img-box flex-grow-1 rounded-3 overflow-hidden shadow-sm border p-0 d-flex align-items-center justify-content-center cursor-pointer" onclick="refreshCaptcha()" title="برای تغییر تصویر کلیک کنید" style="height: 48px;">
+                                <img id="captchaImg" src="{{ url_for('captcha_image') }}" alt="کپچا" class="w-100 h-100 d-block" style="object-fit: cover;">
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" onclick="refreshCaptcha()" title="تغییر تصویر کد امنیتی" style="width: 48px; height: 48px;">
+                                <i class="fas fa-rotate"></i>
+                            </button>
+                        </div>
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control text-center font-monospace fs-4 fw-bold login-captcha-input py-2" name="captcha" id="captchaInputField3" placeholder="کد ۵ رقمی عددی" maxlength="5" autocomplete="off" required style="letter-spacing: 6px;">
+                        {% endif %}
+                    </div>
+
+                    <!-- دکمه ورود -->
+                    <button type="submit" class="btn w-100 py-2 fw-bold login-submit-btn d-flex align-items-center justify-content-center gap-2">
+                        {% if active_style == 'hacker_terminal' %}
+                            <i class="fas fa-terminal"></i>
+                            <span class="font-monospace">[ {{ _('اجرا') if _ else 'اجرا' }} // {{ _('ورود مجاز') if _ else 'ورود مجاز' }} ]</span>
+                        {% elif active_style == 'stealth_tactical' %}
+                            <div class="stealth-btn-inner w-100 h-100 d-flex align-items-center justify-content-center">
+                                <span style="letter-spacing: 2px; font-weight: 900; font-size: 1.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">مجوز دسترسی</span>
+                            </div>
+                        {% elif active_style == 'ios_lockscreen' %}
+                            <span>ورود</span>
+                        {% elif active_style == 'swiss_minimal' %}
+                            <span>ورود</span>
+                            <i class="fas fa-arrow-left"></i>
+                        {% else %}
+                            <i class="fas fa-arrow-right-to-bracket"></i>
+                            <span>ورود به پنل کاربری</span>
+                        {% endif %}
+                    </button>
+                </form>

@@ -450,28 +450,54 @@
         </div>
 
         <!-- ۳. سه‌بعدی نئومورفیک -->
-        <div class="theme-container theme-neumorphic" id="tab-neu">
-            <div style="text-align: center; margin-bottom: 24px;">
-                <div style="width: 56px; height: 56px; margin: 0 auto 12px; background: #1b2028; border-radius: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 6px 6px 12px #13171d, -6px -6px 12px #232933;">
-                    <i class="fas fa-cubes" style="font-size: 1.5rem; color: #94a3b8;"></i>
+        <div class="theme-container theme-neumorphic" id="tab-neu" dir="ltr">
+            <div class="neo-header">
+                <div class="neo-logo-icon">
+                    <i class="fas fa-cube"></i>
                 </div>
-                <h3 style="font-weight: 800; color: #f1f5f9;">احراز هویت سه‌بعدی</h3>
-                <p style="font-size: 0.8rem; color: #64748b;">طراحی نرم و ارگونومیک (Soft Matte)</p>
+                <h4 style="font-weight: 600; font-size: 1.3rem; margin-bottom: 5px; color: #e2e8f0;">NEXUS</h4>
+                <div style="font-size: 1.15rem; font-weight: 500; margin-bottom: 5px;">ورود به حساب کاربری</div>
+                <div style="font-size: 0.9rem; color: #64748b;">خوش آمدید</div>
             </div>
-            <div class="neu-well">
-                <i class="fas fa-user" style="color: #64748b; margin-left: 8px;"></i>
-                <input type="text" placeholder="شناسه کاربری">
+            
+            <div class="neo-track">
+                <div class="neo-raised-btn">
+                    <i class="fas fa-user"></i>
+                </div>
+                <input type="text" class="neo-input font-monospace" placeholder="نام کاربری |" style="direction: rtl; text-align: left;">
             </div>
-            <div class="neu-well">
-                <i class="fas fa-shield-alt" style="color: #64748b; margin-left: 8px;"></i>
-                <input type="password" placeholder="رمز عبور">
+            
+            <div class="neo-track">
+                <div class="neo-raised-btn">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 16px; direction: ltr;">
+                    <span style="font-size: 0.75rem; color: #64748b; margin-bottom: -2px; text-align: right;">رمز عبور</span>
+                    <input type="password" class="neo-input px-0 font-monospace" placeholder="••••••••" style="text-align: left;">
+                </div>
+                <i class="fas fa-eye-slash" style="color: #64748b; margin-right: 15px; cursor: pointer;"></i>
             </div>
-            <div class="neu-well" style="padding: 6px 14px;">
-                <input type="text" placeholder="کد عددی">
-                <div style="background: #151920; padding: 6px 14px; border-radius: 12px; letter-spacing: 6px; font-weight: 800; color: #cbd5e1; box-shadow: inset 2px 2px 5px #0d0f14;">
-                    49271
+            
+            <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+                <div class="neo-track" style="flex-grow: 1; position: relative; margin: 0; overflow: hidden; padding: 0;">
+                    <div style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; mix-blend-mode: multiply; opacity: 0.7; filter: contrast(1.5);">
+                        <div style="width: 100%; height: 100%; background: #fff; display: flex; align-items: center; justify-content: center; font-family: monospace; font-size: 2rem; letter-spacing: 0.8rem; font-weight: bold; color: #000; padding-left: 0.8rem;">49271</div>
+                    </div>
+                    <input type="text" class="neo-input font-monospace text-center" style="position: relative; width: 100%; height: 100%; font-size: 2rem; letter-spacing: 1.2rem; font-weight: bold; text-shadow: -1px -1px 2px rgba(255,255,255,0.1), 1px 1px 2px rgba(0,0,0,0.8); background: transparent; padding-left: 1.2rem;" placeholder="     ">
+                </div>
+                <div class="neo-raised-btn" style="width: 64px; height: 64px; border-radius: 50%; margin: 0; cursor: pointer;">
+                    <i class="fas fa-redo"></i>
                 </div>
             </div>
+            
+            <button class="neo-submit">ورود</button>
+            
+            <div style="text-align: center; margin-top: 30px; font-size: 0.85rem; color: #64748b;">
+                <div style="margin-bottom: 8px; cursor: pointer;">فراموشی رمز؟</div>
+                <div>حساب کاربری ندارید؟ <span style="color: #cbd5e1; cursor: pointer;">ثبت نام</span></div>
+            </div>
+        </div>
+
             <button class="neu-btn">تأیید و ورود</button>
         </div>
 
@@ -534,19 +560,59 @@
         </div>
         
         <!-- ۵. مینیمال سوئیسی -->
-        <div class="theme-container theme-swiss" id="tab-swiss">
-            <div style="margin-bottom: 30px;">
-                <span style="font-size: 0.72rem; letter-spacing: 3px; color: #94a3b8; text-transform: uppercase;">Aura Access</span>
-                <h2 style="font-weight: 800; margin-top: 6px;">خوش آمدید.</h2>
-                <p style="font-size: 0.85rem; color: #64748b;">برای ورود مشخصات خود را وارد کنید.</p>
+        <div class="theme-container theme-swiss" id="tab-swiss" dir="ltr">
+            <div style="margin-bottom: 40px;">
+                <span style="font-size: 2.8rem; font-weight: 300; letter-spacing: 1px; display: block; margin-bottom: -5px;">AURA</span>
+                <span style="font-size: 1.5rem; font-weight: 300;">Access</span>
+                
+                <div style="margin-top: 50px; font-size: 1.5rem;">خوش آمدید.</div>
+                <div style="font-size: 1.1rem; color: rgba(255,255,255,0.7);">برای ادامه وارد شوید.</div>
             </div>
-            <div class="swiss-line-group">
-                <span class="swiss-label">نام کاربری</span>
-                <div class="swiss-input-row">
-                    <i class="far fa-user" style="color: #64748b;"></i>
-                    <input type="text" placeholder="user@domain">
+            
+            <div class="swiss-input-group">
+                <div class="swiss-label-row">
+                    <span>نام کاربری</span>
+                    <div style="flex-grow: 1;"></div>
+                </div>
+                <div class="swiss-input-row focused">
+                    <i class="far fa-user"></i>
+                    <input type="text" placeholder="username">
                 </div>
             </div>
+            
+            <div class="swiss-input-group" style="margin-bottom: 3rem;">
+                <div class="swiss-label-row">
+                    <span>رمز عبور</span>
+                    <div style="flex-grow: 1;"></div>
+                </div>
+                <div class="swiss-input-row">
+                    <i class="fas fa-lock" style="opacity: 0.5;"></i>
+                    <input type="password" placeholder="••••••••">
+                </div>
+            </div>
+            
+            <div class="swiss-input-group">
+                <div class="swiss-captcha-box">
+                    <div class="swiss-captcha-display">
+                        7 4 9 2 5
+                    </div>
+                    <i class="fas fa-rotate-right" style="font-size: 1.5rem; opacity: 0.5; font-weight: 300; cursor: pointer;"></i>
+                </div>
+                <div class="swiss-captcha-input-row">
+                    <input type="text" placeholder="     " value="">
+                </div>
+                <div style="margin-top: 8px;">
+                    <span style="font-size: 0.85rem; opacity: 0.5;">شناسه امنیتی (Captcha)</span>
+                </div>
+            </div>
+            
+            <button class="swiss-btn" style="margin-top: 10px;">ورود</button>
+            
+            <div style="text-align: center; margin-top: 25px;">
+                <span style="font-size: 0.9rem; opacity: 0.5; cursor: pointer;">فراموشی رمز؟</span>
+            </div>
+        </div>
+    </div>
             <div class="swiss-line-group">
                 <span class="swiss-label">رمز عبور</span>
                 <div class="swiss-input-row">
