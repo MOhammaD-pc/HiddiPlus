@@ -18,7 +18,7 @@
     
     <!-- دکمه کنترل تم روز/شب صفحه لاگین -->
     {% if active_style != 'hacker_terminal' %}
-    <div class="position-absolute top-0 end-0 m-3" style="z-index: 10;">
+    <div class="position-absolute top-0 start-0 m-3" style="z-index: 10;">
         <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 d-flex align-items-center gap-2 shadow-sm login-header-theme-toggle" onclick="toggleTheme()" title="تغییر حالت تیره / روشن">
             <i class="fas fa-circle-half-stroke"></i>
             <span class="small d-none d-sm-inline" id="loginThemeBtnText">حالت روز / شب</span>
@@ -94,14 +94,14 @@
                 </div>
 
                 <h4 class="fw-black mb-1 login-brand-title">
-                    {{ login_page_title or branding.get('brand_title') or 'سامانه هوشمند VPN' }}
+                    {% if active_style == 'stealth_tactical' %}ورود امن{% else %}{{ login_page_title or branding.get('brand_title') or 'سامانه هوشمند VPN' }}{% endif %}
                 </h4>
                 
                 <p class="small mb-2 login-brand-subtitle opacity-75">
                     {% if active_style == 'hacker_terminal' %}
                         AUTHENTICATION // ENCRYPTED ACCESS ONLY
                     {% elif active_style == 'stealth_tactical' %}
-                        MILITARY GRADE AUTHENTICATION
+                        دسترسی فقط برای پرسنل مجاز
                     {% else %}
                         {{ login_page_subtitle or 'ورود مدیران و همکاران فروش' }}
                     {% endif %}
@@ -145,11 +145,22 @@
                 <form method="POST" autocomplete="on" id="mainLoginForm">
                     <!-- نام کاربری -->
                     <div class="mb-3">
+                        {% if active_style == 'stealth_tactical' %}
+                        <div class="stealth-input-wrapper d-flex align-items-stretch" style="height: 64px;">
+                            <div class="stealth-hexagon-icon flex-shrink-0 d-flex align-items-center justify-content-center">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="stealth-input-body-wrap flex-grow-1 d-flex">
+                                <div class="stealth-input-body flex-grow-1 d-flex flex-column justify-content-center">
+                                    <span class="stealth-floating-label">شناسه کاربری (OPERATIVE)</span>
+                                    <input type="text" class="stealth-form-control font-monospace" name="username" placeholder="OPERATIVE-97" required autofocus style="direction: ltr; text-align: left;">
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
                         <label class="form-label small fw-bold mb-1">
                             {% if active_style == 'hacker_terminal' %}
                                 <span class="font-monospace text-success">[USER_ID] نام کاربری:</span>
-                            {% elif active_style == 'stealth_tactical' %}
-                                <i class="fas fa-id-badge me-1 text-warning"></i> شناسه کاربری (OPERATIVE):
                             {% elif active_style == 'swiss_minimal' %}
                                 <span>نام کاربری:</span>
                             {% else %}
@@ -157,25 +168,44 @@
                             {% endif %}
                         </label>
                         <div class="input-group login-input-group">
-                            <span class="input-group-text border-end-0">
+                            <span class="input-group-text border-start-0">
                                 {% if active_style == 'hacker_terminal' %}<i class="fas fa-terminal text-success"></i>
-                                {% elif active_style == 'stealth_tactical' %}<i class="fas fa-id-badge text-warning"></i>
-                                {% elif active_style == 'ios_lockscreen' %}<i class="fas fa-user text-secondary"></i>
+                                {% elif active_style == 'ios_lockscreen' %}<i class="fas fa-expand text-secondary fs-5"></i>
                                 {% elif active_style == 'swiss_minimal' %}<i class="far fa-user text-muted"></i>
                                 {% else %}<i class="fas fa-user text-muted"></i>
                                 {% endif %}
                             </span>
-                            <input type="text" class="form-control border-start-0 ps-1 font-monospace" name="username" placeholder="{% if active_style == 'hacker_terminal' %}root_user{% elif active_style == 'stealth_tactical' %}OPERATIVE-01{% else %}Username{% endif %}" required autofocus style="direction: ltr; text-align: right;">
+                            <input type="text" class="form-control border-start-0 ps-1 font-monospace" name="username" placeholder="{% if active_style == 'hacker_terminal' %}root_user{% elif active_style == 'ios_lockscreen' %}Your Name{% else %}Username{% endif %}" required autofocus style="direction: ltr; text-align: left;">
+                            {% if active_style == 'ios_lockscreen' %}
+                            <span class="input-group-text border-start-0 bg-transparent text-secondary">
+                                <i class="fas fa-user-circle fs-5"></i>
+                            </span>
+                            {% endif %}
                         </div>
+                        {% endif %}
                     </div>
 
                     <!-- کلمه عبور -->
                     <div class="mb-3">
+                        {% if active_style == 'stealth_tactical' %}
+                        <div class="stealth-input-wrapper d-flex align-items-stretch" style="height: 64px;">
+                            <div class="stealth-hexagon-icon flex-shrink-0 d-flex align-items-center justify-content-center">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <div class="stealth-input-body-wrap flex-grow-1 d-flex">
+                                <div class="stealth-input-body flex-grow-1 position-relative d-flex flex-column justify-content-center">
+                                    <span class="stealth-floating-label">کلید دسترسی (ACCESS KEY)</span>
+                                    <input type="password" name="password" id="loginPasswordInput" class="stealth-form-control pe-5 font-monospace" placeholder="••••••••••••" required style="direction: ltr; text-align: left;">
+                                    <button type="button" class="position-absolute start-0 top-50 translate-middle-y bg-transparent border-0 text-warning opacity-75 ms-3 cursor-pointer" onclick="togglePasswordVisibility()">
+                                        <i class="fas fa-eye" id="passwordToggleIcon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
                         <label class="form-label small fw-bold mb-1">
                             {% if active_style == 'hacker_terminal' %}
                                 <span class="font-monospace text-success">[ENCRYPTED_KEY] رمز عبور:</span>
-                            {% elif active_style == 'stealth_tactical' %}
-                                <i class="fas fa-fingerprint me-1 text-warning"></i> کلید دسترسی (ACCESS KEY):
                             {% elif active_style == 'swiss_minimal' %}
                                 <span>رمز عبور:</span>
                             {% else %}
@@ -183,29 +213,59 @@
                             {% endif %}
                         </label>
                         <div class="input-group login-input-group">
-                            <span class="input-group-text border-end-0">
+                            <span class="input-group-text border-start-0">
                                 {% if active_style == 'hacker_terminal' %}<i class="fas fa-key text-success"></i>
-                                {% elif active_style == 'stealth_tactical' %}<i class="fas fa-fingerprint text-warning"></i>
-                                {% elif active_style == 'ios_lockscreen' %}<i class="fas fa-lock text-secondary"></i>
+                                {% elif active_style == 'ios_lockscreen' %}<i class="fas fa-lock text-secondary fs-5"></i>
                                 {% elif active_style == 'swiss_minimal' %}<i class="fas fa-key text-muted"></i>
                                 {% else %}<i class="fas fa-lock text-muted"></i>
                                 {% endif %}
                             </span>
-                            <input type="password" id="loginPasswordInput" class="form-control border-start-0 border-end-0 px-1 font-monospace" name="password" placeholder="••••••••" required style="direction: ltr;">
+                            <input type="password" id="loginPasswordInput" class="form-control border-start-0 border-start-0 px-1 font-monospace" name="password" placeholder="••••••••" required style="direction: ltr; {% if active_style == 'ios_lockscreen' %}text-align: left;{% endif %}">
                             <button type="button" class="input-group-text border-start-0 bg-transparent cursor-pointer" onclick="togglePasswordVisibility()" title="نمایش/مخفی‌سازی رمز">
-                                <i class="fas fa-eye text-muted" id="passwordToggleIcon"></i>
+                                <i class="fas fa-eye {% if active_style == 'ios_lockscreen' %}text-secondary fs-5{% else %}text-muted{% endif %}" id="passwordToggleIcon"></i>
                             </button>
                         </div>
+                        {% endif %}
                     </div>
 
                     <!-- کد کپچا امنیتی -->
                     <div class="mb-4">
+                        {% if active_style == 'ios_lockscreen' %}
+                        <div class="input-group login-input-group align-items-center p-1" style="height: 56px;">
+                            <span class="input-group-text border-0 bg-transparent ps-3 pe-2 text-secondary">
+                                <i class="fas fa-key fs-5"></i>
+                            </span>
+                            <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control border-0 bg-transparent font-monospace fs-5 text-white" name="captcha" id="captchaInputField" placeholder="کد ۵ رقمی" maxlength="5" autocomplete="off" required style="letter-spacing: 4px; text-align: left;">
+                            <div class="captcha-img-box rounded-pill overflow-hidden border border-secondary border-opacity-25 ms-1 me-1 cursor-pointer" onclick="refreshCaptcha()" style="height: 38px; width: 110px; flex-shrink: 0; background: rgba(0,0,0,0.2) !important;">
+                                <img id="captchaImg" src="{{ url_for('captcha_image') }}" alt="کپچا" class="w-100 h-100 d-block" style="object-fit: cover; filter: invert(0.9) hue-rotate(180deg);">
+                            </div>
+                            <button type="button" class="input-group-text border-0 bg-transparent text-secondary pe-3 ps-2 cursor-pointer" onclick="refreshCaptcha()">
+                                <i class="fas fa-rotate fs-5"></i>
+                            </button>
+                        </div>
+                        {% elif active_style == 'stealth_tactical' %}
+                        <div class="stealth-captcha-wrapper">
+                            <div class="text-center mb-1">
+                                <span class="stealth-floating-label" style="position: static; font-size: 0.8rem; letter-spacing: 2px;">کد تأیید امنیتی (HUD)</span>
+                            </div>
+                            <div class="stealth-captcha-hud p-3 position-relative d-flex flex-column align-items-center gap-2">
+                                <div class="stealth-hud-corners"></div>
+                                <div class="d-flex align-items-center justify-content-center gap-3 w-100 px-3">
+                                    <div class="captcha-img-box stealth-captcha-img cursor-pointer flex-grow-1 border border-warning" onclick="refreshCaptcha()" style="height: 48px; filter: invert(1) sepia(1) saturate(5) hue-rotate(350deg) brightness(1.2) contrast(1.2);">
+                                        <img id="captchaImg" src="{{ url_for('captcha_image') }}" alt="کپچا" class="w-100 h-100 d-block" style="object-fit: cover;">
+                                    </div>
+                                    <button type="button" class="btn btn-warning rounded-1 stealth-rotate-btn d-flex align-items-center justify-content-center" onclick="refreshCaptcha()" style="height: 48px; width: 48px;">
+                                        <i class="fas fa-rotate fs-5 text-dark"></i>
+                                    </button>
+                                </div>
+                                <input type="text" inputmode="numeric" pattern="[0-9]*" class="stealth-captcha-input text-center font-monospace w-100 mt-2" name="captcha" id="captchaInputField2" placeholder="[ ورود کد ]" maxlength="5" autocomplete="off" required>
+                            </div>
+                        </div>
+                        {% else %}
                         <label class="form-label small fw-bold mb-1 d-flex justify-content-between align-items-center">
                             <span>
                                 {% if active_style == 'hacker_terminal' %}
                                     <span class="font-monospace text-success">[VERIFICATION_TOKEN] کد امنیتی:</span>
-                                {% elif active_style == 'stealth_tactical' %}
-                                    <i class="fas fa-shield-halved me-1 text-warning"></i> کد تأیید امنیتی HUD:
                                 {% elif active_style == 'swiss_minimal' %}
                                     <span>کد امنیتی:</span>
                                 {% else %}
@@ -226,7 +286,8 @@
                                 <i class="fas fa-rotate"></i>
                             </button>
                         </div>
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control text-center font-monospace fs-4 fw-bold login-captcha-input py-2" name="captcha" id="captchaInputField" placeholder="کد ۵ رقمی عددی" maxlength="5" autocomplete="off" required style="letter-spacing: 6px;">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-control text-center font-monospace fs-4 fw-bold login-captcha-input py-2" name="captcha" id="captchaInputField3" placeholder="کد ۵ رقمی عددی" maxlength="5" autocomplete="off" required style="letter-spacing: 6px;">
+                        {% endif %}
                     </div>
 
                     <!-- دکمه ورود -->
@@ -235,11 +296,11 @@
                             <i class="fas fa-terminal"></i>
                             <span class="font-monospace">[ {{ _('اجرا') if _ else 'اجرا' }} // {{ _('ورود مجاز') if _ else 'ورود مجاز' }} ]</span>
                         {% elif active_style == 'stealth_tactical' %}
-                            <i class="fas fa-shield-halved"></i>
-                            <span>AUTHORIZE ACCESS</span>
+                            <div class="stealth-btn-inner w-100 h-100 d-flex align-items-center justify-content-center">
+                                <span style="letter-spacing: 2px; font-weight: 900; font-size: 1.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">مجوز دسترسی</span>
+                            </div>
                         {% elif active_style == 'ios_lockscreen' %}
-                            <i class="fas fa-arrow-right-to-bracket"></i>
-                            <span>ورود به حساب کاربری</span>
+                            <span>ورود</span>
                         {% elif active_style == 'swiss_minimal' %}
                             <span>ورود</span>
                             <i class="fas fa-arrow-left"></i>
@@ -611,122 +672,109 @@
     color: #00cc52 !important;
 }
 
-/* ─── استایل ۴: کپسولی شیشه‌ای آیفون (ios_lockscreen) ─── */
-.login-theme-ios_lockscreen,
-.login-theme-ios_glass {
-    background: #090d16;
-    color: #f8fafc;
-    transition: background 0.3s ease;
-}
-[data-bs-theme="light"] .login-theme-ios_lockscreen,
-[data-bs-theme="light"] .login-theme-ios_glass {
-    background: #f1f5f9;
-    color: #0f172a;
-}
-.login-theme-ios_lockscreen .login-main-card,
-.login-theme-ios_glass .login-main-card {
-    background: rgba(18, 24, 38, 0.75) !important;
-    backdrop-filter: blur(35px) saturate(190%);
-    -webkit-backdrop-filter: blur(35px) saturate(190%);
-    border: 1px solid rgba(255, 255, 255, 0.18) !important;
-    box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
-    border-radius: 40px !important;
-    color: #f8fafc;
-}
-[data-bs-theme="light"] .login-theme-ios_lockscreen .login-main-card,
-[data-bs-theme="light"] .login-theme-ios_glass .login-main-card {
-    background: rgba(255, 255, 255, 0.82) !important;
-    border: 1px solid rgba(203, 213, 225, 0.8) !important;
-    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.08) !important;
-    color: #0f172a;
-}
-.login-theme-ios_lockscreen .login-card-header,
-.login-theme-ios_glass .login-card-header {
-    background: transparent;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-.login-theme-ios_lockscreen .login-brand-title,
-.login-theme-ios_glass .login-brand-title {
-    color: #ffffff;
-    font-weight: 800;
-}
-[data-bs-theme="light"] .login-theme-ios_lockscreen .login-brand-title,
-[data-bs-theme="light"] .login-theme-ios_glass .login-brand-title {
-    color: #0f172a;
-}
-.login-theme-ios_lockscreen .logo-icon-wrapper,
-.login-theme-ios_glass .logo-icon-wrapper {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 9999px !important;
+/* ─── استایل ۴: استلث دارک زره‌پوش (stealth_tactical) ─── */
+.login-theme-stealth_tactical,
+.login-theme-executive_dark {
+    background: #0a0a0a;
+    background-image: radial-gradient(#2b3038 1px, transparent 1px), radial-gradient(#2b3038 1px, transparent 1px);
+    background-position: 0 0, 10px 10px;
+    background-size: 20px 20px;
     color: #cbd5e1;
 }
-.login-theme-ios_lockscreen .login-version-badge,
-.login-theme-ios_glass .login-version-badge {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    color: #cbd5e1;
-    border-radius: 9999px !important;
-}
-.login-theme-ios_lockscreen .login-input-group,
-.login-theme-ios_glass .login-input-group {
-    border-radius: 9999px !important;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.08);
-}
-[data-bs-theme="light"] .login-theme-ios_lockscreen .login-input-group,
-[data-bs-theme="light"] .login-theme-ios_glass .login-input-group {
-    border: 1px solid #cbd5e1;
-    background: rgba(255, 255, 255, 0.9);
-}
-.login-theme-ios_lockscreen .login-input-group .input-group-text,
-.login-theme-ios_lockscreen .login-input-group .form-control,
-.login-theme-ios_glass .login-input-group .input-group-text,
-.login-theme-ios_glass .login-input-group .form-control {
+.login-theme-stealth_tactical .login-main-card,
+.login-theme-executive_dark .login-main-card {
     background: transparent !important;
     border: none !important;
-    color: inherit !important;
+    box-shadow: none !important;
+    color: #cbd5e1 !important;
 }
-.login-theme-ios_lockscreen .captcha-img-box,
-.login-theme-ios_glass .captcha-img-box {
-    border-radius: 9999px !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    overflow: hidden;
-}
-.login-theme-ios_lockscreen .btn-outline-secondary,
-.login-theme-ios_glass .btn-outline-secondary {
-    border-radius: 9999px !important;
-}
-.login-theme-ios_lockscreen .login-captcha-input,
-.login-theme-ios_glass .login-captcha-input {
-    border-radius: 9999px !important;
-    background: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    color: inherit !important;
-}
-.login-theme-ios_lockscreen .login-submit-btn,
-.login-theme-ios_glass .login-submit-btn {
-    border-radius: 9999px !important;
-    background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    color: #ffffff !important;
-    padding: 13px !important;
-    font-weight: 700 !important;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-}
-[data-bs-theme="light"] .login-theme-ios_lockscreen .login-submit-btn,
-[data-bs-theme="light"] .login-theme-ios_glass .login-submit-btn {
-    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
-    border: 1px solid #334155 !important;
-    color: #ffffff !important;
-}
-.login-theme-ios_lockscreen .login-card-footer,
-.login-theme-ios_glass .login-card-footer {
+.login-theme-stealth_tactical .login-card-header,
+.login-theme-executive_dark .login-card-header {
     background: transparent;
-    color: #94a3b8;
+    border: none;
 }
+.login-theme-stealth_tactical .login-brand-title,
+.login-theme-executive_dark .login-brand-title {
+    color: #e2e8f0; font-family: 'Arial', sans-serif; font-weight: 900; letter-spacing: 2px;
+}
+.login-theme-stealth_tactical .logo-icon-wrapper,
+.login-theme-executive_dark .logo-icon-wrapper {
+    background: transparent !important; border: none !important; box-shadow: none !important;
+    font-size: 3.5rem; color: #9ca3af !important; margin-bottom: 0px;
+}
+.login-theme-stealth_tactical .login-version-badge,
+.login-theme-executive_dark .login-version-badge {
+    display: none !important;
+}
+.stealth-input-wrapper {
+    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+    margin-bottom: 24px;
+}
+.stealth-hexagon-icon {
+    width: 60px; height: 60px;
+    background: #f59e0b;
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+    padding: 2px;
+    margin-left: -10px;
+    z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+}
+.stealth-hexagon-icon::before {
+    content: ''; position: absolute; top: 2px; left: 2px; right: 2px; bottom: 2px;
+    background: linear-gradient(135deg, #374151 0%, #111827 100%);
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+    z-index: -1;
+}
+.stealth-hexagon-icon i { color: #f59e0b; font-size: 1.2rem; }
 
+.stealth-input-body-wrap {
+    background: #4a5568;
+    clip-path: polygon(15px 0, 100% 0, 100% 100%, 15px 100%, 0 calc(100% - 15px), 0 15px);
+    padding: 2px 0 2px 2px;
+}
+.stealth-input-body {
+    background: linear-gradient(to right, #374151 0%, #111827 100%);
+    clip-path: polygon(14px 0, 100% 0, 100% 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+    height: 100%;
+    padding: 8px 30px 8px 15px;
+}
+.stealth-floating-label { font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px; }
+.stealth-form-control { background: transparent !important; border: none !important; color: #f59e0b !important; font-weight: 700; font-size: 1.1rem; outline: none; padding: 0; width: 100%; }
+.stealth-form-control::placeholder { color: #52525b !important; font-weight: 500; }
+
+.stealth-captcha-wrapper { margin-bottom: 30px; }
+.stealth-captcha-hud {
+    background: rgba(245, 158, 11, 0.05);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    box-shadow: inset 0 0 20px rgba(245, 158, 11, 0.1);
+}
+.stealth-hud-corners::before, .stealth-hud-corners::after {
+    content: ''; position: absolute; width: 15px; height: 15px; border: 2px solid #f59e0b;
+}
+.stealth-hud-corners::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+.stealth-hud-corners::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+.stealth-captcha-input { background: rgba(0,0,0,0.5); border: 1px solid #f59e0b; color: #f59e0b; font-size: 1.5rem; letter-spacing: 8px; padding: 5px; outline: none; }
+.stealth-captcha-input:focus { box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+
+.login-theme-stealth_tactical .login-submit-btn,
+.login-theme-executive_dark .login-submit-btn {
+    background: #4a5568 !important;
+    border: none !important;
+    padding: 2px !important;
+    clip-path: polygon(15px 0, calc(100% - 15px) 0, 100% 15px, 100% calc(100% - 15px), calc(100% - 15px) 100%, 15px 100%, 0 calc(100% - 15px), 0 15px) !important;
+    position: relative;
+    border-radius: 0 !important;
+}
+.stealth-btn-inner {
+    background: linear-gradient(180deg, #9ca3af 0%, #4b5563 100%);
+    clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+    color: #111827 !important;
+    border-bottom: 2px solid #ef4444;
+}
+.login-theme-stealth_tactical .login-card-footer,
+.login-theme-executive_dark .login-card-footer {
+    background: transparent; border: none; color: #64748b; border-top: none;
+}
 /* ─── استایل ۵: سه‌بعدی نئومورفیک (neumorphic_3d) ─── */
 .login-theme-neumorphic_3d,
 .login-theme-titanium_metallic {

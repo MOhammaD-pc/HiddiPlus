@@ -143,12 +143,13 @@
 
         /* ─── ۲. کپسولی آیفون ─── */
         .theme-ios-capsule {
-            background: rgba(22, 28, 45, 0.85);
-            backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
-            border-radius: 36px;
-            padding: 28px 24px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(25px) saturate(150%);
+            -webkit-backdrop-filter: blur(25px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255,255,255,0.2);
+            border-radius: 40px;
+            padding: 15px 10px 25px 10px;
             color: #ffffff;
             text-align: center;
         }
@@ -157,22 +158,26 @@
             height: 28px;
             background: #000;
             border-radius: 9999px;
-            margin: 0 auto 20px auto;
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
             font-size: 0.72rem;
             color: #cbd5e1;
+            z-index: 10;
         }
         .ios-capsule-input {
             display: flex;
             align-items: center;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.25);
             border-radius: 9999px;
-            padding: 12px 20px;
-            margin-bottom: 14px;
+            padding: 2px 8px;
+            margin-bottom: 20px;
             color: #fff;
         }
         .ios-capsule-input input {
@@ -181,21 +186,26 @@
             color: #fff;
             width: 100%;
             outline: none;
-            font-size: 0.95rem;
-            padding: 0 8px;
+            font-size: 1.05rem;
+            padding: 10px 8px;
+        }
+        .ios-capsule-input input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
         }
         .ios-capsule-btn {
-            width: 100%;
-            background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            width: calc(100% - 20px);
+            background: linear-gradient(180deg, #333333 0%, #0a0a0a 100%);
+            border: 1px solid rgba(255,255,255,0.1);
             color: #ffffff;
             font-weight: 700;
-            padding: 14px;
+            padding: 15px;
             border-radius: 9999px;
-            font-size: 1rem;
+            font-size: 1.1rem;
             cursor: pointer;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255,255,255,0.15);
             margin-top: 10px;
+            margin-left: 10px;
+            margin-right: 10px;
         }
 
         /* ─── ۳. سه‌بعدی نئومورفیک ─── */
@@ -244,45 +254,67 @@
 
         /* ─── ۴. استلث دارک زره‌پوش ─── */
         .theme-stealth {
-            background: #0f1218;
-            border: 2px solid #283344;
-            clip-path: polygon(0 15px, 15px 0, calc(100% - 15px) 0, 100% 15px, 100% calc(100% - 15px), calc(100% - 15px) 100%, 15px 100%, 0 calc(100% - 15px));
+            background: #0a0a0a;
+            background-image: radial-gradient(#2b3038 1px, transparent 1px), radial-gradient(#2b3038 1px, transparent 1px);
+            background-position: 0 0, 10px 10px;
+            background-size: 20px 20px;
             padding: 30px 24px;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
             color: #cbd5e1;
+            border-radius: 12px;
+            border: 2px solid #1e293b;
         }
-        .stealth-input {
-            background: #161b24;
-            border: 1px solid #3b495e;
-            clip-path: polygon(0 8px, 8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px));
-            padding: 12px 18px;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
+        .stealth-input-wrapper {
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+            margin-bottom: 24px;
         }
-        .stealth-input input {
-            background: transparent;
-            border: none;
-            color: #f1f5f9;
-            width: 100%;
-            outline: none;
-            font-size: 0.95rem;
-            margin-right: 10px;
+        .stealth-hexagon-icon {
+            width: 60px; height: 60px;
+            background: #f59e0b;
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+            padding: 2px;
+            margin-left: -10px;
+            z-index: 2;
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
         }
-        .stealth-btn {
-            width: 100%;
-            background: linear-gradient(180deg, #2b3648 0%, #171e29 100%);
-            border: 1.5px solid #4a5c77;
-            clip-path: polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px));
-            color: #f8fafc;
-            font-weight: 900;
-            letter-spacing: 1px;
-            padding: 14px;
-            font-size: 1rem;
-            cursor: pointer;
-            margin-top: 14px;
+        .stealth-hexagon-icon::before {
+            content: ''; position: absolute; top: 2px; left: 2px; right: 2px; bottom: 2px;
+            background: linear-gradient(135deg, #374151 0%, #111827 100%);
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+            z-index: -1;
         }
+        .stealth-hexagon-icon i { color: #f59e0b; font-size: 1.2rem; }
 
+        .stealth-input-body-wrap {
+            background: #4a5568;
+            clip-path: polygon(15px 0, 100% 0, 100% 100%, 15px 100%, 0 calc(100% - 15px), 0 15px);
+            padding: 2px 0 2px 2px;
+        }
+        .stealth-input-body {
+            background: linear-gradient(to right, #374151 0%, #111827 100%);
+            clip-path: polygon(14px 0, 100% 0, 100% 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+            height: 100%;
+            padding: 8px 30px 8px 15px;
+        }
+        .stealth-floating-label { font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px; }
+        .stealth-form-control { background: transparent !important; border: none !important; color: #f59e0b !important; font-weight: 700; font-size: 1.1rem; outline: none; padding: 0; width: 100%; }
+        .stealth-form-control::placeholder { color: #52525b !important; font-weight: 500; }
+
+        .stealth-captcha-wrapper { margin-bottom: 30px; }
+        .stealth-captcha-hud {
+            background: rgba(245, 158, 11, 0.05);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            box-shadow: inset 0 0 20px rgba(245, 158, 11, 0.1);
+        }
+        .stealth-hud-corners::before, .stealth-hud-corners::after {
+            content: ''; position: absolute; width: 15px; height: 15px; border: 2px solid #f59e0b;
+        }
+        .stealth-hud-corners::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+        .stealth-hud-corners::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+        .stealth-captcha-img { border-radius: 4px; }
+        .stealth-captcha-input { background: rgba(0,0,0,0.5); border: 1px solid #f59e0b; color: #f59e0b; font-size: 1.5rem; letter-spacing: 8px; padding: 5px; outline: none; }
+        .stealth-captcha-input:focus { box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+        
         /* ─── ۵. مینیمال سوئیسی ─── */
         .theme-swiss {
             background: #0d0f14;
@@ -393,27 +425,28 @@
                 <i class="fas fa-expand"></i> Face ID
             </div>
             <div style="margin-bottom: 24px;">
-                <i class="fab fa-apple" style="font-size: 2.2rem; color: #cbd5e1;"></i>
-                <h3 style="margin-top: 8px; font-weight: 700;">ورود به حساب</h3>
-                <p style="font-size: 0.8rem; color: #94a3b8;">سامانه امن هوشمند اینترنت</p>
+                <i class="fab fa-apple" style="font-size: 2.2rem; color: #cbd5e1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></i>
+                <h3 style="margin-top: 8px; font-weight: 700; font-size: 1.8rem; letter-spacing: -0.5px;">Log In</h3>
             </div>
             <div class="ios-capsule-input">
-                <i class="fas fa-user-circle" style="color: #cbd5e1;"></i>
-                <input type="text" placeholder="نام کاربری...">
+                <i class="fas fa-expand text-secondary ms-2 fs-5"></i>
+                <input type="text" placeholder="Your Name" style="text-align: left; direction: ltr;">
+                <i class="fas fa-user-circle text-secondary me-2 fs-5"></i>
             </div>
             <div class="ios-capsule-input">
-                <i class="fas fa-lock" style="color: #cbd5e1;"></i>
-                <input type="password" placeholder="کلمه عبور...">
-                <i class="fas fa-eye-slash" style="color: #94a3b8; font-size: 0.85rem;"></i>
+                <i class="fas fa-lock text-secondary ms-2 fs-5"></i>
+                <input type="password" placeholder="••••••••" style="text-align: left; direction: ltr;">
+                <i class="fas fa-eye text-secondary me-2 fs-5"></i>
             </div>
-            <div class="ios-capsule-input" style="padding: 4px 6px 4px 18px; justify-content: space-between;">
-                <input type="text" placeholder="کد ۵ رقمی..." style="width: 50%;">
-                <div style="background: rgba(255,255,255,0.15); border-radius: 9999px; padding: 6px 14px; letter-spacing: 5px; font-weight: bold; font-size: 0.9rem;">
-                    82619
+            <div class="ios-capsule-input p-1" style="justify-content: space-between;">
+                <i class="fas fa-key ms-3 me-2 text-secondary fs-5"></i>
+                <input type="text" placeholder="کد ۵ رقمی" style="width: 40%;">
+                <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 9999px; height: 38px; width: 110px; display: flex; align-items: center; justify-content: center; letter-spacing: 5px; font-weight: bold; font-size: 1.1rem; color: #fff;">
+                    8W2J4
                 </div>
-                <button type="button" style="background: none; border: none; color: #cbd5e1; margin-right: 6px; cursor: pointer;"><i class="fas fa-rotate"></i></button>
+                <button type="button" style="background: none; border: none; color: #cbd5e1; margin-right: 6px; cursor: pointer;"><i class="fas fa-rotate fs-5"></i></button>
             </div>
-            <button class="ios-capsule-btn">ورود به پنل کاربری</button>
+            <button class="ios-capsule-btn">Enter</button>
         </div>
 
         <!-- ۳. سه‌بعدی نئومورفیک -->
@@ -445,27 +478,61 @@
         <!-- ۴. استلث دارک زره‌پوش -->
         <div class="theme-container theme-stealth" id="tab-stealth">
             <div style="text-align: center; margin-bottom: 22px;">
-                <i class="fas fa-shield-halved" style="font-size: 2rem; color: #e2e8f0; margin-bottom: 8px;"></i>
-                <h3 style="font-weight: 900; letter-spacing: 1px; color: #f8fafc;">STEALTH CONTROL</h3>
-                <p style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">Military Grade Encryption</p>
+                <div style="font-size: 3rem; color: #9ca3af; margin-bottom: 0px;"><i class="fas fa-shield-halved"></i></div>
+                <h3 style="font-family: 'Arial', sans-serif; font-weight: 900; letter-spacing: 2px; color: #f8fafc; margin-bottom: 4px;">ورود امن</h3>
+                <p style="font-size: 0.75rem; color: #94a3b8; letter-spacing: 1px;">دسترسی فقط برای پرسنل مجاز</p>
             </div>
-            <div class="stealth-input">
-                <i class="fas fa-id-badge" style="color: #94a3b8; margin-left: 8px;"></i>
-                <input type="text" placeholder="OPERATIVE ID">
-            </div>
-            <div class="stealth-input">
-                <i class="fas fa-fingerprint" style="color: #94a3b8; margin-left: 8px;"></i>
-                <input type="password" placeholder="ACCESS KEY">
-            </div>
-            <div class="stealth-input" style="padding: 6px 12px;">
-                <input type="text" placeholder="SECURITY CODE">
-                <div style="background: #0a0d12; border: 1px solid #d97706; color: #fbbf24; font-family: monospace; font-weight: 900; letter-spacing: 6px; padding: 6px 12px;">
-                    4B7X9
+            
+            <div class="stealth-input-wrapper" style="display: flex; align-items: stretch; height: 60px;">
+                <div class="stealth-hexagon-icon" style="flex-shrink: 0;">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="stealth-input-body-wrap" style="flex-grow: 1; display: flex;">
+                    <div class="stealth-input-body" style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
+                        <span class="stealth-floating-label">شناسه کاربری</span>
+                        <input type="text" class="stealth-form-control" placeholder="OPERATIVE-97" style="direction: ltr; text-align: left;">
+                    </div>
                 </div>
             </div>
-            <button class="stealth-btn">AUTHORIZE ACCESS</button>
+            
+            <div class="stealth-input-wrapper" style="display: flex; align-items: stretch; height: 60px;">
+                <div class="stealth-hexagon-icon" style="flex-shrink: 0;">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <div class="stealth-input-body-wrap" style="flex-grow: 1; display: flex;">
+                    <div class="stealth-input-body" style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; position: relative;">
+                        <span class="stealth-floating-label">کلمه عبور</span>
+                        <input type="password" class="stealth-form-control" placeholder="••••••••••••" style="direction: ltr; text-align: left;">
+                        <i class="fas fa-eye" style="position: absolute; left: 15px; color: #f59e0b; opacity: 0.75;"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stealth-captcha-wrapper">
+                <div class="text-center" style="text-align: center; margin-bottom: 4px;">
+                    <span class="stealth-floating-label" style="font-size: 0.8rem; letter-spacing: 2px;">کد تأیید امنیتی</span>
+                </div>
+                <div class="stealth-captcha-hud" style="padding: 12px; position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                    <div class="stealth-hud-corners"></div>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 0 12px;">
+                        <div class="stealth-captcha-img" style="flex-grow: 1; border: 1px solid #f59e0b; height: 48px; filter: invert(1) sepia(1) saturate(5) hue-rotate(350deg) brightness(1.2) contrast(1.2); background: #111;">
+                            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #fff; font-family: monospace; font-size: 1.5rem; letter-spacing: 8px;">8W2J4</div>
+                        </div>
+                        <button style="background: #f59e0b; border: none; height: 48px; width: 48px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                            <i class="fas fa-rotate fs-5" style="color: #000;"></i>
+                        </button>
+                    </div>
+                    <input type="text" class="stealth-captcha-input" placeholder="[ کد ۵ رقمی ]" style="text-align: center; width: 100%; margin-top: 8px;">
+                </div>
+            </div>
+            
+            <button class="stealth-btn" style="padding: 2px; border: none; background: #4a5568; margin-top: 20px; width: 100%; clip-path: polygon(15px 0, calc(100% - 15px) 0, 100% 15px, 100% calc(100% - 15px), calc(100% - 15px) 100%, 15px 100%, 0 calc(100% - 15px), 0 15px);">
+                <div style="background: linear-gradient(180deg, #9ca3af 0%, #4b5563 100%); clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px); border-bottom: 2px solid #ef4444; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 16px;">
+                    <span style="letter-spacing: 2px; font-weight: 900; font-size: 1.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.8); color: #111827;">مجوز دسترسی</span>
+                </div>
+            </button>
         </div>
-
+        
         <!-- ۵. مینیمال سوئیسی -->
         <div class="theme-container theme-swiss" id="tab-swiss">
             <div style="margin-bottom: 30px;">
