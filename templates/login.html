@@ -68,7 +68,7 @@
                 {% endif %}
 
                 <div class="login-brand-logo mb-3">
-                    {% if branding.get('logo_url') and active_style != 'swiss_minimal' %}
+                    {% if active_style == 'swiss_minimal' %}<!-- No Logo Icon -->{% elif branding.get('logo_url') %}
                         <div class="logo-wrapper d-inline-flex p-2 rounded-4 shadow-sm">
                             <img src="{{ branding.get('logo_url') }}" alt="لوگو" style="max-height: 60px; max-width: 60px; object-fit: contain;">
                         </div>
@@ -84,9 +84,8 @@
                             <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="font-weight: 700; font-size: 1.1rem; color: #f8fafc; font-family: -apple-system, sans-serif;">
                                 ورود به حساب کاربری
                             </div>
-                        {% elif active_style == 'swiss_minimal' %}
-                            <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="color: #fff; font-size: 2rem;"><i class="fas fa-fingerprint"></i></div>
-                        {% elif active_style == 'swiss_minimal' %}<span class='swiss-title'>AURA<br>Access</span>{% else %}{{ login_page_title or branding.get('brand_title') or 'سامانه هوشمند VPN' }}{% endif %}
+                        
+                        {% elif active_style == 'swiss_minimal' %}<span style='font-weight: 400; font-size: 1.8rem; letter-spacing: 0.5px;'>AURA<br>Access</span>{% else %}{{ login_page_title or branding.get('brand_title') or 'سامانه هوشمند VPN' }}{% endif %}
                 </h4>
                 
                 <p class="small mb-2 login-brand-subtitle opacity-75">
@@ -372,8 +371,7 @@
                             </div>
                         {% elif active_style == 'ios_lockscreen' %}
                             <span>ورود</span>
-                        {% elif active_style == 'swiss_minimal' %}
-                            <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="color: #fff; font-size: 2rem;"><i class="fas fa-fingerprint"></i></div>
+                        
                         {% else %}
                             <i class="fas fa-arrow-right-to-bracket"></i>
                             <span>ورود به حساب کاربری</span>
@@ -392,7 +390,7 @@
             </div>
 
             <!-- پاورقی کارت -->
-            <div class="card-footer login-card-footer text-center py-3 border-0" {% if active_style == 'neumorphic_3d' %}style="display: none !important;"{% endif %}>
+            <div class="card-footer login-card-footer text-center py-3 border-0" {% if active_style in ['neumorphic_3d', 'swiss_minimal'] %}style="display: none !important;"{% endif %}>
                 <div class="small opacity-75 mb-1">{{ branding.get('footer_text') or 'تمامی حقوق برای مدیریت این سامانه محفوظ است.' }}</div>
                 <div class="d-inline-flex align-items-center gap-1 small opacity-50" style="font-size: 0.72rem;">
                     <i class="fas fa-shield-halved"></i>
@@ -1061,10 +1059,22 @@
 .login-theme-swiss_minimal {
     background: #111111 !important;
 }
+
 .login-theme-swiss_minimal .login-main-card {
-    background: transparent !important;
+    background: #111111 !important;
+    border: none !important;
     box-shadow: none !important;
 }
+/* Autofill fix to remove yellow/blue backgrounds */
+.login-theme-swiss_minimal input:-webkit-autofill,
+.login-theme-swiss_minimal input:-webkit-autofill:hover, 
+.login-theme-swiss_minimal input:-webkit-autofill:focus, 
+.login-theme-swiss_minimal input:-webkit-autofill:active{
+    -webkit-box-shadow: 0 0 0 30px #111111 inset !important;
+    -webkit-text-fill-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
 .swiss-form-control:focus {
     outline: none !important;
     box-shadow: none !important;
@@ -1132,7 +1142,6 @@
     background: transparent !important;
     color: #ffffff !important;
 }
-.login-theme-swiss_minimal .login-submit-btn,
 .login-theme-nordic_studio .login-submit-btn,
 .login-theme-minimal_luxury .login-submit-btn {
     background: #ffffff !important;
@@ -1142,6 +1151,16 @@
     border-radius: 12px !important;
     padding: 13px !important;
     box-shadow: 0 4px 15px rgba(255, 255, 255, 0.15);
+}
+.login-theme-swiss_minimal .login-submit-btn {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-weight: 400 !important;
+    font-family: -apple-system, sans-serif !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 14px !important;
+    box-shadow: none !important;
 }
 .login-theme-swiss_minimal .login-submit-btn:hover,
 .login-theme-nordic_studio .login-submit-btn:hover,
@@ -1169,6 +1188,9 @@
         -webkit-backdrop-filter: none !important;
     }
 }
+
+
+.login-theme-swiss_minimal .login-brand-logo { display: none !important; }
 
 /* NEUMORPHIC 3D RE-IMPLEMENTATION */
 .login-theme-neumorphic_3d { background: #2a2d34 !important; }
