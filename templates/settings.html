@@ -1816,7 +1816,7 @@ function updateBorderSubstyleUI(input) {
                     <i class="fas fa-palette me-1 text-primary"></i> انتخاب تم گرافیکی صفحه لاگین:
                 </label>
                 <div class="row g-3">
-                    <!-- Liquid Glass (formerly Glass Aurora) -->
+                    <!-- 1. Liquid Glass -->
                     <div class="col-md-6 col-lg-4">
                         <label class="login-theme-choice-card d-block p-3 rounded-3 border h-100 position-relative {% if login_security_config.login_style in ('glass_aurora', 'liquid_glass') %}border-primary shadow-sm bg-primary-subtle bg-opacity-10{% else %}border-light-subtle bg-white{% endif %}" style="cursor: pointer;">
                             <input type="radio" name="login_style" value="glass_aurora" class="form-check-input position-absolute top-0 end-0 m-3" {% if login_security_config.login_style in ('glass_aurora', 'liquid_glass') %}checked{% endif %} onchange="selectLoginTheme(this)">
@@ -1826,39 +1826,11 @@ function updateBorderSubstyleUI(input) {
                                 </div>
                             </div>
                             <div class="fw-bold text-dark small mb-1">لیکوید گلس (Liquid Glass)</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">طراحی مدرن شیشه‌ای مات با هاله‌های رنگی ارغوانی و فیروزه‌ای و پس‌زمینه تیره</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">طراحی شیشه‌ای مات و بلور با هاله‌های رنگی ارغوانی و فیروزه‌ای پویا</div>
                         </label>
                     </div>
 
-                    <!-- iOS Lockscreen -->
-                    <div class="col-md-6 col-lg-4">
-                        <label class="login-theme-choice-card d-block p-3 rounded-3 border h-100 position-relative {% if login_security_config.login_style in ('ios_lockscreen', 'ios_glass') %}border-primary shadow-sm bg-primary-subtle bg-opacity-10{% else %}border-light-subtle bg-white{% endif %}" style="cursor: pointer;">
-                            <input type="radio" name="login_style" value="ios_lockscreen" class="form-check-input position-absolute top-0 end-0 m-3" {% if login_security_config.login_style in ('ios_lockscreen', 'ios_glass') %}checked{% endif %} onchange="selectLoginTheme(this)">
-                            <div class="theme-preview-box rounded-2 mb-2 p-3 text-center" style="background: #111827; color: #f8fafc; min-height: 80px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.15);">
-                                <div style="background: rgba(255,255,255,0.12); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-radius: 12px; padding: 6px 14px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.25); color: #cbd5e1;">
-                                    <i class="fab fa-apple me-1"></i> iOS Lockscreen
-                                </div>
-                            </div>
-                            <div class="fw-bold text-dark small mb-1">لاک‌اسکرین آیفون (iOS Lockscreen)</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">طراحی شیشه‌ای مات آیفون با آیکون نقره‌ای/استیل، بدون هاله نوری با پشتیبانی از روز و شب</div>
-                        </label>
-                    </div>
-
-                    <!-- Dark -->
-                    <div class="col-md-6 col-lg-4">
-                        <label class="login-theme-choice-card d-block p-3 rounded-3 border h-100 position-relative {% if login_security_config.login_style in ('executive_dark', 'dark') %}border-primary shadow-sm bg-primary-subtle bg-opacity-10{% else %}border-light-subtle bg-white{% endif %}" style="cursor: pointer;">
-                            <input type="radio" name="login_style" value="executive_dark" class="form-check-input position-absolute top-0 end-0 m-3" {% if login_security_config.login_style in ('executive_dark', 'dark') %}checked{% endif %} onchange="selectLoginTheme(this)">
-                            <div class="theme-preview-box rounded-2 mb-2 p-3 text-center" style="background: #080a0f; color: #94a3b8; min-height: 80px; display: flex; align-items: center; justify-content: center; border: 1px solid #21262d;">
-                                <div style="background: #0d1117; border-radius: 6px; padding: 6px 14px; font-size: 0.75rem; border: 1px solid #30363d; color: #f0f6fc; font-weight: 600;">
-                                    <i class="fas fa-shield-halved text-secondary me-1"></i> Dark Mode
-                                </div>
-                            </div>
-                            <div class="fw-bold text-dark small mb-1">دارک (Dark)</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">تم تیره خالص و اداری با رنگ‌بندی مشکی و دودی، بدون نارنجی، بدون افکت سنگین و هاله</div>
-                        </label>
-                    </div>
-
-                    <!-- Cyber Neon -->
+                    <!-- 2. Cyber Neon -->
                     <div class="col-md-6 col-lg-4">
                         <label class="login-theme-choice-card d-block p-3 rounded-3 border h-100 position-relative {% if login_security_config.login_style == 'cyber_neon' %}border-primary shadow-sm bg-primary-subtle bg-opacity-10{% else %}border-light-subtle bg-white{% endif %}" style="cursor: pointer;">
                             <input type="radio" name="login_style" value="cyber_neon" class="form-check-input position-absolute top-0 end-0 m-3" {% if login_security_config.login_style == 'cyber_neon' %}checked{% endif %} onchange="selectLoginTheme(this)">
@@ -1872,45 +1844,73 @@ function updateBorderSubstyleUI(input) {
                         </label>
                     </div>
 
-                    <!-- Minimal Luxury -->
+                    <!-- 3. Hacker Terminal -->
                     <div class="col-md-6 col-lg-4">
-                        <label class="login-theme-choice-card d-block p-3 rounded-3 border h-100 position-relative {% if login_security_config.login_style == 'minimal_luxury' %}border-primary shadow-sm bg-primary-subtle bg-opacity-10{% else %}border-light-subtle bg-white{% endif %}" style="cursor: pointer;">
-                            <input type="radio" name="login_style" value="minimal_luxury" class="form-check-input position-absolute top-0 end-0 m-3" {% if login_security_config.login_style == 'minimal_luxury' %}checked{% endif %} onchange="selectLoginTheme(this)">
-                            <div class="theme-preview-box rounded-2 mb-2 p-3 text-center" style="background: #f8fafc; color: #0f172a; min-height: 80px; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0;">
-                                <div style="background: #ffffff; border-radius: 6px; padding: 6px 14px; font-size: 0.75rem; border: 1px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.06); font-weight: 600;">
-                                    <i class="fas fa-crown me-1" style="color: #d97706;"></i> Minimal Luxury
+                        <label class="login-theme-choice-card d-block p-3 rounded-3 border h-100 position-relative {% if login_security_config.login_style in ('hacker_terminal', 'ruby_waves', 'gradient_vibrant') %}border-primary shadow-sm bg-primary-subtle bg-opacity-10{% else %}border-light-subtle bg-white{% endif %}" style="cursor: pointer;">
+                            <input type="radio" name="login_style" value="hacker_terminal" class="form-check-input position-absolute top-0 end-0 m-3" {% if login_security_config.login_style in ('hacker_terminal', 'ruby_waves', 'gradient_vibrant') %}checked{% endif %} onchange="selectLoginTheme(this)">
+                            <div class="theme-preview-box rounded-2 mb-2 p-3 text-center font-monospace" style="background: #020402; color: #00ff66; min-height: 80px; display: flex; align-items: center; justify-content: center; border: 1px solid #00ff6644;">
+                                <div style="background: rgba(0,255,102,0.1); border-radius: 4px; padding: 6px 14px; font-size: 0.75rem; border: 1px solid #00ff66; text-shadow: 0 0 8px #00ff66;">
+                                    <i class="fas fa-user-secret me-1"></i> [root@vpn:~#]
                                 </div>
                             </div>
-                            <div class="fw-bold text-dark small mb-1">مینیمال لوکس (Minimal Luxury)</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">روشن، تمیز و باوقار، خطوط ظریف، تایپوگرافی چشم‌نواز و کنتراست شفاف</div>
+                            <div class="fw-bold text-dark small mb-1">ترمینال هکری (Hacker CLI)</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">خط فرمان لینوکس با ۳ دکمه پنجره، اسکن‌لاین CRT و فیلدهای براکت‌دار سبز فسفری</div>
                         </label>
                     </div>
 
-                    <!-- Nordic Studio -->
+                    <!-- 4. iOS Capsule -->
                     <div class="col-md-6 col-lg-4">
-                        <label class="login-theme-choice-card d-block p-3 rounded-3 border h-100 position-relative {% if login_security_config.login_style in ('nordic_studio', 'gradient_vibrant', 'ruby_waves') %}border-primary shadow-sm bg-primary-subtle bg-opacity-10{% else %}border-light-subtle bg-white{% endif %}" style="cursor: pointer;">
-                            <input type="radio" name="login_style" value="nordic_studio" class="form-check-input position-absolute top-0 end-0 m-3" {% if login_security_config.login_style in ('nordic_studio', 'gradient_vibrant', 'ruby_waves') %}checked{% endif %} onchange="selectLoginTheme(this)">
-                            <div class="theme-preview-box rounded-2 mb-2 p-3 text-center" style="background: #f1f5f9; color: #0f172a; min-height: 80px; display: flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1;">
-                                <div style="background: #ffffff; border-radius: 8px; padding: 6px 14px; font-size: 0.75rem; border: 1px solid #94a3b8; color: #0f172a; font-weight: 700; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                                    <i class="fas fa-cube me-1 text-primary"></i> Nordic Studio
+                        <label class="login-theme-choice-card d-block p-3 rounded-3 border h-100 position-relative {% if login_security_config.login_style in ('ios_lockscreen', 'ios_glass') %}border-primary shadow-sm bg-primary-subtle bg-opacity-10{% else %}border-light-subtle bg-white{% endif %}" style="cursor: pointer;">
+                            <input type="radio" name="login_style" value="ios_lockscreen" class="form-check-input position-absolute top-0 end-0 m-3" {% if login_security_config.login_style in ('ios_lockscreen', 'ios_glass') %}checked{% endif %} onchange="selectLoginTheme(this)">
+                            <div class="theme-preview-box rounded-2 mb-2 p-3 text-center" style="background: #0f172a; color: #f8fafc; min-height: 80px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.15);">
+                                <div style="background: rgba(255,255,255,0.12); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-radius: 9999px; padding: 6px 18px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.25); color: #cbd5e1;">
+                                    <i class="fab fa-apple me-1"></i> Dynamic Capsule
                                 </div>
                             </div>
-                            <div class="fw-bold text-dark small mb-1">نوردیک استودیو (Nordic Studio)</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">مینیمالیسم مدرن اسکاندیناوی، بدون هاله نوری و سبک با تم اختصاصی روز و شب</div>
+                            <div class="fw-bold text-dark small mb-1">کپسولی آیفون (iOS Capsule)</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">فیلدهای ۱۰۰٪ کپسولی، جزیره پویا با Face ID، شیشه مات عمیق و آیکون استیل اپل</div>
                         </label>
                     </div>
 
-                    <!-- Titanium Metallic -->
+                    <!-- 5. Neumorphic 3D -->
                     <div class="col-md-6 col-lg-4">
-                        <label class="login-theme-choice-card d-block p-3 rounded-3 border h-100 position-relative {% if login_security_config.login_style == 'titanium_metallic' %}border-primary shadow-sm bg-primary-subtle bg-opacity-10{% else %}border-light-subtle bg-white{% endif %}" style="cursor: pointer;">
-                            <input type="radio" name="login_style" value="titanium_metallic" class="form-check-input position-absolute top-0 end-0 m-3" {% if login_security_config.login_style == 'titanium_metallic' %}checked{% endif %} onchange="selectLoginTheme(this)">
-                            <div class="theme-preview-box rounded-2 mb-2 p-3 text-center" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #e2e8f0; min-height: 80px; display: flex; align-items: center; justify-content: center; border: 1px solid #475569;">
-                                <div style="background: rgba(255,255,255,0.08); border-radius: 8px; padding: 6px 14px; font-size: 0.75rem; border: 1px solid #64748b; color: #f1f5f9; font-weight: 600;">
-                                    <i class="fas fa-layer-group me-1 text-secondary"></i> Titanium Metallic
+                        <label class="login-theme-choice-card d-block p-3 rounded-3 border h-100 position-relative {% if login_security_config.login_style in ('neumorphic_3d', 'titanium_metallic') %}border-primary shadow-sm bg-primary-subtle bg-opacity-10{% else %}border-light-subtle bg-white{% endif %}" style="cursor: pointer;">
+                            <input type="radio" name="login_style" value="neumorphic_3d" class="form-check-input position-absolute top-0 end-0 m-3" {% if login_security_config.login_style in ('neumorphic_3d', 'titanium_metallic') %}checked{% endif %} onchange="selectLoginTheme(this)">
+                            <div class="theme-preview-box rounded-2 mb-2 p-3 text-center" style="background: #181d24; color: #e2e8f0; min-height: 80px; display: flex; align-items: center; justify-content: center; border: 1px solid #232a35;">
+                                <div style="background: #181d24; border-radius: 12px; padding: 6px 14px; font-size: 0.75rem; box-shadow: inset 3px 3px 6px #101318, inset -3px -3px 6px #202730; color: #cbd5e1; font-weight: 700;">
+                                    <i class="fas fa-cubes me-1 text-secondary"></i> 3D Soft Matte
                                 </div>
                             </div>
-                            <div class="fw-bold text-dark small mb-1">تیتانیوم متالیک (Titanium Metallic)</div>
-                            <div class="text-muted" style="font-size: 0.75rem;">طراحی صنعتی متالیک با بافت تیتانیوم و استیل، بدون هاله نوری با تم روز و شب</div>
+                            <div class="fw-bold text-dark small mb-1">سه‌بعدی نئومورفیک (Neumorphic 3D)</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">عمق فیزیکی و لمسی با فیلدهای فرورفته سه‌بعدی و دکمه برجسته با بازخورد کلیک</div>
+                        </label>
+                    </div>
+
+                    <!-- 6. Stealth Tactical -->
+                    <div class="col-md-6 col-lg-4">
+                        <label class="login-theme-choice-card d-block p-3 rounded-3 border h-100 position-relative {% if login_security_config.login_style in ('stealth_tactical', 'executive_dark', 'dark') %}border-primary shadow-sm bg-primary-subtle bg-opacity-10{% else %}border-light-subtle bg-white{% endif %}" style="cursor: pointer;">
+                            <input type="radio" name="login_style" value="stealth_tactical" class="form-check-input position-absolute top-0 end-0 m-3" {% if login_security_config.login_style in ('stealth_tactical', 'executive_dark', 'dark') %}checked{% endif %} onchange="selectLoginTheme(this)">
+                            <div class="theme-preview-box rounded-2 mb-2 p-3 text-center" style="background: #0a0d13; color: #94a3b8; min-height: 80px; display: flex; align-items: center; justify-content: center; border: 1.5px solid #283344;">
+                                <div style="background: #141b26; border-radius: 4px; padding: 6px 14px; font-size: 0.75rem; border: 1px solid #3b495e; color: #f59e0b; font-weight: 800; letter-spacing: 1px;">
+                                    <i class="fas fa-shield-halved me-1"></i> TACTICAL HUD
+                                </div>
+                            </div>
+                            <div class="fw-bold text-dark small mb-1">استلث زره‌پوش (Stealth Tactical)</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">سبک نظامی با فیلدهای زاویه‌دار و پخ‌خورده، بافت فیبر کربن و دکمه استیل با خط LED</div>
+                        </label>
+                    </div>
+
+                    <!-- 7. Swiss Minimal -->
+                    <div class="col-md-6 col-lg-4">
+                        <label class="login-theme-choice-card d-block p-3 rounded-3 border h-100 position-relative {% if login_security_config.login_style in ('swiss_minimal', 'nordic_studio', 'minimal_luxury') %}border-primary shadow-sm bg-primary-subtle bg-opacity-10{% else %}border-light-subtle bg-white{% endif %}" style="cursor: pointer;">
+                            <input type="radio" name="login_style" value="swiss_minimal" class="form-check-input position-absolute top-0 end-0 m-3" {% if login_security_config.login_style in ('swiss_minimal', 'nordic_studio', 'minimal_luxury') %}checked{% endif %} onchange="selectLoginTheme(this)">
+                            <div class="theme-preview-box rounded-2 mb-2 p-3 text-center" style="background: #0e121a; color: #f8fafc; min-height: 80px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.08);">
+                                <div style="border-bottom: 2px solid #ffffff; padding: 4px 14px; font-size: 0.75rem; color: #ffffff; font-weight: 700; letter-spacing: 1px;">
+                                    <i class="fas fa-minus me-1 text-muted"></i> SWISS LINE
+                                </div>
+                            </div>
+                            <div class="fw-bold text-dark small mb-1">مینیمال سوئیسی (Swiss Minimal)</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">فوق‌العاده خلوت با خطوط زیرین معلق بدون باکس سنتی، آیکون‌های باریک و کنتراست شفاف</div>
                         </label>
                     </div>
                 </div>

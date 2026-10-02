@@ -4242,13 +4242,18 @@ def inject_global_branding():
 
 def render_login_page():
     login_style = db.get_setting("login_style", "glass_aurora")
-    # تبدیل تم‌های منسوخ به تم‌های جدید برای پایداری کامل
-    if login_style in ("ruby_waves", "gradient_vibrant"):
-        login_style = "nordic_studio"
-    elif login_style == "liquid_glass":
-        login_style = "glass_aurora"
-    elif login_style == "ios_glass":
-        login_style = "ios_lockscreen"
+    legacy_map = {
+        "ruby_waves": "hacker_terminal",
+        "gradient_vibrant": "hacker_terminal",
+        "executive_dark": "stealth_tactical",
+        "nordic_studio": "swiss_minimal",
+        "titanium_metallic": "neumorphic_3d",
+        "minimal_luxury": "swiss_minimal",
+        "liquid_glass": "glass_aurora",
+        "ios_glass": "ios_lockscreen",
+    }
+    if login_style in legacy_map:
+        login_style = legacy_map[login_style]
 
     login_page_title = db.get_setting("login_page_title", "")
     login_page_subtitle = db.get_setting("login_page_subtitle", "")
@@ -15686,12 +15691,18 @@ def settings():
         "portal_plan_style": db.get_setting("portal_plan_style", "glass_classic")
     }
     cur_login_style = db.get_setting("login_style", "glass_aurora")
-    if cur_login_style in ("ruby_waves", "gradient_vibrant"):
-        cur_login_style = "nordic_studio"
-    elif cur_login_style == "liquid_glass":
-        cur_login_style = "glass_aurora"
-    elif cur_login_style == "ios_glass":
-        cur_login_style = "ios_lockscreen"
+    legacy_map = {
+        "ruby_waves": "hacker_terminal",
+        "gradient_vibrant": "hacker_terminal",
+        "executive_dark": "stealth_tactical",
+        "nordic_studio": "swiss_minimal",
+        "titanium_metallic": "neumorphic_3d",
+        "minimal_luxury": "swiss_minimal",
+        "liquid_glass": "glass_aurora",
+        "ios_glass": "ios_lockscreen",
+    }
+    if cur_login_style in legacy_map:
+        cur_login_style = legacy_map[cur_login_style]
 
     login_security_config = {
         "admin_login_proxy_path": get_admin_login_proxy_path(),

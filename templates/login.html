@@ -4,13 +4,16 @@
 
 {% block login_content %}
 {% set active_style = login_style or 'glass_aurora' %}
-{% if active_style in ('ruby_waves', 'gradient_vibrant') %}{% set active_style = 'nordic_studio' %}{% endif %}
+{% if active_style in ('ruby_waves', 'gradient_vibrant') %}{% set active_style = 'hacker_terminal' %}{% endif %}
 {% if active_style == 'liquid_glass' %}{% set active_style = 'glass_aurora' %}{% endif %}
 {% if active_style == 'ios_glass' %}{% set active_style = 'ios_lockscreen' %}{% endif %}
+{% if active_style == 'executive_dark' %}{% set active_style = 'stealth_tactical' %}{% endif %}
+{% if active_style in ('nordic_studio', 'minimal_luxury') %}{% set active_style = 'swiss_minimal' %}{% endif %}
+{% if active_style == 'titanium_metallic' %}{% set active_style = 'neumorphic_3d' %}{% endif %}
 {% set show_bg_effect = login_bg_effect if login_bg_effect is defined else true %}
 
 <div class="login-page-root login-theme-{{ active_style }} position-relative overflow-hidden d-flex align-items-center justify-content-center"
-     {% if active_style in ['cyber_neon', 'glass_aurora', 'executive_dark'] %}data-bs-theme="dark"{% endif %}
+     {% if active_style in ['cyber_neon', 'glass_aurora', 'hacker_terminal', 'stealth_tactical', 'neumorphic_3d', 'swiss_minimal'] %}data-bs-theme="dark"{% endif %}
      style="min-height: 100vh; padding: 24px 16px;">
     
     <!-- دکمه کنترل تم روز/شب صفحه لاگین -->
@@ -31,6 +34,8 @@
         {% elif active_style == 'cyber_neon' %}
             <div class="cyber-grid position-absolute w-100 h-100 top-0 start-0" style="background-image: linear-gradient(rgba(0, 242, 254, 0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.07) 1px, transparent 1px); background-size: 35px 35px; opacity: 0.85;"></div>
             <div class="position-absolute top-0 start-50 translate-middle-x" style="width: 600px; height: 300px; background: radial-gradient(circle, rgba(0, 242, 254, 0.22) 0%, rgba(0,0,0,0) 75%);"></div>
+        {% elif active_style == 'hacker_terminal' %}
+            <div class="hacker-scanlines position-absolute w-100 h-100 top-0 start-0" style="background: linear-gradient(rgba(0, 255, 102, 0.03) 50%, rgba(0, 0, 0, 0.3) 50%); background-size: 100% 4px; pointer-events: none; opacity: 0.7;"></div>
         {% endif %}
     </div>
     {% endif %}
@@ -38,8 +43,28 @@
     <div class="login-card-container position-relative" style="z-index: 2; width: 100%; max-width: 440px;">
         <div class="card login-main-card border-0 overflow-hidden shadow-2xl">
             
+            {% if active_style == 'hacker_terminal' %}
+            <!-- نوار ترمینال لینوکس -->
+            <div class="hacker-window-topbar d-flex align-items-center justify-content-between px-3 py-2 border-bottom border-success border-opacity-25 font-monospace" style="background: rgba(0, 255, 102, 0.06); font-size: 0.78rem;">
+                <div class="d-flex gap-1 align-items-center">
+                    <span class="rounded-circle" style="width: 10px; height: 10px; background: #ff5f56; display: inline-block;"></span>
+                    <span class="rounded-circle" style="width: 10px; height: 10px; background: #ffbd2e; display: inline-block;"></span>
+                    <span class="rounded-circle" style="width: 10px; height: 10px; background: #27c93f; display: inline-block;"></span>
+                </div>
+                <span class="text-success small opacity-75 font-monospace">root@vpn-core: ~ bash</span>
+            </div>
+            {% endif %}
+
             <!-- سربرگ کارت لاگین -->
             <div class="login-card-header text-center p-4 pb-3">
+                {% if active_style == 'ios_lockscreen' %}
+                <!-- جزیره پویا iOS -->
+                <div class="ios-dynamic-island mx-auto mb-3 d-inline-flex align-items-center justify-content-center gap-2 px-3 py-1 rounded-pill bg-black text-white shadow" style="font-size: 0.72rem;">
+                    <i class="fas fa-expand text-secondary"></i>
+                    <span style="letter-spacing: 0.5px;">Face ID</span>
+                </div>
+                {% endif %}
+
                 <div class="login-brand-logo mb-3">
                     {% if branding.get('logo_url') %}
                         <div class="logo-wrapper d-inline-flex p-2 rounded-4 shadow-sm">
@@ -49,16 +74,16 @@
                         <div class="logo-icon-wrapper d-inline-flex align-items-center justify-content-center rounded-4 shadow-sm" style="width: 64px; height: 64px;">
                             {% if active_style == 'cyber_neon' %}
                                 <i class="fas fa-microchip fs-2 text-cyan"></i>
-                            {% elif active_style == 'executive_dark' %}
-                                <i class="fas fa-shield-halved fs-2 text-secondary" style="color: #cbd5e1 !important;"></i>
+                            {% elif active_style == 'hacker_terminal' %}
+                                <i class="fas fa-user-secret fs-2 text-success"></i>
                             {% elif active_style == 'ios_lockscreen' %}
                                 <i class="fab fa-apple fs-2 text-secondary" style="color: #cbd5e1 !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></i>
-                            {% elif active_style == 'nordic_studio' %}
-                                <i class="fas fa-cube fs-2" style="color: inherit;"></i>
-                            {% elif active_style == 'titanium_metallic' %}
-                                <i class="fas fa-layer-group fs-2 text-secondary" style="color: #94a3b8 !important;"></i>
-                            {% elif active_style == 'minimal_luxury' %}
-                                <i class="fas fa-crown fs-2 text-warning"></i>
+                            {% elif active_style == 'neumorphic_3d' %}
+                                <i class="fas fa-cubes fs-2 text-secondary"></i>
+                            {% elif active_style == 'stealth_tactical' %}
+                                <i class="fas fa-shield-halved fs-2 text-warning" style="color: #f59e0b !important;"></i>
+                            {% elif active_style == 'swiss_minimal' %}
+                                <i class="fas fa-fingerprint fs-2" style="color: inherit;"></i>
                             {% else %}
                                 <i class="fas fa-shield-halved fs-2 text-primary"></i>
                             {% endif %}
@@ -71,7 +96,13 @@
                 </h4>
                 
                 <p class="small mb-2 login-brand-subtitle opacity-75">
-                    {{ login_page_subtitle or 'ورود مدیران و همکاران فروش' }}
+                    {% if active_style == 'hacker_terminal' %}
+                        AUTHENTICATION // ENCRYPTED ACCESS ONLY
+                    {% elif active_style == 'stealth_tactical' %}
+                        MILITARY GRADE AUTHENTICATION
+                    {% else %}
+                        {{ login_page_subtitle or 'ورود مدیران و همکاران فروش' }}
+                    {% endif %}
                 </p>
 
                 <!-- نشان نسخه فعال -->
@@ -113,24 +144,50 @@
                     <!-- نام کاربری -->
                     <div class="mb-3">
                         <label class="form-label small fw-bold mb-1">
-                            <i class="fas fa-user-circle me-1 opacity-75"></i> نام کاربری:
+                            {% if active_style == 'hacker_terminal' %}
+                                <span class="font-monospace text-success">[USER_ID] نام کاربری:</span>
+                            {% elif active_style == 'stealth_tactical' %}
+                                <i class="fas fa-id-badge me-1 text-warning"></i> شناسه کاربری (OPERATIVE):
+                            {% elif active_style == 'swiss_minimal' %}
+                                <span>نام کاربری:</span>
+                            {% else %}
+                                <i class="fas fa-user-circle me-1 opacity-75"></i> نام کاربری:
+                            {% endif %}
                         </label>
                         <div class="input-group login-input-group">
                             <span class="input-group-text border-end-0">
-                                <i class="fas fa-user text-muted"></i>
+                                {% if active_style == 'hacker_terminal' %}<i class="fas fa-terminal text-success"></i>
+                                {% elif active_style == 'stealth_tactical' %}<i class="fas fa-id-badge text-warning"></i>
+                                {% elif active_style == 'ios_lockscreen' %}<i class="fas fa-user text-secondary"></i>
+                                {% elif active_style == 'swiss_minimal' %}<i class="far fa-user text-muted"></i>
+                                {% else %}<i class="fas fa-user text-muted"></i>
+                                {% endif %}
                             </span>
-                            <input type="text" class="form-control border-start-0 ps-1 font-monospace" name="username" placeholder="Username" required autofocus style="direction: ltr; text-align: right;">
+                            <input type="text" class="form-control border-start-0 ps-1 font-monospace" name="username" placeholder="{% if active_style == 'hacker_terminal' %}root_user{% elif active_style == 'stealth_tactical' %}OPERATIVE-01{% else %}Username{% endif %}" required autofocus style="direction: ltr; text-align: right;">
                         </div>
                     </div>
 
                     <!-- کلمه عبور -->
                     <div class="mb-3">
                         <label class="form-label small fw-bold mb-1">
-                            <i class="fas fa-key me-1 opacity-75"></i> رمز عبور:
+                            {% if active_style == 'hacker_terminal' %}
+                                <span class="font-monospace text-success">[ENCRYPTED_KEY] رمز عبور:</span>
+                            {% elif active_style == 'stealth_tactical' %}
+                                <i class="fas fa-fingerprint me-1 text-warning"></i> کلید دسترسی (ACCESS KEY):
+                            {% elif active_style == 'swiss_minimal' %}
+                                <span>رمز عبور:</span>
+                            {% else %}
+                                <i class="fas fa-key me-1 opacity-75"></i> رمز عبور:
+                            {% endif %}
                         </label>
                         <div class="input-group login-input-group">
                             <span class="input-group-text border-end-0">
-                                <i class="fas fa-lock text-muted"></i>
+                                {% if active_style == 'hacker_terminal' %}<i class="fas fa-key text-success"></i>
+                                {% elif active_style == 'stealth_tactical' %}<i class="fas fa-fingerprint text-warning"></i>
+                                {% elif active_style == 'ios_lockscreen' %}<i class="fas fa-lock text-secondary"></i>
+                                {% elif active_style == 'swiss_minimal' %}<i class="fas fa-key text-muted"></i>
+                                {% else %}<i class="fas fa-lock text-muted"></i>
+                                {% endif %}
                             </span>
                             <input type="password" id="loginPasswordInput" class="form-control border-start-0 border-end-0 px-1 font-monospace" name="password" placeholder="••••••••" required style="direction: ltr;">
                             <button type="button" class="input-group-text border-start-0 bg-transparent cursor-pointer" onclick="togglePasswordVisibility()" title="نمایش/مخفی‌سازی رمز">
@@ -142,7 +199,17 @@
                     <!-- کد کپچا امنیتی -->
                     <div class="mb-4">
                         <label class="form-label small fw-bold mb-1 d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-shield-check me-1 opacity-75"></i> کد امنیتی (کپچا):</span>
+                            <span>
+                                {% if active_style == 'hacker_terminal' %}
+                                    <span class="font-monospace text-success">[VERIFICATION_TOKEN] کد امنیتی:</span>
+                                {% elif active_style == 'stealth_tactical' %}
+                                    <i class="fas fa-shield-halved me-1 text-warning"></i> کد تأیید امنیتی HUD:
+                                {% elif active_style == 'swiss_minimal' %}
+                                    <span>کد امنیتی:</span>
+                                {% else %}
+                                    <i class="fas fa-shield-check me-1 opacity-75"></i> کد امنیتی (کپچا):
+                                {% endif %}
+                            </span>
                             <small class="text-muted cursor-pointer" onclick="refreshCaptcha()" style="font-size: 0.75rem;">
                                 <i class="fas fa-rotate me-1"></i>تغییر تصویر
                             </small>
@@ -160,8 +227,22 @@
 
                     <!-- دکمه ورود -->
                     <button type="submit" class="btn w-100 py-2 fw-bold login-submit-btn d-flex align-items-center justify-content-center gap-2">
-                        <i class="fas fa-arrow-right-to-bracket"></i>
-                        <span>ورود به پنل کاربری</span>
+                        {% if active_style == 'hacker_terminal' %}
+                            <i class="fas fa-terminal"></i>
+                            <span class="font-monospace">[ EXECUTE // ACCESS GRANTED ]</span>
+                        {% elif active_style == 'stealth_tactical' %}
+                            <i class="fas fa-shield-halved"></i>
+                            <span>AUTHORIZE ACCESS</span>
+                        {% elif active_style == 'ios_lockscreen' %}
+                            <i class="fas fa-arrow-right-to-bracket"></i>
+                            <span>ورود به حساب کاربری</span>
+                        {% elif active_style == 'swiss_minimal' %}
+                            <span>ورود</span>
+                            <i class="fas fa-arrow-left"></i>
+                        {% else %}
+                            <i class="fas fa-arrow-right-to-bracket"></i>
+                            <span>ورود به پنل کاربری</span>
+                        {% endif %}
                     </button>
                 </form>
             </div>
@@ -416,13 +497,109 @@
     color: #94a3b8;
 }
 
-/* ─── استایل ۲: لاک‌اسکرین آیفون (ios_lockscreen / ios_glass) ─── */
+/* ─── استایل ۳: ترمینال هکری (hacker_terminal) ─── */
+.login-theme-hacker_terminal {
+    background: #020402;
+    color: #00ff66;
+    font-family: 'Courier New', Courier, monospace;
+}
+.login-theme-hacker_terminal .login-main-card {
+    background: #030804 !important;
+    border: 1.5px solid #00ff66 !important;
+    box-shadow: 0 0 35px rgba(0, 255, 102, 0.25), inset 0 0 20px rgba(0, 255, 102, 0.06) !important;
+    border-radius: 8px !important;
+    color: #00ff66 !important;
+}
+.login-theme-hacker_terminal .login-card-header {
+    background: transparent;
+    border-bottom: 1px dashed rgba(0, 255, 102, 0.3);
+}
+.login-theme-hacker_terminal .login-brand-title {
+    color: #00ff66;
+    text-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
+    font-family: monospace;
+}
+.login-theme-hacker_terminal .login-brand-subtitle {
+    color: #00cc52 !important;
+    font-family: monospace;
+    letter-spacing: 1px;
+}
+.login-theme-hacker_terminal .logo-icon-wrapper {
+    background: rgba(0, 255, 102, 0.08);
+    border: 1px solid #00ff66;
+    box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
+    border-radius: 6px !important;
+}
+.login-theme-hacker_terminal .login-version-badge {
+    background: rgba(0, 255, 102, 0.1);
+    border: 1px solid #00ff66;
+    color: #00ff66;
+    border-radius: 4px !important;
+}
+.login-theme-hacker_terminal .form-label {
+    color: #00ff66 !important;
+    font-family: monospace;
+}
+.login-theme-hacker_terminal .login-input-group .input-group-text,
+.login-theme-hacker_terminal .login-input-group .form-control {
+    background: #011204;
+    border-color: #00ff66;
+    color: #00ff66;
+    font-family: monospace;
+}
+.login-theme-hacker_terminal .login-input-group .input-group-text i {
+    color: #00ff66 !important;
+}
+.login-theme-hacker_terminal .login-input-group .form-control:focus {
+    border-color: #00ff66;
+    box-shadow: 0 0 14px rgba(0, 255, 102, 0.5);
+    background: #021a07;
+}
+.login-theme-hacker_terminal .captcha-img-box {
+    background: #011204;
+    border-color: #00ff66 !important;
+    border-radius: 4px !important;
+}
+.login-theme-hacker_terminal .login-captcha-input {
+    background: #011204;
+    border-color: #00ff66;
+    color: #00ff66;
+    font-family: monospace;
+    letter-spacing: 8px;
+    border-radius: 4px !important;
+}
+.login-theme-hacker_terminal .login-submit-btn {
+    background: rgba(0, 255, 102, 0.15);
+    border: 1.5px solid #00ff66;
+    color: #00ff66;
+    border-radius: 6px;
+    font-family: monospace;
+    font-weight: 800;
+    box-shadow: 0 0 20px rgba(0, 255, 102, 0.3);
+    transition: all 0.2s ease;
+}
+.login-theme-hacker_terminal .login-submit-btn:hover {
+    background: #00ff66;
+    color: #020402;
+    box-shadow: 0 0 30px rgba(0, 255, 102, 0.7);
+}
+.login-theme-hacker_terminal .btn-outline-secondary {
+    color: #00ff66 !important;
+    border-color: #00ff66 !important;
+    background: rgba(0, 255, 102, 0.08);
+}
+.login-theme-hacker_terminal .login-card-footer {
+    background: transparent;
+    border-top: 1px dashed rgba(0, 255, 102, 0.25);
+    color: #00cc52 !important;
+}
+
+/* ─── استایل ۴: کپسولی شیشه‌ای آیفون (ios_lockscreen) ─── */
 .login-theme-ios_lockscreen,
 .login-theme-ios_glass {
     background: #090d16;
     color: #f8fafc;
-    position: relative;
-    transition: background 0.3s ease, color 0.3s ease;
+    transition: background 0.3s ease;
 }
 [data-bs-theme="light"] .login-theme-ios_lockscreen,
 [data-bs-theme="light"] .login-theme-ios_glass {
@@ -432,592 +609,394 @@
 .login-theme-ios_lockscreen .login-main-card,
 .login-theme-ios_glass .login-main-card {
     background: rgba(18, 24, 38, 0.75) !important;
-    backdrop-filter: blur(30px) saturate(190%);
-    -webkit-backdrop-filter: blur(30px) saturate(190%);
+    backdrop-filter: blur(35px) saturate(190%);
+    -webkit-backdrop-filter: blur(35px) saturate(190%);
     border: 1px solid rgba(255, 255, 255, 0.18) !important;
     box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
-    border-radius: 32px !important;
+    border-radius: 40px !important;
     color: #f8fafc;
 }
 [data-bs-theme="light"] .login-theme-ios_lockscreen .login-main-card,
 [data-bs-theme="light"] .login-theme-ios_glass .login-main-card {
-    background: rgba(255, 255, 255, 0.78) !important;
+    background: rgba(255, 255, 255, 0.82) !important;
     border: 1px solid rgba(203, 213, 225, 0.8) !important;
-    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.08) !important;
     color: #0f172a;
 }
 .login-theme-ios_lockscreen .login-card-header,
 .login-theme-ios_glass .login-card-header {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 100%);
+    background: transparent;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-[data-bs-theme="light"] .login-theme-ios_lockscreen .login-card-header,
-[data-bs-theme="light"] .login-theme-ios_glass .login-card-header {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, transparent 100%);
-    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
 }
 .login-theme-ios_lockscreen .login-brand-title,
 .login-theme-ios_glass .login-brand-title {
     color: #ffffff;
     font-weight: 800;
-    letter-spacing: -0.5px;
 }
 [data-bs-theme="light"] .login-theme-ios_lockscreen .login-brand-title,
 [data-bs-theme="light"] .login-theme-ios_glass .login-brand-title {
     color: #0f172a;
 }
-.login-theme-ios_lockscreen .login-brand-subtitle,
-.login-theme-ios_glass .login-brand-subtitle {
-    color: #94a3b8 !important;
-}
-[data-bs-theme="light"] .login-theme-ios_lockscreen .login-brand-subtitle,
-[data-bs-theme="light"] .login-theme-ios_glass .login-brand-subtitle {
-    color: #64748b !important;
-}
-.login-theme-ios_lockscreen .logo-wrapper,
 .login-theme-ios_lockscreen .logo-icon-wrapper,
-.login-theme-ios_glass .logo-wrapper,
 .login-theme-ios_glass .logo-icon-wrapper {
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 22px !important;
-    backdrop-filter: blur(16px);
+    border-radius: 9999px !important;
     color: #cbd5e1;
-}
-[data-bs-theme="light"] .login-theme-ios_lockscreen .logo-wrapper,
-[data-bs-theme="light"] .login-theme-ios_lockscreen .logo-icon-wrapper,
-[data-bs-theme="light"] .login-theme-ios_glass .logo-wrapper,
-[data-bs-theme="light"] .login-theme-ios_glass .logo-icon-wrapper {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(203, 213, 225, 0.9);
-    color: #475569;
 }
 .login-theme-ios_lockscreen .login-version-badge,
 .login-theme-ios_glass .login-version-badge {
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.16);
     color: #cbd5e1;
+    border-radius: 9999px !important;
 }
-[data-bs-theme="light"] .login-theme-ios_lockscreen .login-version-badge,
-[data-bs-theme="light"] .login-theme-ios_glass .login-version-badge {
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    color: #475569;
+.login-theme-ios_lockscreen .login-input-group,
+.login-theme-ios_glass .login-input-group {
+    border-radius: 9999px !important;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
 }
-.login-theme-ios_lockscreen .form-label,
-.login-theme-ios_glass .form-label {
-    color: #cbd5e1 !important;
-}
-[data-bs-theme="light"] .login-theme-ios_lockscreen .form-label,
-[data-bs-theme="light"] .login-theme-ios_glass .form-label {
-    color: #334155 !important;
+[data-bs-theme="light"] .login-theme-ios_lockscreen .login-input-group,
+[data-bs-theme="light"] .login-theme-ios_glass .login-input-group {
+    border: 1px solid #cbd5e1;
+    background: rgba(255, 255, 255, 0.9);
 }
 .login-theme-ios_lockscreen .login-input-group .input-group-text,
 .login-theme-ios_lockscreen .login-input-group .form-control,
 .login-theme-ios_glass .login-input-group .input-group-text,
 .login-theme-ios_glass .login-input-group .form-control {
-    background: rgba(15, 23, 42, 0.6);
-    border-color: rgba(255, 255, 255, 0.14);
-    color: #ffffff;
-}
-[data-bs-theme="light"] .login-theme-ios_lockscreen .login-input-group .input-group-text,
-[data-bs-theme="light"] .login-theme-ios_lockscreen .login-input-group .form-control,
-[data-bs-theme="light"] .login-theme-ios_glass .login-input-group .input-group-text,
-[data-bs-theme="light"] .login-theme-ios_glass .login-input-group .form-control {
-    background: rgba(255, 255, 255, 0.85);
-    border-color: #cbd5e1;
-    color: #0f172a;
-}
-.login-theme-ios_lockscreen .login-input-group .form-control:focus,
-.login-theme-ios_glass .login-input-group .form-control:focus {
-    border-color: #94a3b8;
-    background: rgba(15, 23, 42, 0.85);
-    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.25);
-}
-[data-bs-theme="light"] .login-theme-ios_lockscreen .login-input-group .form-control:focus,
-[data-bs-theme="light"] .login-theme-ios_glass .login-input-group .form-control:focus {
-    border-color: #475569;
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
-}
-.login-theme-ios_lockscreen .login-input-group .input-group-text i,
-.login-theme-ios_lockscreen .input-group-text i,
-.login-theme-ios_glass .login-input-group .input-group-text i,
-.login-theme-ios_glass .input-group-text i {
-    color: #cbd5e1 !important;
-}
-[data-bs-theme="light"] .login-theme-ios_lockscreen .login-input-group .input-group-text i,
-[data-bs-theme="light"] .login-theme-ios_lockscreen .input-group-text i,
-[data-bs-theme="light"] .login-theme-ios_glass .login-input-group .input-group-text i,
-[data-bs-theme="light"] .login-theme-ios_glass .input-group-text i {
-    color: #64748b !important;
+    background: transparent !important;
+    border: none !important;
+    color: inherit !important;
 }
 .login-theme-ios_lockscreen .captcha-img-box,
 .login-theme-ios_glass .captcha-img-box {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.14) !important;
+    border-radius: 9999px !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    overflow: hidden;
 }
-[data-bs-theme="light"] .login-theme-ios_lockscreen .captcha-img-box,
-[data-bs-theme="light"] .login-theme-ios_glass .captcha-img-box {
-    background: #ffffff;
-    border-color: #cbd5e1 !important;
+.login-theme-ios_lockscreen .btn-outline-secondary,
+.login-theme-ios_glass .btn-outline-secondary {
+    border-radius: 9999px !important;
 }
 .login-theme-ios_lockscreen .login-captcha-input,
 .login-theme-ios_glass .login-captcha-input {
-    background: rgba(15, 23, 42, 0.6);
-    border-color: rgba(255, 255, 255, 0.14);
-    color: #ffffff;
-}
-[data-bs-theme="light"] .login-theme-ios_lockscreen .login-captcha-input,
-[data-bs-theme="light"] .login-theme-ios_glass .login-captcha-input {
-    background: rgba(255, 255, 255, 0.85);
-    border-color: #cbd5e1;
-    color: #0f172a;
+    border-radius: 9999px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: inherit !important;
 }
 .login-theme-ios_lockscreen .login-submit-btn,
 .login-theme-ios_glass .login-submit-btn {
-    background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    color: #f8fafc;
-    font-weight: 700;
-    border-radius: 18px;
-    padding: 13px;
-    box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    transition: all 0.25s ease;
+    border-radius: 9999px !important;
+    background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    color: #ffffff !important;
+    padding: 13px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
 }
 [data-bs-theme="light"] .login-theme-ios_lockscreen .login-submit-btn,
 [data-bs-theme="light"] .login-theme-ios_glass .login-submit-btn {
-    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-    border: 1px solid #334155;
-    color: #ffffff;
-    box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.25);
-}
-.login-theme-ios_lockscreen .login-submit-btn:hover,
-.login-theme-ios_glass .login-submit-btn:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.1);
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
+    border: 1px solid #334155 !important;
+    color: #ffffff !important;
 }
 .login-theme-ios_lockscreen .login-card-footer,
 .login-theme-ios_glass .login-card-footer {
-    background: rgba(10, 15, 26, 0.35);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: transparent;
     color: #94a3b8;
 }
-[data-bs-theme="light"] .login-theme-ios_lockscreen .login-card-footer,
-[data-bs-theme="light"] .login-theme-ios_glass .login-card-footer {
-    background: rgba(241, 245, 249, 0.6);
-    border-top: 1px solid rgba(226, 232, 240, 0.8);
-    color: #64748b;
-}
 
-/* ─── استایل ۳: مینیمال لوکس (minimal_luxury) ─── */
-.login-theme-minimal_luxury {
-    background: #f8fafc;
-    color: #0f172a;
+/* ─── استایل ۵: سه‌بعدی نئومورفیک (neumorphic_3d) ─── */
+.login-theme-neumorphic_3d,
+.login-theme-titanium_metallic {
+    background: #181d24;
+    color: #e2e8f0;
 }
-[data-bs-theme="dark"] .login-theme-minimal_luxury {
-    background: #0f172a;
-    color: #f8fafc;
+.login-theme-neumorphic_3d .login-main-card,
+.login-theme-titanium_metallic .login-main-card {
+    background: #181d24 !important;
+    border: 1px solid #232a35 !important;
+    border-radius: 32px !important;
+    box-shadow: 20px 20px 60px #101318, -20px -20px 60px #202730 !important;
+    color: #e2e8f0 !important;
 }
-.login-theme-minimal_luxury .login-main-card {
-    background: #ffffff !important;
-    border: 1px solid rgba(226, 232, 240, 0.8) !important;
-    box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.03) !important;
-    border-radius: 28px !important;
-}
-[data-bs-theme="dark"] .login-theme-minimal_luxury .login-main-card {
-    background: #1e293b !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5) !important;
-}
-.login-theme-minimal_luxury .login-card-header {
+.login-theme-neumorphic_3d .login-card-header,
+.login-theme-titanium_metallic .login-card-header {
     background: transparent;
+    border-bottom: 1px solid #232a35;
 }
-.login-theme-minimal_luxury .logo-wrapper,
-.login-theme-minimal_luxury .logo-icon-wrapper {
-    background: #f1f5f9;
+.login-theme-neumorphic_3d .logo-icon-wrapper,
+.login-theme-titanium_metallic .logo-icon-wrapper {
+    background: #181d24 !important;
+    border: none !important;
+    border-radius: 20px !important;
+    box-shadow: 6px 6px 12px #101318, -6px -6px 12px #202730 !important;
+}
+.login-theme-neumorphic_3d .login-version-badge,
+.login-theme-titanium_metallic .login-version-badge {
+    background: #181d24;
+    border: 1px solid #232a35;
+    color: #94a3b8;
+}
+.login-theme-neumorphic_3d .login-input-group,
+.login-theme-titanium_metallic .login-input-group {
+    background: #181d24 !important;
     border-radius: 18px !important;
+    box-shadow: inset 4px 4px 8px #101318, inset -4px -4px 8px #202730 !important;
+    border: none !important;
 }
-[data-bs-theme="dark"] .login-theme-minimal_luxury .logo-wrapper,
-[data-bs-theme="dark"] .login-theme-minimal_luxury .logo-icon-wrapper {
-    background: #334155;
+.login-theme-neumorphic_3d .login-input-group .input-group-text,
+.login-theme-neumorphic_3d .login-input-group .form-control,
+.login-theme-titanium_metallic .login-input-group .input-group-text,
+.login-theme-titanium_metallic .login-input-group .form-control {
+    background: transparent !important;
+    border: none !important;
+    color: #e2e8f0 !important;
 }
-.login-theme-minimal_luxury .login-version-badge {
-    background: #f1f5f9;
-    color: #64748b;
+.login-theme-neumorphic_3d .captcha-img-box,
+.login-theme-titanium_metallic .captcha-img-box {
+    border-radius: 18px !important;
+    box-shadow: inset 3px 3px 6px #101318, inset -3px -3px 6px #202730 !important;
+    border: none !important;
 }
-[data-bs-theme="dark"] .login-theme-minimal_luxury .login-version-badge {
-    background: #334155;
-    color: #94a3b8;
+.login-theme-neumorphic_3d .login-captcha-input,
+.login-theme-titanium_metallic .login-captcha-input {
+    background: #181d24 !important;
+    border-radius: 18px !important;
+    box-shadow: inset 4px 4px 8px #101318, inset -4px -4px 8px #202730 !important;
+    border: none !important;
+    color: #e2e8f0 !important;
 }
-.login-theme-minimal_luxury .login-input-group .input-group-text,
-.login-theme-minimal_luxury .login-input-group .form-control {
-    background: #f8fafc;
-    border-color: #e2e8f0;
+.login-theme-neumorphic_3d .btn-outline-secondary,
+.login-theme-titanium_metallic .btn-outline-secondary {
+    background: #181d24 !important;
+    border: none !important;
+    border-radius: 14px !important;
+    box-shadow: 4px 4px 8px #101318, -4px -4px 8px #202730 !important;
+    color: #94a3b8 !important;
 }
-[data-bs-theme="dark"] .login-theme-minimal_luxury .login-input-group .input-group-text,
-[data-bs-theme="dark"] .login-theme-minimal_luxury .login-input-group .form-control {
-    background: #0f172a;
-    border-color: #334155;
-    color: #f8fafc;
+.login-theme-neumorphic_3d .login-submit-btn,
+.login-theme-titanium_metallic .login-submit-btn {
+    background: #181d24 !important;
+    border: none !important;
+    border-radius: 20px !important;
+    box-shadow: 6px 6px 14px #101318, -6px -6px 14px #202730 !important;
+    color: #f1f5f9 !important;
+    font-weight: 800 !important;
+    padding: 14px !important;
+    transition: all 0.15s ease;
 }
-.login-theme-minimal_luxury .login-submit-btn {
-    background: #0f172a;
-    color: #ffffff;
-    border-radius: 16px;
-    padding: 12px;
-    border: none;
-    transition: all 0.2s ease;
+.login-theme-neumorphic_3d .login-submit-btn:active,
+.login-theme-titanium_metallic .login-submit-btn:active {
+    box-shadow: inset 4px 4px 8px #101318, inset -4px -4px 8px #202730 !important;
 }
-[data-bs-theme="dark"] .login-theme-minimal_luxury .login-submit-btn {
-    background: #38bdf8;
-    color: #0f172a;
-}
-.login-theme-minimal_luxury .login-submit-btn:hover {
-    opacity: 0.92;
-    transform: translateY(-2px);
-}
-.login-theme-minimal_luxury .login-card-footer {
+.login-theme-neumorphic_3d .login-card-footer,
+.login-theme-titanium_metallic .login-card-footer {
     background: transparent;
     color: #94a3b8;
 }
 
-/* ─── استایل ۴: دارک مینیمال (executive_dark / dark) ─── */
+/* ─── استایل ۶: استلث دارک زره‌پوش (stealth_tactical) ─── */
+.login-theme-stealth_tactical,
 .login-theme-executive_dark {
+    background: #0a0d13;
+    color: #cbd5e1;
+}
+.login-theme-stealth_tactical .login-main-card,
+.login-theme-executive_dark .login-main-card {
+    background: #0f141d !important;
+    border: 2px solid #283344 !important;
+    clip-path: polygon(0 16px, 16px 0, calc(100% - 16px) 0, 100% 16px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px)) !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95) !important;
+    color: #cbd5e1 !important;
+}
+.login-theme-stealth_tactical .login-card-header,
+.login-theme-executive_dark .login-card-header {
+    background: rgba(20, 27, 38, 0.5);
+    border-bottom: 1px solid #283344;
+}
+.login-theme-stealth_tactical .login-brand-title,
+.login-theme-executive_dark .login-brand-title {
+    color: #f8fafc;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+}
+.login-theme-stealth_tactical .login-brand-subtitle,
+.login-theme-executive_dark .login-brand-subtitle {
+    color: #94a3b8 !important;
+    letter-spacing: 1px;
+}
+.login-theme-stealth_tactical .logo-icon-wrapper,
+.login-theme-executive_dark .logo-icon-wrapper {
+    background: #141b26;
+    border: 1px solid #3b495e;
+    clip-path: polygon(0 8px, 8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px));
+}
+.login-theme-stealth_tactical .login-version-badge,
+.login-theme-executive_dark .login-version-badge {
+    background: #141b26;
+    border: 1px solid #324053;
+    color: #f59e0b;
+}
+.login-theme-stealth_tactical .form-label,
+.login-theme-executive_dark .form-label {
+    color: #cbd5e1 !important;
+}
+.login-theme-stealth_tactical .login-input-group,
+.login-theme-executive_dark .login-input-group {
+    clip-path: polygon(0 8px, 8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px)) !important;
+    background: #141b26 !important;
+    border: 1px solid #324053 !important;
+}
+.login-theme-stealth_tactical .login-input-group .input-group-text,
+.login-theme-stealth_tactical .login-input-group .form-control,
+.login-theme-executive_dark .login-input-group .input-group-text,
+.login-theme-executive_dark .login-input-group .form-control {
+    background: #141b26 !important;
+    border: none !important;
+    color: #f1f5f9 !important;
+}
+.login-theme-stealth_tactical .captcha-img-box,
+.login-theme-executive_dark .captcha-img-box {
+    clip-path: polygon(0 6px, 6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px)) !important;
+    border: 1px solid #d97706 !important;
+}
+.login-theme-stealth_tactical .login-captcha-input,
+.login-theme-executive_dark .login-captcha-input {
+    clip-path: polygon(0 6px, 6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px)) !important;
+    background: #141b26 !important;
+    border: 1px solid #324053 !important;
+    color: #fbbf24 !important;
+    font-family: monospace;
+}
+.login-theme-stealth_tactical .login-submit-btn,
+.login-theme-executive_dark .login-submit-btn {
+    background: linear-gradient(180deg, #2a3547 0%, #151c27 100%) !important;
+    border: 1.5px solid #45556e !important;
+    clip-path: polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px)) !important;
+    color: #f8fafc !important;
+    font-weight: 800 !important;
+    letter-spacing: 1px !important;
+    border-bottom: 2px solid #ef4444 !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+}
+.login-theme-stealth_tactical .login-card-footer,
+.login-theme-executive_dark .login-card-footer {
+    background: #0a0d13;
+    border-top: 1px solid #283344;
+    color: #64748b;
+}
+
+/* ─── استایل ۷: مینیمال مدرن سوئیسی (swiss_minimal) ─── */
+.login-theme-swiss_minimal,
+.login-theme-nordic_studio,
+.login-theme-minimal_luxury {
     background: #080a0f;
     color: #f8fafc;
 }
-.login-theme-executive_dark .login-main-card {
-    background: #0d1117 !important;
-    border: 1px solid #21262d !important;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
-    border-radius: 22px !important;
-    color: #f8fafc;
+.login-theme-swiss_minimal .login-main-card,
+.login-theme-nordic_studio .login-main-card,
+.login-theme-minimal_luxury .login-main-card {
+    background: #0e121a !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 28px !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+    color: #f8fafc !important;
 }
-.login-theme-executive_dark .login-card-header {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
-    border-bottom: 1px solid #21262d;
-}
-.login-theme-executive_dark .login-brand-title {
-    color: #f0f6fc;
-    font-weight: 800;
-}
-.login-theme-executive_dark .login-brand-subtitle {
-    color: #8b949e !important;
-}
-.login-theme-executive_dark .logo-wrapper,
-.login-theme-executive_dark .logo-icon-wrapper {
-    background: #161b22;
-    border: 1px solid #30363d;
-    color: #c9d1d9;
-}
-.login-theme-executive_dark .login-version-badge {
-    background: #161b22;
-    border: 1px solid #30363d;
-    color: #8b949e;
-}
-.login-theme-executive_dark .form-label {
-    color: #c9d1d9 !important;
-}
-.login-theme-executive_dark .login-input-group .input-group-text,
-.login-theme-executive_dark .login-input-group .form-control {
-    background: #0d1117;
-    border-color: #30363d;
-    color: #f0f6fc;
-}
-.login-theme-executive_dark .login-input-group .form-control:focus {
-    border-color: #58a6ff;
-    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
-    background: #161b22;
-}
-.login-theme-executive_dark .captcha-img-box {
-    background: #0d1117;
-    border-color: #30363d !important;
-}
-.login-theme-executive_dark .login-captcha-input {
-    background: #0d1117;
-    border-color: #30363d;
-    color: #f0f6fc;
-}
-.login-theme-executive_dark .login-submit-btn {
-    background: linear-gradient(180deg, #21262d 0%, #161b22 100%);
-    border: 1px solid #30363d;
-    color: #f0f6fc;
-    font-weight: 700;
-    border-radius: 12px;
-    padding: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
-    transition: all 0.25s ease;
-}
-.login-theme-executive_dark .login-submit-btn:hover {
-    background: linear-gradient(180deg, #30363d 0%, #21262d 100%);
-    border-color: #8b949e;
-    transform: translateY(-2px);
-    color: #ffffff;
-}
-.login-theme-executive_dark .login-card-footer {
-    background: #090d13;
-    border-top: 1px solid #21262d;
-    color: #8b949e;
-}
-
-/* ─── استایل جدید ۵: نوردیک استودیو (nordic_studio) ─── */
-.login-theme-nordic_studio {
-    background: #f8fafc;
-    color: #0f172a;
-    transition: background 0.3s ease, color 0.3s ease;
-}
-[data-bs-theme="dark"] .login-theme-nordic_studio {
-    background: #0b0f17;
-    color: #f8fafc;
-}
-.login-theme-nordic_studio .login-main-card {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.02) !important;
-    border-radius: 24px !important;
-    color: #0f172a;
-}
-[data-bs-theme="dark"] .login-theme-nordic_studio .login-main-card {
-    background: #141b26 !important;
-    border: 1px solid #1f2937 !important;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7) !important;
-    color: #f8fafc;
-}
-.login-theme-nordic_studio .login-card-header {
+.login-theme-swiss_minimal .login-card-header,
+.login-theme-nordic_studio .login-card-header,
+.login-theme-minimal_luxury .login-card-header {
     background: transparent;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
-[data-bs-theme="dark"] .login-theme-nordic_studio .login-card-header {
-    border-bottom: 1px solid #1f2937;
-}
-.login-theme-nordic_studio .logo-wrapper,
-.login-theme-nordic_studio .logo-icon-wrapper {
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
+.login-theme-swiss_minimal .logo-icon-wrapper,
+.login-theme-nordic_studio .logo-icon-wrapper,
+.login-theme-minimal_luxury .logo-icon-wrapper {
+    background: #141a24;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 18px !important;
 }
-[data-bs-theme="dark"] .login-theme-nordic_studio .logo-wrapper,
-[data-bs-theme="dark"] .login-theme-nordic_studio .logo-icon-wrapper {
-    background: #1e2638;
-    border: 1px solid #334155;
-    color: #cbd5e1;
-}
-.login-theme-nordic_studio .login-version-badge {
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    color: #64748b;
-}
-[data-bs-theme="dark"] .login-theme-nordic_studio .login-version-badge {
-    background: #1e2638;
-    border: 1px solid #334155;
+.login-theme-swiss_minimal .login-version-badge,
+.login-theme-nordic_studio .login-version-badge,
+.login-theme-minimal_luxury .login-version-badge {
+    background: #141a24;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     color: #94a3b8;
 }
-.login-theme-nordic_studio .form-label {
-    color: #334155 !important;
-    font-weight: 600;
-}
-[data-bs-theme="dark"] .login-theme-nordic_studio .form-label {
-    color: #cbd5e1 !important;
-}
-.login-theme-nordic_studio .login-input-group .input-group-text,
-.login-theme-nordic_studio .login-input-group .form-control {
-    background: #f8fafc;
-    border-color: #e2e8f0;
-    color: #0f172a;
-}
-[data-bs-theme="dark"] .login-theme-nordic_studio .login-input-group .input-group-text,
-[data-bs-theme="dark"] .login-theme-nordic_studio .login-input-group .form-control {
-    background: #0f1420;
-    border-color: #1f2937;
-    color: #f8fafc;
-}
-.login-theme-nordic_studio .login-input-group .form-control:focus {
-    border-color: #0f172a;
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
-}
-[data-bs-theme="dark"] .login-theme-nordic_studio .login-input-group .form-control:focus {
-    border-color: #60a5fa;
-    background: #141b26;
-    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
-}
-.login-theme-nordic_studio .captcha-img-box {
-    background: #f8fafc;
-    border-color: #e2e8f0 !important;
-}
-[data-bs-theme="dark"] .login-theme-nordic_studio .captcha-img-box {
-    background: #0f1420;
-    border-color: #1f2937 !important;
-}
-.login-theme-nordic_studio .login-captcha-input {
-    background: #f8fafc;
-    border-color: #e2e8f0;
-    color: #0f172a;
-}
-[data-bs-theme="dark"] .login-theme-nordic_studio .login-captcha-input {
-    background: #0f1420;
-    border-color: #1f2937;
-    color: #f8fafc;
-}
-.login-theme-nordic_studio .login-submit-btn {
-    background: #0f172a;
-    border: none;
-    color: #ffffff;
-    font-weight: 700;
-    border-radius: 14px;
-    padding: 12px;
-    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
-    transition: all 0.2s ease;
-}
-[data-bs-theme="dark"] .login-theme-nordic_studio .login-submit-btn {
-    background: #f8fafc;
-    color: #0b0f17;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-}
-.login-theme-nordic_studio .login-submit-btn:hover {
-    opacity: 0.92;
-    transform: translateY(-2px);
-}
-.login-theme-nordic_studio .login-card-footer {
-    background: transparent;
-    color: #94a3b8;
-}
-
-/* ─── استایل جدید ۶: تیتانیوم متالیک (titanium_metallic) ─── */
-.login-theme-titanium_metallic {
-    background: #eef2f6;
-    color: #1e293b;
-    transition: background 0.3s ease, color 0.3s ease;
-}
-[data-bs-theme="dark"] .login-theme-titanium_metallic {
-    background: #0a0d14;
-    color: #f1f5f9;
-}
-.login-theme-titanium_metallic .login-main-card {
-    background: #ffffff !important;
-    border: 1.5px solid #cbd5e1 !important;
-    box-shadow: 0 25px 50px -12px rgba(30, 41, 59, 0.12), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
-    border-radius: 26px !important;
-    color: #1e293b;
-}
-[data-bs-theme="dark"] .login-theme-titanium_metallic .login-main-card {
-    background: #111520 !important;
-    border: 1.5px solid #334155 !important;
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
-    color: #f1f5f9;
-}
-.login-theme-titanium_metallic .login-card-header {
-    background: linear-gradient(180deg, rgba(203, 213, 225, 0.3) 0%, transparent 100%);
-    border-bottom: 1px solid #e2e8f0;
-}
-[data-bs-theme="dark"] .login-theme-titanium_metallic .login-card-header {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
-    border-bottom: 1px solid #1e293b;
-}
-.login-theme-titanium_metallic .login-brand-title {
-    color: #1e293b;
-    font-weight: 800;
-}
-[data-bs-theme="dark"] .login-theme-titanium_metallic .login-brand-title {
-    color: #f8fafc;
-}
-.login-theme-titanium_metallic .login-brand-subtitle {
-    color: #64748b !important;
-}
-[data-bs-theme="dark"] .login-theme-titanium_metallic .login-brand-subtitle {
+.login-theme-swiss_minimal .form-label,
+.login-theme-nordic_studio .form-label,
+.login-theme-minimal_luxury .form-label {
     color: #94a3b8 !important;
+    font-size: 0.78rem;
+    letter-spacing: 1px;
 }
-.login-theme-titanium_metallic .logo-wrapper,
-.login-theme-titanium_metallic .logo-icon-wrapper {
-    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-    border: 1px solid #94a3b8;
-    color: #334155;
-    border-radius: 20px !important;
+.login-theme-swiss_minimal .login-input-group,
+.login-theme-nordic_studio .login-input-group,
+.login-theme-minimal_luxury .login-input-group {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1.5px solid #2d3748 !important;
+    border-radius: 0 !important;
+    transition: border-color 0.2s;
 }
-[data-bs-theme="dark"] .login-theme-titanium_metallic .logo-wrapper,
-[data-bs-theme="dark"] .login-theme-titanium_metallic .logo-icon-wrapper {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    border: 1px solid #475569;
-    color: #cbd5e1;
+.login-theme-swiss_minimal .login-input-group:focus-within,
+.login-theme-nordic_studio .login-input-group:focus-within,
+.login-theme-minimal_luxury .login-input-group:focus-within {
+    border-bottom-color: #ffffff !important;
 }
-.login-theme-titanium_metallic .login-version-badge {
-    background: #e2e8f0;
-    border: 1px solid #cbd5e1;
-    color: #475569;
+.login-theme-swiss_minimal .login-input-group .input-group-text,
+.login-theme-swiss_minimal .login-input-group .form-control,
+.login-theme-nordic_studio .login-input-group .input-group-text,
+.login-theme-nordic_studio .login-input-group .form-control,
+.login-theme-minimal_luxury .login-input-group .input-group-text,
+.login-theme-minimal_luxury .login-input-group .form-control {
+    background: transparent !important;
+    border: none !important;
+    color: #f8fafc !important;
 }
-[data-bs-theme="dark"] .login-theme-titanium_metallic .login-version-badge {
-    background: #1e2638;
-    border: 1px solid #334155;
-    color: #94a3b8;
+.login-theme-swiss_minimal .captcha-img-box,
+.login-theme-nordic_studio .captcha-img-box,
+.login-theme-minimal_luxury .captcha-img-box {
+    border: none !important;
+    border-bottom: 1.5px solid #2d3748 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
 }
-.login-theme-titanium_metallic .login-input-group .input-group-text,
-.login-theme-titanium_metallic .login-input-group .form-control {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-    color: #1e293b;
+.login-theme-swiss_minimal .login-captcha-input,
+.login-theme-nordic_studio .login-captcha-input,
+.login-theme-minimal_luxury .login-captcha-input {
+    border: none !important;
+    border-bottom: 1.5px solid #2d3748 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: #ffffff !important;
 }
-[data-bs-theme="dark"] .login-theme-titanium_metallic .login-input-group .input-group-text,
-[data-bs-theme="dark"] .login-theme-titanium_metallic .login-input-group .form-control {
-    background: #0b0e17;
-    border-color: #334155;
-    color: #f1f5f9;
+.login-theme-swiss_minimal .login-submit-btn,
+.login-theme-nordic_studio .login-submit-btn,
+.login-theme-minimal_luxury .login-submit-btn {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-weight: 800 !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 13px !important;
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.15);
 }
-.login-theme-titanium_metallic .login-input-group .form-control:focus {
-    border-color: #475569;
-    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.2);
-}
-[data-bs-theme="dark"] .login-theme-titanium_metallic .login-input-group .form-control:focus {
-    border-color: #94a3b8;
-    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.25);
-}
-.login-theme-titanium_metallic .captcha-img-box {
-    background: #f8fafc;
-    border-color: #cbd5e1 !important;
-}
-[data-bs-theme="dark"] .login-theme-titanium_metallic .captcha-img-box {
-    background: #0b0e17;
-    border-color: #334155 !important;
-}
-.login-theme-titanium_metallic .login-captcha-input {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-    color: #1e293b;
-}
-[data-bs-theme="dark"] .login-theme-titanium_metallic .login-captcha-input {
-    background: #0b0e17;
-    border-color: #334155;
-    color: #f1f5f9;
-}
-.login-theme-titanium_metallic .login-submit-btn {
-    background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
-    border: 1px solid #1e293b;
-    color: #f8fafc;
-    font-weight: 700;
-    border-radius: 14px;
-    padding: 12px;
-    box-shadow: 0 10px 25px -4px rgba(30, 41, 59, 0.35);
-    transition: all 0.25s ease;
-}
-[data-bs-theme="dark"] .login-theme-titanium_metallic .login-submit-btn {
-    background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
-    border: 1px solid #475569;
-    color: #ffffff;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
-}
-.login-theme-titanium_metallic .login-submit-btn:hover {
-    filter: brightness(1.15);
+.login-theme-swiss_minimal .login-submit-btn:hover,
+.login-theme-nordic_studio .login-submit-btn:hover,
+.login-theme-minimal_luxury .login-submit-btn:hover {
+    opacity: 0.9 !important;
     transform: translateY(-2px);
 }
-.login-theme-titanium_metallic .login-card-footer {
-    background: rgba(203, 213, 225, 0.2);
-    border-top: 1px solid #e2e8f0;
+.login-theme-swiss_minimal .login-card-footer,
+.login-theme-nordic_studio .login-card-footer,
+.login-theme-minimal_luxury .login-card-footer {
+    background: transparent;
     color: #64748b;
-}
-[data-bs-theme="dark"] .login-theme-titanium_metallic .login-card-footer {
-    background: rgba(11, 14, 23, 0.6);
-    border-top: 1px solid #1e293b;
-    color: #94a3b8;
 }
 
 @media (max-width: 991.98px) {
