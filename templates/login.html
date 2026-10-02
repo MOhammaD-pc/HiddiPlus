@@ -17,12 +17,14 @@
      style="min-height: 100vh; padding: 24px 16px;">
     
     <!-- دکمه کنترل تم روز/شب صفحه لاگین -->
+    {% if active_style != 'hacker_terminal' %}
     <div class="position-absolute top-0 end-0 m-3" style="z-index: 10;">
         <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 d-flex align-items-center gap-2 shadow-sm login-header-theme-toggle" onclick="toggleTheme()" title="تغییر حالت تیره / روشن">
             <i class="fas fa-circle-half-stroke"></i>
             <span class="small d-none d-sm-inline" id="loginThemeBtnText">حالت روز / شب</span>
         </button>
     </div>
+    {% endif %}
     
     <!-- جلوه‌های نوری و پس‌زمینه بر اساس تنظیمات سیستم -->
     {% if show_bg_effect %}
@@ -51,7 +53,7 @@
                     <span class="rounded-circle" style="width: 10px; height: 10px; background: #ffbd2e; display: inline-block;"></span>
                     <span class="rounded-circle" style="width: 10px; height: 10px; background: #27c93f; display: inline-block;"></span>
                 </div>
-                <span class="text-success small opacity-75 font-monospace">root@vpn-core: ~ bash</span>
+                <span class="text-success small opacity-75 font-monospace">root@core.com: ~ bash</span>
             </div>
             {% endif %}
 
@@ -210,9 +212,11 @@
                                     <i class="fas fa-shield-check me-1 opacity-75"></i> کد امنیتی (کپچا):
                                 {% endif %}
                             </span>
+                            {% if active_style != 'hacker_terminal' %}
                             <small class="text-muted cursor-pointer" onclick="refreshCaptcha()" style="font-size: 0.75rem;">
                                 <i class="fas fa-rotate me-1"></i>تغییر تصویر
                             </small>
+                            {% endif %}
                         </label>
                         <div class="d-flex align-items-center gap-2 mb-2">
                             <div class="captcha-img-box flex-grow-1 rounded-3 overflow-hidden shadow-sm border p-0 d-flex align-items-center justify-content-center cursor-pointer" onclick="refreshCaptcha()" title="برای تغییر تصویر کلیک کنید" style="height: 48px;">
@@ -229,7 +233,7 @@
                     <button type="submit" class="btn w-100 py-2 fw-bold login-submit-btn d-flex align-items-center justify-content-center gap-2">
                         {% if active_style == 'hacker_terminal' %}
                             <i class="fas fa-terminal"></i>
-                            <span class="font-monospace">[ EXECUTE // ACCESS GRANTED ]</span>
+                            <span class="font-monospace">[ {{ _('اجرا') if _ else 'اجرا' }} // {{ _('ورود مجاز') if _ else 'ورود مجاز' }} ]</span>
                         {% elif active_style == 'stealth_tactical' %}
                             <i class="fas fa-shield-halved"></i>
                             <span>AUTHORIZE ACCESS</span>
@@ -542,31 +546,36 @@
 }
 .login-theme-hacker_terminal .login-input-group .input-group-text,
 .login-theme-hacker_terminal .login-input-group .form-control {
-    background: #011204;
-    border-color: #00ff66;
-    color: #00ff66;
+    background: #061f0e !important;
+    border-color: #00ff66 !important;
+    color: #00ff66 !important;
     font-family: monospace;
 }
 .login-theme-hacker_terminal .login-input-group .input-group-text i {
     color: #00ff66 !important;
 }
 .login-theme-hacker_terminal .login-input-group .form-control:focus {
-    border-color: #00ff66;
-    box-shadow: 0 0 14px rgba(0, 255, 102, 0.5);
-    background: #021a07;
+    border-color: #00ff66 !important;
+    box-shadow: none !important;
+    background: #061f0e !important;
 }
 .login-theme-hacker_terminal .captcha-img-box {
-    background: #011204;
+    background: #061f0e !important;
     border-color: #00ff66 !important;
     border-radius: 4px !important;
 }
 .login-theme-hacker_terminal .login-captcha-input {
-    background: #011204;
-    border-color: #00ff66;
-    color: #00ff66;
+    background: #061f0e !important;
+    border-color: #00ff66 !important;
+    color: #00ff66 !important;
     font-family: monospace;
     letter-spacing: 8px;
     border-radius: 4px !important;
+}
+.login-theme-hacker_terminal .login-captcha-input:focus {
+    border-color: #00ff66 !important;
+    box-shadow: none !important;
+    background: #061f0e !important;
 }
 .login-theme-hacker_terminal .login-submit-btn {
     background: rgba(0, 255, 102, 0.15);
