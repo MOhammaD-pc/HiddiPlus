@@ -933,7 +933,7 @@ def filter_gateway_name(gateway):
     # ثبت‌های دستی پنل
     if g in ("admin_manual", "manual", "panel_manual"):
         return "ثبت دستی مدیریت"
-    elif g in ("reseller_manual", "manual_reseller"):
+    elif g in ("reseller_manual", "manual_reseller", "cash_reseller"):
         return "ثبت دستی نماینده"
     elif g in ("cashback", "vip_cashback"):
         return "پاداش کش‌بک VIP"

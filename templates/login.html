@@ -81,24 +81,12 @@
                             {% elif active_style == 'ios_lockscreen' %}
                                 <i class="fab fa-apple fs-2 text-secondary" style="color: #cbd5e1 !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></i>
                             {% elif active_style == 'neumorphic_3d' %}
-                                <i class="fas fa-cubes fs-2 text-secondary"></i>
-                            {% elif active_style == 'swiss_minimal' %}
-                            <div class="w-100 bg-white text-black d-flex align-items-center justify-content-center" style="font-size: 1.2rem; font-family: -apple-system, sans-serif; font-weight: 400; padding: 12px 0;">
-                                ورود
+                            <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="font-weight: 700; font-size: 1.1rem; color: #f8fafc; font-family: -apple-system, sans-serif;">
+                                ورود به حساب کاربری
                             </div>
-                        {% elif active_style == 'neumorphic_3d' %}
-                            <div class="neo-submit">
-                                ورود
-                            </div>
-                        {% else %}
-                                <i class="fas fa-shield-halved fs-2 text-primary"></i>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-                </div>
-
-                <h4 class="fw-black mb-1 login-brand-title">
-                    {% if active_style == 'stealth_tactical' %}ورود امن{% elif active_style == 'swiss_minimal' %}AURA<br>Access{% else %}{{ login_page_title or branding.get('brand_title') or 'سامانه هوشمند VPN' }}{% endif %}
+                        {% elif active_style == 'swiss_minimal' %}
+                            <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="color: #fff; font-size: 2rem;"><i class="fas fa-fingerprint"></i></div>
+                        {% elif active_style == 'swiss_minimal' %}<span class='swiss-title'>AURA<br>Access</span>{% else %}{{ login_page_title or branding.get('brand_title') or 'سامانه هوشمند VPN' }}{% endif %}
                 </h4>
                 
                 <p class="small mb-2 login-brand-subtitle opacity-75">
@@ -170,17 +158,31 @@
                     <div class="neo-wrapper" dir="ltr">
                         <div class="neo-header">
                             <div class="neo-logo-icon">
-                                <i class="fas fa-cube"></i>
+                                {% if branding.get('logo_url') %}
+                                    <img src="{{ branding.get('logo_url') }}" alt="لوگو" style="max-height: 40px; max-width: 40px; object-fit: contain;">
+                                {% else %}
+                                    <i class="fas fa-cube"></i>
+                                {% endif %}
                             </div>
-                            <h4 style="font-weight: 600; font-size: 1.3rem; margin-bottom: 5px; color: #e2e8f0;">NEXUS</h4>
-                            <div style="font-size: 1.15rem; font-weight: 500; margin-bottom: 5px;">ورود به حساب کاربری</div>
-                            <div style="font-size: 0.9rem; color: #64748b;">خوش آمدید</div>
+                            <h4 style="font-weight: 600; font-size: 1.3rem; margin-bottom: 5px; color: #e2e8f0;">{{ branding.get('login_page_title') or 'TGBot' }}</h4>
+                            <div style="font-size: 0.9rem; color: #64748b;">{{ login_page_subtitle or 'ورود به حساب کاربری' }}</div>
                         </div>
                     {% endif %}
 
+                    
+
                     <!-- نام کاربری -->
                     <div class="mb-3">
-                        {% if active_style == 'stealth_tactical' %}
+                        {% if active_style == 'neumorphic_3d' %}
+                        <div class="neo-track">
+                            <div class="neo-raised-btn"><i class="fas fa-user"></i></div>
+                            <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 16px; direction: ltr;">
+                                <span style="font-size: 0.75rem; color: #64748b; margin-bottom: -2px; text-align: right;">نام کاربری</span>
+                                <input type="text" class="neo-input px-0 font-monospace" name="username" placeholder="username" style="text-align: left;" required autofocus>
+                            </div>
+                            <i class="fas fa-user-check" style="color: #64748b; margin-right: 15px; opacity: 0;"></i>
+                        </div>
+                        {% elif active_style == 'stealth_tactical' %}
                         <div class="stealth-input-wrapper d-flex align-items-stretch" style="height: 64px;">
                             <div class="stealth-hexagon-icon flex-shrink-0 d-flex align-items-center justify-content-center">
                                 <i class="fas fa-user"></i>
@@ -371,9 +373,7 @@
                         {% elif active_style == 'ios_lockscreen' %}
                             <span>ورود</span>
                         {% elif active_style == 'swiss_minimal' %}
-                            <div class="w-100 bg-white text-black d-flex align-items-center justify-content-center" style="font-size: 1.2rem; font-family: -apple-system, sans-serif; font-weight: 400; padding: 12px 0;">
-                                ورود
-                            </div>
+                            <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="color: #fff; font-size: 2rem;"><i class="fas fa-fingerprint"></i></div>
                         {% else %}
                             <i class="fas fa-arrow-right-to-bracket"></i>
                             <span>ورود به حساب کاربری</span>
@@ -386,18 +386,13 @@
                     </div>
                     {% endif %}
                 
-                    {% if active_style == 'neumorphic_3d' %}
-                        <div class="text-center" style="margin-top: 30px; font-size: 0.85rem; color: #64748b;">
-                            <div class="mb-2 cursor-pointer">فراموشی رمز؟</div>
-                            <div>حساب کاربری ندارید؟ <span style="color: #cbd5e1; cursor: pointer;">ثبت نام</span></div>
-                        </div>
-                    </div>
-                    {% endif %}
+                    
+                                    {% if active_style == 'neumorphic_3d' %}</div>{% endif %}
                 </form>
             </div>
 
             <!-- پاورقی کارت -->
-            <div class="card-footer login-card-footer text-center py-3 border-0">
+            <div class="card-footer login-card-footer text-center py-3 border-0" {% if active_style == 'neumorphic_3d' %}style="display: none !important;"{% endif %}>
                 <div class="small opacity-75 mb-1">{{ branding.get('footer_text') or 'تمامی حقوق برای مدیریت این سامانه محفوظ است.' }}</div>
                 <div class="d-inline-flex align-items-center gap-1 small opacity-50" style="font-size: 0.72rem;">
                     <i class="fas fa-shield-halved"></i>
