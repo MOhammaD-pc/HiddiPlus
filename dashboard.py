@@ -3960,15 +3960,15 @@ def reseller_required(f):
 import random
 
 def generate_svg_captcha() -> tuple[str, str]:
-    """تولید کپچای تصویری امن کاملاً عددی SVG با نویز ملایم و ارقام خوانا بدون نیاز به کتابخانه جانبی"""
+    """تولید کپچای تصویری امن کاملاً عددی SVG با پر کردن کامل کادر بدون فضای خالی"""
     chars = "0123456789"
     code = "".join(random.choices(chars, k=5))
-    width, height = 150, 48
+    width, height = 280, 48
     
     # خطوط نویز ملایم
     lines_svg = []
     palette = ["#4f46e5", "#0ea5e9", "#10b981", "#64748b", "#8b5cf6"]
-    for _ in range(4):
+    for _ in range(5):
         x1, y1 = random.randint(5, width - 5), random.randint(5, height - 5)
         x2, y2 = random.randint(5, width - 5), random.randint(5, height - 5)
         stroke = random.choice(palette)
@@ -3976,24 +3976,24 @@ def generate_svg_captcha() -> tuple[str, str]:
         
     # نقاط نویز
     dots_svg = []
-    for _ in range(20):
+    for _ in range(25):
         cx, cy = random.randint(2, width - 2), random.randint(2, height - 2)
-        r = random.uniform(1.0, 2.0)
+        r = random.uniform(1.0, 2.2)
         color = random.choice(palette)
         dots_svg.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{color}" opacity="0.3" />')
         
-    # ارقام کاملاً مشخص، پررنگ و خوانا با زاویه ملایم
+    # ارقام کاملاً مشخص، پررنگ و خوانا با پخش یکنواخت در تمام عرض کادر
     chars_svg = []
     for i, ch in enumerate(code):
-        x = 18 + (i * 24) + random.randint(-1, 1)
-        y = 34 + random.randint(-2, 2)
-        angle = random.randint(-14, 14)
+        x = 32 + (i * 52) + random.randint(-2, 2)
+        y = 35 + random.randint(-2, 2)
+        angle = random.randint(-12, 12)
         color = random.choice(["#0f172a", "#1e1b4b", "#0369a1", "#047857", "#334155", "#4338ca"])
         chars_svg.append(
-            f'<text x="{x}" y="{y}" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="900" fill="{color}" transform="rotate({angle}, {x}, {y})">{ch}</text>'
+            f'<text x="{x}" y="{y}" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="900" fill="{color}" transform="rotate({angle}, {x}, {y})">{ch}</text>'
         )
         
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 {width} {height}" preserveAspectRatio="none">
         <rect width="100%" height="100%" fill="#f1f5f9" rx="8" />
         {''.join(dots_svg)}
         {''.join(lines_svg)}

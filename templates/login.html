@@ -148,8 +148,8 @@
                             </small>
                         </label>
                         <div class="d-flex align-items-center gap-2 mb-2">
-                            <div class="captcha-img-box flex-grow-1 rounded-3 overflow-hidden shadow-sm border p-1 d-flex align-items-center justify-content-center cursor-pointer" onclick="refreshCaptcha()" title="برای تغییر تصویر کلیک کنید">
-                                <img id="captchaImg" src="{{ url_for('captcha_image') }}" alt="کپچا" class="w-100" style="height: 48px; object-fit: contain;">
+                            <div class="captcha-img-box flex-grow-1 rounded-3 overflow-hidden shadow-sm border p-0 d-flex align-items-center justify-content-center cursor-pointer" onclick="refreshCaptcha()" title="برای تغییر تصویر کلیک کنید" style="height: 48px;">
+                                <img id="captchaImg" src="{{ url_for('captcha_image') }}" alt="کپچا" class="w-100 h-100 d-block" style="object-fit: cover;">
                             </div>
                             <button type="button" class="btn btn-outline-secondary rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" onclick="refreshCaptcha()" title="تغییر تصویر کد امنیتی" style="width: 48px; height: 48px;">
                                 <i class="fas fa-rotate"></i>
