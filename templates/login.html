@@ -118,24 +118,8 @@
     </div>
 </div>
 {% elif active_style == 'stealth_tactical' %}
-                          <div class="text-center mb-1 mt-4">
-                              <div style="font-size: 0.7rem; font-weight: 700; color: #94a3b8; letter-spacing: 2px;">کد امنیتی (VERIFICATION CODE)</div>
-                          </div>
-                          <div class="stealth-captcha-hud p-2 position-relative d-flex flex-column align-items-center" style="border: 2px solid #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.2), inset 0 0 10px rgba(245, 158, 11, 0.2); border-radius: 4px; margin-bottom: 25px; background: rgba(245, 158, 11, 0.05);">
-                              <div class="corner top-left" style="position: absolute; top: -2px; left: -2px; width: 15px; height: 15px; border-top: 3px solid #fff; border-left: 3px solid #fff;"></div>
-                              <div class="corner top-right" style="position: absolute; top: -2px; right: -2px; width: 15px; height: 15px; border-top: 3px solid #fff; border-right: 3px solid #fff;"></div>
-                              <div class="corner bottom-left" style="position: absolute; bottom: -2px; left: -2px; width: 15px; height: 15px; border-bottom: 3px solid #fff; border-left: 3px solid #fff;"></div>
-                              <div class="corner bottom-right" style="position: absolute; bottom: -2px; right: -2px; width: 15px; height: 15px; border-bottom: 3px solid #fff; border-right: 3px solid #fff;"></div>
-                              
-                              <div class="d-flex w-100 justify-content-center align-items-center" style="height: 50px; cursor: pointer;" onclick="refreshCaptcha()">
-                                  <img id="captchaImg" src="{{ url_for('captcha_image') }}" style="height: 100%; filter: invert(1) sepia(1) saturate(5) hue-rotate(350deg) brightness(1.2) contrast(1.5);">
-                                  <i class="fas fa-rotate ms-3 text-warning opacity-75 fs-5"></i>
-                              </div>
-                              <div class="mt-2 w-100 d-flex justify-content-center px-3 mb-1">
-                                  <input type="text" name="captcha" id="captchaInputField2" maxlength="5" autocomplete="off" required style="background: rgba(0,0,0,0.5); border: 1px solid rgba(245, 158, 11, 0.3); color: #fff; font-size: 1.5rem; font-family: monospace; letter-spacing: 10px; text-align: center; width: 100%; outline: none; padding: 2px;" placeholder="[ TYPE CODE ]" onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='rgba(245, 158, 11, 0.3)'">
-                              </div>
-                          </div>
-                        {% elif active_style == 'swiss_minimal' %}
+                        سیستم دسترسی مجاز پرسنل
+                    {% elif active_style == 'swiss_minimal' %}
                         خوش آمدید.<br>برای ادامه وارد شوید.
                     {% else %}
                         {{ login_page_subtitle or 'ورود مدیران و همکاران فروش' }}
@@ -188,7 +172,7 @@
                                     <i class="fas fa-cube"></i>
                                 {% endif %}
                             </div>
-                            <h4 style="font-weight: 600; font-size: 1.3rem; margin-bottom: 5px; color: #e2e8f0;">{{ branding.get('login_page_title') or 'TGBot' }}</h4>
+                            <h4 style="font-weight: 600; font-size: 1.3rem; margin-bottom: 5px; color: #e2e8f0;">{{ login_page_title or branding.get('brand_title') or 'TGBot' }}</h4>
                             <div style="font-size: 0.9rem; color: #64748b;">{{ login_page_subtitle or 'ورود به حساب کاربری' }}</div>
                         </div>
                     {% endif %}
@@ -256,7 +240,21 @@
 
                     <!-- رمز عبور -->
                     <div class="mb-3">
-                        {% if active_style == 'stealth_tactical' %}
+                        {% if active_style == 'neumorphic_3d' %}
+                        <div class="neo-track position-relative mb-2">
+                            <div class="neo-raised-btn"><i class="fas fa-lock"></i></div>
+                            <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 16px; direction: ltr;">
+                                <span style="font-size: 0.75rem; color: #64748b; margin-bottom: -2px; text-align: right;">رمز عبور</span>
+                                <input type="password" id="loginPasswordInput" class="neo-input px-0 font-monospace" name="password" placeholder="••••••••••••" style="text-align: left; letter-spacing: 3px;" required>
+                            </div>
+                            <button type="button" class="btn btn-link p-0 text-decoration-none" onclick="togglePasswordVisibility()" style="margin-right: 15px; width: 24px;">
+                                <i class="fas fa-eye text-muted" id="passwordToggleIcon"></i>
+                            </button>
+                        </div>
+                        <div class="text-start pe-2">
+                            <a href="#" class="text-decoration-none small" style="font-size: 0.75rem; color: #3b82f6;">فراموشی رمز؟</a>
+                        </div>
+                        {% elif active_style == 'stealth_tactical' %}
                         <div class="stealth-input-wrapper d-flex align-items-stretch" style="height: 64px;">
                             <div class="stealth-hexagon-icon flex-shrink-0 d-flex align-items-center justify-content-center">
                                 <i class="fas fa-lock"></i>
@@ -324,24 +322,24 @@
                             </button>
                         </div>
                         {% elif active_style == 'stealth_tactical' %}
-                        <div class="stealth-captcha-wrapper">
-                            <div class="text-center mb-1">
-                                <span class="stealth-floating-label" style="position: static; font-size: 0.8rem; letter-spacing: 2px;">کد تایید امنیتی (HUD)</span>
-                            </div>
-                            <div class="stealth-captcha-hud p-3 position-relative d-flex flex-column align-items-center gap-2">
-                                <div class="stealth-hud-corners"></div>
-                                <div class="d-flex align-items-center justify-content-center gap-3 w-100 px-3">
-                                    <div class="captcha-img-box stealth-captcha-img cursor-pointer flex-grow-1 border border-warning" onclick="refreshCaptcha()" style="height: 48px; filter: invert(1) sepia(1) saturate(5) hue-rotate(350deg) brightness(1.2) contrast(1.2);">
-                                        <img id="captchaImg" src="{{ url_for('captcha_image') }}" alt="کپچا" class="w-100 h-100 d-block" style="object-fit: cover;">
-                                    </div>
-                                    <button type="button" class="btn btn-warning rounded-1 stealth-rotate-btn d-flex align-items-center justify-content-center" onclick="refreshCaptcha()" style="height: 48px; width: 48px;">
-                                        <i class="fas fa-rotate fs-5 text-dark"></i>
-                                    </button>
-                                </div>
-                                <input type="text" inputmode="numeric" pattern="[0-9]*" class="stealth-captcha-input text-center font-monospace w-100 mt-2" name="captcha" id="captchaInputField2" placeholder="[ ورود کد ]" maxlength="5" autocomplete="off" required>
-                            </div>
-                        </div>
-                        {% elif active_style == 'swiss_minimal' %}
+                          <div class="text-center mb-1 mt-4">
+                              <div style="font-size: 0.7rem; font-weight: 700; color: #94a3b8; letter-spacing: 2px;">کد امنیتی (VERIFICATION CODE)</div>
+                          </div>
+                          <div class="stealth-captcha-hud p-2 position-relative d-flex flex-column align-items-center" style="border: 2px solid #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.2), inset 0 0 10px rgba(245, 158, 11, 0.2); border-radius: 4px; margin-bottom: 25px; background: rgba(245, 158, 11, 0.05);">
+                              <div class="corner top-left" style="position: absolute; top: -2px; left: -2px; width: 15px; height: 15px; border-top: 3px solid #fff; border-left: 3px solid #fff;"></div>
+                              <div class="corner top-right" style="position: absolute; top: -2px; right: -2px; width: 15px; height: 15px; border-top: 3px solid #fff; border-right: 3px solid #fff;"></div>
+                              <div class="corner bottom-left" style="position: absolute; bottom: -2px; left: -2px; width: 15px; height: 15px; border-bottom: 3px solid #fff; border-left: 3px solid #fff;"></div>
+                              <div class="corner bottom-right" style="position: absolute; bottom: -2px; right: -2px; width: 15px; height: 15px; border-bottom: 3px solid #fff; border-right: 3px solid #fff;"></div>
+                              
+                              <div class="d-flex w-100 justify-content-center align-items-center" style="height: 50px; cursor: pointer;" onclick="refreshCaptcha()">
+                                  <img id="captchaImg" src="{{ url_for('captcha_image') }}" style="height: 100%; filter: invert(1) sepia(1) saturate(5) hue-rotate(350deg) brightness(1.2) contrast(1.5);">
+                                  <i class="fas fa-rotate ms-3 text-warning opacity-75 fs-5"></i>
+                              </div>
+                              <div class="mt-2 w-100 d-flex justify-content-center px-3 mb-1">
+                                  <input type="text" name="captcha" id="captchaInputField2" maxlength="5" autocomplete="off" required style="background: rgba(0,0,0,0.5); border: 1px solid rgba(245, 158, 11, 0.3); color: #fff; font-size: 1.5rem; font-family: monospace; letter-spacing: 10px; text-align: center; width: 100%; outline: none; padding: 2px;" placeholder="[ TYPE CODE ]" onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='rgba(245, 158, 11, 0.3)'">
+                              </div>
+                          </div>
+                          {% elif active_style == 'swiss_minimal' %}
                         <div class="position-relative mb-5" style="margin-top: 30px;" dir="ltr">
                             <div class="d-flex align-items-center justify-content-between mb-2 px-2">
                                 <div class="captcha-img-box flex-grow-1 mx-3" style="height: 55px; filter: invert(1) grayscale(1) brightness(3) contrast(3); cursor: pointer;" onclick="refreshCaptcha()">
