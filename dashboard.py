@@ -9067,7 +9067,7 @@ def admin_subscription_purge(sub_id):
     uuid_val = sub.get("hidify_uuid")
     if uuid_val:
         try:
-            hidify_sync_delete_user(uuid_val)
+            hidify_sync_delete_user(uuid_val, reseller_id=sub.get("reseller_id"))
         except Exception as e:
             logger.warning(f"Error purging user {uuid_val} from Hiddify: {e}")
 
@@ -9145,7 +9145,7 @@ def admin_trash_bulk():
             sub = dict(sub_row)
             if sub.get("hidify_uuid"):
                 try:
-                    hidify_sync_delete_user(sub["hidify_uuid"])
+                    hidify_sync_delete_user(sub["hidify_uuid"], reseller_id=sub.get("reseller_id"))
                 except Exception as e:
                     logger.warning(f"Error purging user {sub['hidify_uuid']} from Hiddify: {e}")
             del_res = db.purge_subscription_permanently(sub_id)
@@ -12847,7 +12847,7 @@ def admin_subscriptions_bulk():
         elif action == "delete":
             if uuid_val:
                 try:
-                    hidify_sync_delete_user(uuid_val)
+                    hidify_sync_delete_user(uuid_val, reseller_id=sub.get("reseller_id"))
                 except Exception as ex:
                     logger.error(f"Error deleting user {uuid_val} from Hiddify: {ex}")
             del_res = db.delete_customer_subscription(sub_id, refund_to_customer=False, admin_name=admin_name, reason=final_reason)
@@ -18561,7 +18561,7 @@ def reseller_purge_user(sub_id: int):
     uuid_val = sub.get("hidify_uuid")
     if uuid_val:
         try:
-            hidify_sync_delete_user(uuid_val)
+            hidify_sync_delete_user(uuid_val, reseller_id=reseller_id)
         except Exception as e:
             logger.warning(f"Error purging user {uuid_val} from Hiddify by reseller: {e}")
 
@@ -18671,7 +18671,7 @@ def reseller_trash_bulk():
             sub = dict(sub_row)
             if sub.get("hidify_uuid"):
                 try:
-                    hidify_sync_delete_user(sub["hidify_uuid"])
+                    hidify_sync_delete_user(sub["hidify_uuid"], reseller_id=reseller_id)
                 except Exception as e:
                     logger.warning(f"Error purging user {sub['hidify_uuid']} from Hiddify: {e}")
             del_res = db.purge_subscription_permanently(sub_id, reseller_id=reseller_id)
