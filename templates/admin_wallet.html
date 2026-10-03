@@ -11,6 +11,9 @@
         <button type="button" class="btn btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#addAccountModal">
             <i class="fas fa-plus me-1"></i> تعریف حساب / کارت جدید
         </button>
+        <button type="button" class="btn btn-outline-danger fw-bold" onclick="openWalletRecordModal('', 'withdrawal')">
+            <i class="fas fa-hand-holding-dollar me-1"></i> ثبت برداشت / حقوق / هزینه
+        </button>
         <button type="button" class="btn btn-outline-primary fw-bold" data-bs-toggle="modal" data-bs-target="#transferModal">
             <i class="fas fa-arrow-right-arrow-left me-1"></i> انتقال بین‌حسابی
         </button>
@@ -195,6 +198,9 @@
                         </td>
                         <td class="text-end pe-3">
                             <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-warning" onclick="openWalletRecordModal({{ a.get('id') }}, 'withdrawal', '{{ a.get('bank_name') or a.get('card_holder') }}')" title="ثبت برداشت یا حقوق از این حساب">
+                                    <i class="fas fa-hand-holding-dollar me-1"></i>برداشت/حقوق
+                                </button>
                                 <button type="button" class="btn btn-outline-primary" onclick="showAccountTxModal({{ a.get('id') }}, '{{ a.get('bank_name') or a.get('card_holder') }}')">
                                     <i class="fas fa-list me-1"></i>تراکنش‌ها
                                 </button>
@@ -1025,7 +1031,72 @@
     </div>
 </div>
 
-<!-- مودال ۵: نمایش گردش حساب به صورت AJAX -->
+<!-- مودال ۵: ثبت سریع برداشت / حقوق / هزینه / واریز متصل به حساب -->
+<div class="modal fade" id="walletRecordModal" tabindex="-1" dir="rtl">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{{ url_for('accounting_add_record') }}" class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-white py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-hand-holding-dollar text-warning fs-5"></i>
+                    <h5 class="modal-title fw-bold" id="walletRecordModalTitle">ثبت برداشت / حقوق / هزینه حساب</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">نوع تراکنش و سند <span class="text-danger">*</span></label>
+                    <select name="type" id="walletRecordTypeSelect" class="form-select" required onchange="handleWalletRecordTypeChange()">
+                        <option value="withdrawal" selected>برداشت / حقوق و علی‌الحساب (کسر از حساب)</option>
+                        <option value="expense">هزینه / مخارج جاری، سرور و زیرساخت (کسر از حساب)</option>
+                        <option value="income">واریز دستی / آورده نقدی یا درآمد (افزایش موجودی حساب)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label id="walletCardSelectLabel" class="form-label fw-bold small">حساب یا کارت مبدأ پرداخت <span class="text-danger">*</span></label>
+                    <select name="card_id" id="walletRecordCardSelect" class="form-select font-monospace" required>
+                        {% for a in accounts %}
+                        <option value="{{ a['id'] }}">
+                            {{ a['bank_name'] }} - {{ a['card_holder'] }} (موجودی: {{ "{:,}".format(a['balance']) }} ت)
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div id="walletCardHelp" class="form-text small text-muted mt-1">
+                        مبلغ تراکنش به صورت آنی از مانده شناور کسر شده و گردش حساب به‌روزرسانی می‌شود.
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">عنوان سند / پرداخت <span class="text-danger">*</span></label>
+                    <input type="text" name="title" id="walletRecordTitleInput" class="form-control" placeholder="مثال: علی‌الحساب حقوق اسفند" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">دسته‌بندی <span class="text-danger">*</span></label>
+                    <select name="category" id="walletRecordCategorySelect" class="form-select" required>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">مبلغ (تومان) <span class="text-danger">*</span></label>
+                    <input type="text" name="amount" id="walletRecordAmountInput" class="form-control font-monospace" placeholder="مثال: 5,000,000" required oninput="formatTomanInput(this, 'walletAmountPreview')">
+                    <div id="walletAmountPreview" class="text-warning small mt-1 fw-bold"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">تاریخ سند (شمسی و میلادی):</label>
+                    <input type="text" name="date" class="form-control font-monospace" data-dual-picker="date" placeholder="انتخاب تاریخ سند...">
+                    <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">در صورت خالی بودن، تاریخ امروز ثبت می‌شود.</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">توضیحات تکمیلی</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="توضیحات تکمیلی، شماره پیگیری، نام شخص یا بابت..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="submit" class="btn btn-warning text-dark fw-bold px-4" id="walletRecordSubmitBtn"><i class="fas fa-check me-1"></i>ثبت و اعمال در حساب</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- مودال ۶: نمایش گردش حساب به صورت AJAX -->
 <div class="modal fade" id="accountTxModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
@@ -1072,6 +1143,88 @@
 </div>
 
 <script>
+const WALLET_RECORD_CATEGORIES = {
+    withdrawal: {{ withdrawal_categories | tojson }},
+    expense: {{ expense_categories | tojson }},
+    income: {{ income_categories | tojson }}
+};
+
+function openWalletRecordModal(cardId, type = 'withdrawal', cardName = '') {
+    const modalEl = document.getElementById('walletRecordModal');
+    if (!modalEl) return;
+    const typeSelect = document.getElementById('walletRecordTypeSelect');
+    if (typeSelect && type) {
+        typeSelect.value = type;
+    }
+    const cardSelect = document.getElementById('walletRecordCardSelect');
+    if (cardSelect && cardId) {
+        cardSelect.value = cardId;
+    }
+    handleWalletRecordTypeChange();
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
+function handleWalletRecordTypeChange() {
+    const type = document.getElementById('walletRecordTypeSelect').value;
+    const catSelect = document.getElementById('walletRecordCategorySelect');
+    const label = document.getElementById('walletCardSelectLabel');
+    const help = document.getElementById('walletCardHelp');
+    const titleInput = document.getElementById('walletRecordTitleInput');
+    const submitBtn = document.getElementById('walletRecordSubmitBtn');
+    
+    if (!catSelect) return;
+    catSelect.innerHTML = '';
+    const cats = WALLET_RECORD_CATEGORIES[type] || [];
+    cats.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        catSelect.appendChild(opt);
+    });
+    
+    if (type === 'income') {
+        if (label) label.textContent = 'حساب یا کارت مقصد واریز';
+        if (help) help.textContent = 'مبلغ تراکنش به صورت آنی به موجودی حساب افزوده شده و گردش حساب ثبت می‌گردد.';
+        if (titleInput) titleInput.placeholder = 'مثال: واریز دستی به حساب یا آورده نقدی';
+        if (submitBtn) {
+            submitBtn.className = 'btn btn-success fw-bold px-4';
+            submitBtn.innerHTML = '<i class="fas fa-check me-1"></i>ثبت و افزایش موجودی';
+        }
+    } else if (type === 'withdrawal') {
+        if (label) label.textContent = 'حساب یا کارت مبدأ پرداخت حقوق و برداشت';
+        if (help) help.textContent = 'مبلغ تراکنش به صورت آنی از مانده شناور کسر شده و گردش حساب ثبت می‌گردد.';
+        if (titleInput) titleInput.placeholder = 'مثال: پرداخت علی‌الحساب حقوق یا پاداش پرسنل';
+        if (submitBtn) {
+            submitBtn.className = 'btn btn-warning text-dark fw-bold px-4';
+            submitBtn.innerHTML = '<i class="fas fa-check me-1"></i>ثبت برداشت و کسر موجودی';
+        }
+    } else {
+        if (label) label.textContent = 'حساب یا کارت مبدأ پرداخت هزینه';
+        if (help) help.textContent = 'مبلغ تراکنش به صورت آنی از مانده شناور کسر شده و گردش حساب ثبت می‌گردد.';
+        if (titleInput) titleInput.placeholder = 'مثال: خرید سرور، ترافیک، پیامک یا CDN';
+        if (submitBtn) {
+            submitBtn.className = 'btn btn-danger fw-bold px-4';
+            submitBtn.innerHTML = '<i class="fas fa-check me-1"></i>ثبت هزینه و کسر موجودی';
+        }
+    }
+}
+
+function formatTomanInput(input, previewId) {
+    let raw = input.value.replace(/[^0-9]/g, '');
+    if (!raw) {
+        input.value = '';
+        const prev = document.getElementById(previewId);
+        if (prev) prev.textContent = '';
+        return;
+    }
+    input.value = Number(raw).toLocaleString('en-US');
+    const prev = document.getElementById(previewId);
+    if (prev) {
+        prev.textContent = Number(raw).toLocaleString('fa-IR') + ' تومان';
+    }
+}
+
 function updateAdmAccFields() {
     const val = document.getElementById('admAccTypeSelect').value;
     const assignedField = document.getElementById('admAssignedField');
@@ -1123,7 +1276,7 @@ function showAccountTxModal(accId, accName) {
                     <td class="font-monospace fw-bold ${amtColor}">${sign}${Number(tx.amount || 0).toLocaleString()} ت</td>
                     <td class="font-monospace">${Number(tx.balance_after || 0).toLocaleString()} ت</td>
                     <td>${tx.title || '-'}<br><small class="text-muted">${tx.description || ''}</small></td>
-                    <td><span class="badge bg-light text-dark border">${tx.actor || '-'}</span></td>
+                    <td><span class="badge bg-light text-dark border">${tx.actor || tx.created_by || '-'}</span></td>
                 </tr>`;
             });
             tbody.innerHTML = html;
@@ -1132,5 +1285,9 @@ function showAccountTxModal(accId, accName) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">خطا در دریافت تراکنش‌ها.</td></tr>';
         });
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    handleWalletRecordTypeChange();
+});
 </script>
 {% endblock %}

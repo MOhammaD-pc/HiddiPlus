@@ -6,8 +6,8 @@
 <div class="container-fluid py-4" dir="rtl">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0 fw-bold text-white"><i class="fas fa-chart-pie me-2 text-warning"></i>سیستم حسابداری و تراز مالی سراسری</h3>
-        <button class="btn btn-warning fw-bold px-4 rounded-pill" data-bs-toggle="modal" data-bs-target="#addRecordModal">
-            <i class="fas fa-plus me-1"></i> ثبت درآمد / هزینه جدید
+        <button class="btn btn-warning fw-bold px-4 rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#addRecordModal">
+            <i class="fas fa-plus-circle me-1"></i> ثبت سند جدید (برداشت / حقوق / هزینه / درآمد)
         </button>
     </div>
 
@@ -125,41 +125,67 @@
     
     <!-- Manual Records List -->
     <div class="card bg-dark text-white border-secondary rounded-4 shadow-sm">
-        <div class="card-header border-secondary bg-transparent py-3">
-            <h5 class="mb-0 fw-bold"><i class="fas fa-list me-2 text-secondary"></i>تاریخچه تراکنش‌های دستی ({{ records|length }} مورد اخیر)</h5>
+        <div class="card-header border-secondary bg-transparent py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-list me-2 text-warning"></i>تاریخچه اسناد مالی و برداشت‌ها ({{ records|length }} مورد اخیر)</h5>
+            <small class="text-white-50">تراکنش‌های متصل به حساب، همزمان مانده و ریز گردش کارت بانکی را به‌روزرسانی می‌کنند</small>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-dark table-striped table-hover align-middle mb-0 text-center">
-                    <thead>
+                <table class="table table-dark table-hover table-striped align-middle mb-0 text-center">
+                    <thead class="bg-secondary bg-opacity-25 text-white-50">
                         <tr>
-                            <th class="py-2">نوع</th>
-                            <th>عنوان</th>
-                            <th>دسته‌بندی</th>
-                            <th>مبلغ (تومان)</th>
-                            <th>تاریخ</th>
-                            <th>عملیات</th>
+                            <th class="py-3">نوع سند</th>
+                            <th class="py-3">عنوان</th>
+                            <th class="py-3">دسته‌بندی</th>
+                            <th class="py-3">مبلغ (تومان)</th>
+                            <th class="py-3">حساب / کارت بانکی</th>
+                            <th class="py-3">تاریخ سند</th>
+                            <th class="py-3">عملیات</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for rec in records %}
-                        <tr>
+                        <tr class="border-bottom border-secondary">
                             <td>
                                 {% if rec.type == 'income' %}
-                                <span class="badge bg-success">درآمد</span>
+                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="fas fa-arrow-down me-1"></i>درآمد</span>
+                                {% elif rec.type == 'withdrawal' %}
+                                <span class="badge bg-warning text-dark fw-bold px-2 py-1"><i class="fas fa-hand-holding-dollar me-1"></i>برداشت / حقوق</span>
                                 {% else %}
-                                <span class="badge bg-danger">هزینه</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1"><i class="fas fa-arrow-up me-1"></i>هزینه</span>
                                 {% endif %}
                             </td>
-                            <td>{{ rec.title }}</td>
+                            <td class="fw-bold">{{ rec.title }}</td>
                             <td><span class="badge bg-secondary">{{ rec.category }}</span></td>
+                            <td class="font-monospace fw-bold {% if rec.type == 'income' %}text-success{% elif rec.type == 'withdrawal' %}text-warning{% else %}text-danger{% endif %}" dir="ltr">
+                                {% if rec.type == 'income' %}+{% else %}-{% endif %}{{ "{:,}".format(rec.amount) }} <small class="text-white-50">تومان</small>
+                            </td>
+                            <td>
+                                {% if rec.bank_name %}
+                                <div class="d-flex flex-column align-items-center justify-content-center">
+                                    <span class="text-info fw-semibold"><i class="fas fa-credit-card me-1"></i>{{ rec.bank_name }}</span>
+                                    {% if rec.card_holder %}
+                                    <small class="text-white-50">{{ rec.card_holder }}</small>
+                                    {% endif %}
+                                    {% if rec.card_number %}
+                                    <span class="font-monospace text-secondary small" dir="ltr" style="font-size: 0.72rem;">{{ rec.card_number }}</span>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <span class="badge bg-dark text-white-50 border border-secondary">ثبت دفتری</span>
+                                {% endif %}
+                            </td>
                             <td dir="rtl">
                                 <div class="fw-bold text-light">{{ rec.date | shamsi_date }}</div>
                                 <small class="text-white-50 font-monospace" dir="ltr" style="font-size: 0.72rem;">{{ rec.date }}</small>
                             </td>
                             <td>
-                                <a href="{{ url_for('accounting_delete_record', record_id=rec.id) }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('آیا از حذف این رکورد اطمینان دارید؟');"><i class="fas fa-trash"></i></a>
+                                <a href="{{ url_for('accounting_delete_record', record_id=rec.id) }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('آیا از حذف این رکورد اطمینان دارید؟ در صورت اتصال به کارت بانکی، مانده حساب به حالت قبل بازمی‌گردد.');" title="حذف سند و بازگرداندن مانده حساب"><i class="fas fa-trash"></i></a>
                             </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="py-4 text-white-50">هنوز هیچ سند مالی یا برداشتی ثبت نشده است.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -174,32 +200,45 @@
     <div class="modal-dialog modal-dialog-centered">
         <form method="POST" action="{{ url_for('accounting_add_record') }}" class="modal-content bg-dark text-white border-secondary">
             <div class="modal-header border-secondary">
-                <h5 class="modal-title fw-bold"><i class="fas fa-plus me-2 text-warning"></i>ثبت رکورد جدید</h5>
+                <h5 class="modal-title fw-bold"><i class="fas fa-plus-circle me-2 text-warning"></i>ثبت سند مالی (برداشت / حقوق / هزینه / درآمد)</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label text-white-50">نوع رکورد</label>
-                    <select name="type" class="form-select bg-dark text-white border-secondary" required>
-                        <option value="income">درآمد</option>
-                        <option value="expense" selected>هزینه</option>
+                    <label class="form-label text-white-50">نوع سند <span class="text-danger">*</span></label>
+                    <select name="type" id="accountingTypeSelect" class="form-select bg-dark text-white border-secondary" required onchange="handleAccountingTypeChange()">
+                        <option value="withdrawal" selected>برداشت / حقوق و علی‌الحساب (کسر از حساب)</option>
+                        <option value="expense">هزینه / مخارج جاری و سرور (کسر از حساب)</option>
+                        <option value="income">درآمد / آورده نقدی یا واریز (افزایش موجودی حساب)</option>
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label text-white-50">عنوان</label>
-                    <input type="text" name="title" class="form-control bg-dark text-white border-secondary" placeholder="مثال: خرید سرور هتزنر" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label text-white-50">دسته‌بندی</label>
-                    <select name="category" class="form-select bg-dark text-white border-secondary" required>
-                        {% for cat in categories %}
-                        <option value="{{ cat }}">{{ cat }}</option>
+                    <label id="cardLabel" class="form-label text-white-50">حساب / کارت بانکی مبدأ پرداخت</label>
+                    <select name="card_id" id="accountingCardSelect" class="form-select bg-dark text-white border-secondary">
+                        <option value="">-- ثبت دفتری (بدون اثر بر موجودی کارت‌های بانکی) --</option>
+                        {% for a in accounts %}
+                        <option value="{{ a.id }}" {% if default_account and a.id == default_account.id %}selected{% endif %}>
+                            {{ a.bank_name }} - {{ a.card_holder }} (موجودی: {{ "{:,}".format(a.balance) }} تومان)
+                        </option>
                         {% endfor %}
                     </select>
+                    <div id="cardHelp" class="form-text text-white-50 small mt-1">
+                        با انتخاب حساب، مبلغ مستقیماً از مانده کسر شده و گردش حساب ثبت می‌گردد.
+                    </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label text-white-50">مبلغ (تومان)</label>
-                    <input type="number" name="amount" class="form-control bg-dark text-white border-secondary" placeholder="مثال: 500000" min="1" required>
+                    <label class="form-label text-white-50">عنوان سند <span class="text-danger">*</span></label>
+                    <input type="text" name="title" id="accountingTitleInput" class="form-control bg-dark text-white border-secondary" placeholder="مثال: علی‌الحساب حقوق اسفند" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white-50">دسته‌بندی <span class="text-danger">*</span></label>
+                    <select name="category" id="accountingCategorySelect" class="form-select bg-dark text-white border-secondary" required>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white-50">مبلغ (تومان) <span class="text-danger">*</span></label>
+                    <input type="text" name="amount" id="accountingAmountInput" class="form-control bg-dark text-white border-secondary font-monospace" placeholder="مثال: 5,000,000" required oninput="formatTomanInput(this, 'accAmountPreview')">
+                    <div id="accAmountPreview" class="text-warning small mt-1 fw-bold"></div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label text-white-50">تاریخ سند (شمسی و میلادی):</label>
@@ -208,14 +247,73 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label text-white-50">توضیحات تکمیلی</label>
-                    <textarea name="description" class="form-control bg-dark text-white border-secondary" rows="2"></textarea>
+                    <textarea name="description" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="توضیحات، شماره پیگیری، نام شخص یا بابت..."></textarea>
                 </div>
             </div>
             <div class="modal-footer border-secondary">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
-                <button type="submit" class="btn btn-warning fw-bold px-4">ثبت رکورد</button>
+                <button type="submit" class="btn btn-warning fw-bold px-4">ثبت سند</button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+const ACC_CATEGORIES = {
+    withdrawal: {{ withdrawal_categories | tojson }},
+    expense: {{ expense_categories | tojson }},
+    income: {{ income_categories | tojson }}
+};
+
+function handleAccountingTypeChange() {
+    const type = document.getElementById('accountingTypeSelect').value;
+    const catSelect = document.getElementById('accountingCategorySelect');
+    const cardLabel = document.getElementById('cardLabel');
+    const cardHelp = document.getElementById('cardHelp');
+    const titleInput = document.getElementById('accountingTitleInput');
+    
+    if (!catSelect) return;
+    catSelect.innerHTML = '';
+    const cats = ACC_CATEGORIES[type] || [];
+    cats.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        catSelect.appendChild(opt);
+    });
+    
+    if (type === 'income') {
+        if (cardLabel) cardLabel.textContent = 'حساب / کارت بانکی مقصد واریز';
+        if (cardHelp) cardHelp.textContent = 'با انتخاب حساب، مبلغ مستقیماً به مانده شناور افزوده شده و در ریز گردش حساب ثبت می‌گردد.';
+        if (titleInput) titleInput.placeholder = 'مثال: واریز دستی به حساب یا آورده نقدی';
+    } else if (type === 'withdrawal') {
+        if (cardLabel) cardLabel.textContent = 'حساب / کارت بانکی مبدأ پرداخت حقوق و برداشت';
+        if (cardHelp) cardHelp.textContent = 'با انتخاب حساب، مبلغ مستقیماً از مانده کسر شده و در ریز گردش حساب ثبت می‌گردد.';
+        if (titleInput) titleInput.placeholder = 'مثال: پرداخت علی‌الحساب حقوق یا پاداش';
+    } else {
+        if (cardLabel) cardLabel.textContent = 'حساب / کارت بانکی مبدأ پرداخت هزینه';
+        if (cardHelp) cardHelp.textContent = 'با انتخاب حساب، مبلغ مستقیماً از مانده کسر شده و در ریز گردش حساب ثبت می‌گردد.';
+        if (titleInput) titleInput.placeholder = 'مثال: خرید سرور هتزنر، شارژ پنل یا دامنه';
+    }
+}
+
+function formatTomanInput(input, previewId) {
+    let raw = input.value.replace(/[^0-9]/g, '');
+    if (!raw) {
+        input.value = '';
+        const prev = document.getElementById(previewId);
+        if (prev) prev.textContent = '';
+        return;
+    }
+    input.value = Number(raw).toLocaleString('en-US');
+    const prev = document.getElementById(previewId);
+    if (prev) {
+        prev.textContent = Number(raw).toLocaleString('fa-IR') + ' تومان';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    handleAccountingTypeChange();
+});
+</script>
 {% endblock %}

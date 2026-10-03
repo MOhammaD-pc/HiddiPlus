@@ -648,7 +648,7 @@ class Database:
             )
         """)
 
-        # جدول اسناد حسابداری و مدیریت مالی پیشرفته (درآمدها و مخارج)
+        # جدول اسناد حسابداری و مدیریت مالی پیشرفته (درآمدها، مخارج و برداشت‌ها)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS accounting_records (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -661,9 +661,19 @@ class Database:
                 ref_id TEXT,
                 description TEXT,
                 date TEXT NOT NULL,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                card_id INTEGER
             )
         """)
+
+        # مهاجرت خودکار افزودن card_id به جدول اسناد در صورت عدم وجود
+        try:
+            cursor.execute("PRAGMA table_info(accounting_records)")
+            acc_cols = [c[1] for c in cursor.fetchall()]
+            if "card_id" not in acc_cols:
+                cursor.execute("ALTER TABLE accounting_records ADD COLUMN card_id INTEGER")
+        except Exception:
+            pass
 
         # جدول مدیران پنل و سطوح دسترسی (RBAC)
         cursor.execute("""
@@ -20834,7 +20844,7 @@ class Database:
             tx_id = cursor.lastrowid
 
             # همگام‌سازی با سیستم حسابداری کل (accounting_records) برای مدیریت
-            if owner_type == "admin":
+            if owner_type == "admin" and ref_type != "accounting_record":
                 cat_map = {
                     "salary": "حقوق و دستمزد",
                     "server_cost": "سرور و زیرساخت",
@@ -20843,22 +20853,24 @@ class Database:
                     "manual_deposit": "واریز متفرقه",
                     "other": "سایر هزینه‌ها"
                 }
-                if tx_type == "withdrawal" and category in cat_map:
+                if tx_type == "withdrawal":
+                    acc_cat = cat_map.get(category, category)
+                    rec_t = "withdrawal" if any(w in acc_cat for w in ("حقوق", "علی‌الحساب", "برداشت", "سهم")) else "expense"
                     try:
                         cursor.execute("""
                             INSERT INTO accounting_records 
-                            (type, category, title, amount, source, ref_type, ref_id, description, date, created_at)
-                            VALUES ('expense', ?, ?, ?, ?, 'card_tx', ?, ?, ?, ?)
-                        """, (cat_map[category], title or cat_map[category], amt, f"card_{card_id}", str(tx_id), description or f"کسر از کارت {card.get('bank_name')} ({card.get('card_number')[-4:]})", now[:10], now))
+                            (type, category, title, amount, source, ref_type, ref_id, description, date, created_at, card_id)
+                            VALUES (?, ?, ?, ?, ?, 'card_tx', ?, ?, ?, ?, ?)
+                        """, (rec_t, acc_cat, title or acc_cat, amt, f"card_{card_id}", str(tx_id), description or f"کسر از کارت {card.get('bank_name')} ({card.get('card_number')[-4:]})", now[:10], now, card_id))
                     except Exception as e_acc:
                         logger.error(f"Error syncing card withdrawal to accounting: {e_acc}")
-                elif tx_type == "deposit" and category == "manual_deposit":
+                elif tx_type == "deposit" and category in ("manual_deposit", "واریز متفرقه", "واریز دستی"):
                     try:
                         cursor.execute("""
                             INSERT INTO accounting_records 
-                            (type, category, title, amount, source, ref_type, ref_id, description, date, created_at)
-                            VALUES ('income', 'واریز دستی/متفرقه', ?, ?, ?, 'card_tx', ?, ?, ?, ?)
-                        """, (title or "واریز به حساب", amt, f"card_{card_id}", str(tx_id), description, now[:10], now))
+                            (type, category, title, amount, source, ref_type, ref_id, description, date, created_at, card_id)
+                            VALUES ('income', 'واریز دستی/متفرقه', ?, ?, ?, 'card_tx', ?, ?, ?, ?, ?)
+                        """, (title or "واریز به حساب", amt, f"card_{card_id}", str(tx_id), description, now[:10], now, card_id))
                     except Exception as e_acc:
                         logger.error(f"Error syncing card deposit to accounting: {e_acc}")
 
@@ -22170,25 +22182,82 @@ class Database:
     # سیستم حسابداری و مدیریت مالی پیشرفته (Accounting & Profit/Loss)
     # ═══════════════════════════════════════════════════════════════
 
+    def get_bank_card(self, card_id: int) -> Optional[dict]:
+        """واکشی مشخصات یک حساب یا کارت بانکی مدیریت با شناسه"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT * FROM bank_cards WHERE id = ?", (card_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
     def add_accounting_record(self, type: str, category: str, title: str, amount: int,
                               source: str = "manual", ref_type: str = None, ref_id: str = None,
-                              description: str = None, date: str = None) -> dict:
-        """ثبت سند جدید درآمد یا هزینه در حسابداری"""
+                              description: str = None, date: str = None,
+                              card_id: int = None, actor: str = None) -> dict:
+        """ثبت سند جدید درآمد، هزینه یا برداشت در حسابداری به همراه اعمال آنی بر مانده و گردش حساب کارت"""
         conn = self.get_connection()
         cursor = conn.cursor()
         now_iso = get_now_iso()
         record_date = date.strip() if date else now_iso[:10]
+        rec_type = type.strip().lower()
+        amt = abs(int(amount or 0))
+        target_card_id = int(card_id) if card_id and str(card_id).isdigit() and int(card_id) > 0 else None
+
         try:
+            # اطمینان از وجود ستون card_id در جدول
+            try:
+                cursor.execute("PRAGMA table_info(accounting_records)")
+                cols = [c[1] for c in cursor.fetchall()]
+                if "card_id" not in cols:
+                    cursor.execute("ALTER TABLE accounting_records ADD COLUMN card_id INTEGER")
+            except Exception:
+                pass
+
             cursor.execute("""
                 INSERT INTO accounting_records 
-                (type, category, title, amount, source, ref_type, ref_id, description, date, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (type, category, title, amount, source, ref_type, ref_id, description, date, created_at, card_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                type.strip().lower(), category.strip(), title.strip(),
-                int(amount), source, ref_type, ref_id, description,
-                record_date, now_iso
+                rec_type, category.strip(), title.strip(),
+                amt, source, ref_type, ref_id, description,
+                record_date, now_iso, target_card_id
             ))
             record_id = cursor.lastrowid
+
+            # اگر کارت/حساب بانکی انتخاب شده باشد، مانده کارت و ریز گردش حساب بروزرسانی شود
+            if target_card_id:
+                cursor.execute("SELECT * FROM bank_cards WHERE id = ?", (target_card_id,))
+                card_row = cursor.fetchone()
+                if card_row:
+                    card = dict(card_row)
+                    curr_bal = int(card.get("balance") or 0)
+                    tx_type = "deposit" if rec_type == "income" else "withdrawal"
+                    new_bal = curr_bal + amt if tx_type == "deposit" else curr_bal - amt
+
+                    cursor.execute("UPDATE bank_cards SET balance = ? WHERE id = ?", (new_bal, target_card_id))
+                    
+                    tx_title = title.strip() if title else ("واریز به حساب" if tx_type == "deposit" else "برداشت از حساب")
+                    tx_desc = description.strip() if description else f"سند حسابداری #{record_id} ({category.strip()})"
+                    
+                    cursor.execute("""
+                        INSERT INTO card_transactions (
+                            card_id, owner_type, reseller_id, type, amount, balance_after,
+                            category, title, description, tracking_code, ref_type, ref_id,
+                            created_by, created_at
+                        ) VALUES (?, 'admin', 0, ?, ?, ?, ?, ?, ?, NULL, 'accounting_record', ?, ?, ?)
+                    """, (
+                        target_card_id, tx_type, amt, new_bal,
+                        category.strip(), tx_title, tx_desc,
+                        str(record_id),
+                        actor or "admin",
+                        now_iso
+                    ))
+                    card_tx_id = cursor.lastrowid
+                    cursor.execute("UPDATE accounting_records SET ref_type = 'card_tx', ref_id = ? WHERE id = ?", (str(card_tx_id), record_id))
+
             conn.commit()
             try:
                 self.export_full_backup_json()
@@ -22207,7 +22276,7 @@ class Database:
         cursor = conn.cursor()
         now_iso = get_now_iso()
         try:
-            allowed = ["type", "category", "title", "amount", "description", "date"]
+            allowed = ["type", "category", "title", "amount", "description", "date", "card_id"]
             updates = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
             if not updates:
                 return {"success": False, "error": "داده‌ای برای بروزرسانی ارسال نشده است."}
@@ -22259,10 +22328,38 @@ class Database:
             conn.close()
 
     def delete_accounting_record(self, record_id: int) -> dict:
-        """حذف سند حسابداری"""
+        """حذف سند حسابداری و بازگردانی مانده کارت و تراکنش متصل"""
         conn = self.get_connection()
         cursor = conn.cursor()
         try:
+            cursor.execute("SELECT * FROM accounting_records WHERE id=?", (record_id,))
+            rec_row = cursor.fetchone()
+            if rec_row:
+                rec = dict(rec_row)
+                card_id = rec.get("card_id")
+                amount = int(rec.get("amount") or 0)
+                rec_type = str(rec.get("type") or "").lower()
+                ref_type = rec.get("ref_type")
+                ref_id = rec.get("ref_id")
+                
+                # اگر رکورد به کارت متصل بوده، اثر تراکنش را معکوس و مانده را بازیابی می‌کنیم
+                if card_id and amount > 0:
+                    cursor.execute("SELECT balance FROM bank_cards WHERE id = ?", (card_id,))
+                    c_row = cursor.fetchone()
+                    if c_row:
+                        curr_b = int(c_row[0] or 0)
+                        restored_b = curr_b + amount if rec_type in ("expense", "withdrawal") else curr_b - amount
+                        cursor.execute("UPDATE bank_cards SET balance = ? WHERE id = ?", (restored_b, card_id))
+
+                    # حذف تراکنش متصل از card_transactions
+                    if ref_type == "card_tx" and ref_id and str(ref_id).isdigit():
+                        try:
+                            cursor.execute("DELETE FROM card_transactions WHERE id = ?", (int(ref_id),))
+                        except Exception:
+                            pass
+                    else:
+                        cursor.execute("DELETE FROM card_transactions WHERE ref_type = 'accounting_record' AND ref_id = ?", (str(record_id),))
+
             cursor.execute("DELETE FROM accounting_records WHERE id=?", (record_id,))
             conn.commit()
             try:
@@ -22271,6 +22368,7 @@ class Database:
                 pass
             return {"success": True}
         except Exception as e:
+            logger.error(f"Error deleting accounting record: {e}")
             return {"success": False, "error": str(e)}
         finally:
             conn.close()
@@ -22278,36 +22376,41 @@ class Database:
     def get_accounting_records(self, limit: int = 300, type_filter: str = "all",
                                category_filter: str = "all", period: str = "all",
                                search: str = None) -> list:
-        """دریافت لیست اسناد حسابداری با فیلترهای پیشرفته"""
+        """دریافت لیست اسناد حسابداری با فیلترهای پیشرفته و اتصال به اطلاعات کارت/حساب بانکی"""
         conn = self.get_connection()
         cursor = conn.cursor()
         try:
-            query = "SELECT * FROM accounting_records WHERE 1=1"
+            query = """
+                SELECT ar.*, bc.bank_name, bc.card_holder, bc.card_number 
+                FROM accounting_records ar
+                LEFT JOIN bank_cards bc ON ar.card_id = bc.id
+                WHERE 1=1
+            """
             params = []
 
             if type_filter and type_filter != "all":
-                query += " AND type = ?"
+                query += " AND ar.type = ?"
                 params.append(type_filter)
 
             if category_filter and category_filter != "all":
-                query += " AND category = ?"
+                query += " AND ar.category = ?"
                 params.append(category_filter)
 
             if period == "today":
-                query += " AND date = DATE('now')"
+                query += " AND ar.date = DATE('now')"
             elif period == "week":
-                query += " AND date >= DATE('now', '-7 days')"
+                query += " AND ar.date >= DATE('now', '-7 days')"
             elif period == "month":
-                query += " AND date >= DATE('now', 'start of month')"
+                query += " AND ar.date >= DATE('now', 'start of month')"
             elif period == "year":
-                query += " AND date >= DATE('now', 'start of year')"
+                query += " AND ar.date >= DATE('now', 'start of year')"
 
             if search and search.strip():
-                query += " AND (title LIKE ? OR description LIKE ? OR category LIKE ?)"
+                query += " AND (ar.title LIKE ? OR ar.description LIKE ? OR ar.category LIKE ?)"
                 kw = f"%{search.strip()}%"
                 params.extend([kw, kw, kw])
 
-            query += " ORDER BY date DESC, id DESC LIMIT ?"
+            query += " ORDER BY ar.date DESC, ar.id DESC LIMIT ?"
             params.append(limit)
 
             cursor.execute(query, params)
@@ -22387,7 +22490,7 @@ class Database:
                 if dt.year == year:
                     months[dt.month - 1]['income'] += (row['amount'] or 0)
 
-            cursor.execute("SELECT amount, date FROM accounting_records WHERE type='expense'")
+            cursor.execute("SELECT amount, date FROM accounting_records WHERE type IN ('expense', 'withdrawal')")
             for row in cursor.fetchall():
                 try:
                     dt = jdatetime.datetime.strptime(row['date'][:10].replace('/', '-'), '%Y-%m-%d')
@@ -22425,7 +22528,7 @@ class Database:
 
             total_income = auto_tx_income + auto_reseller_income + partner_income + manual_income
 
-            cursor.execute("SELECT COALESCE(SUM(amount), 0) FROM accounting_records WHERE type='expense'")
+            cursor.execute("SELECT COALESCE(SUM(amount), 0) FROM accounting_records WHERE type IN ('expense', 'withdrawal')")
             total_expense = cursor.fetchone()[0] or 0
 
             net_profit = total_income - total_expense

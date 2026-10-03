@@ -38,6 +38,23 @@
                 if (localStorage.getItem('sidebar_collapsed') === 'true' && window.innerWidth >= 992) {
                     document.documentElement.classList.add('sidebar-mini');
                 }
+
+                // تشخیص سریع دستگاه‌های iOS و حالت‌های وب‌اپلیکیشن (PWA / Standalone)
+                const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                const isStandalone = Boolean(window.navigator.standalone) || 
+                                     window.matchMedia('(display-mode: standalone)').matches ||
+                                     window.matchMedia('(display-mode: fullscreen)').matches;
+
+                if (isIos) {
+                    document.documentElement.classList.add('is-ios');
+                }
+                if (isStandalone) {
+                    document.documentElement.classList.add('is-standalone');
+                }
+                if (isIos && isStandalone) {
+                    document.documentElement.classList.add('is-ios-standalone');
+                }
             } catch(e) {}
         })();
     </script>
@@ -1812,16 +1829,45 @@
             top: 0;
             z-index: 1020;
             box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-            /* تنظیم اصولی پدینگ براساس Safe Area اینست‌های iOS برای جلوگیری از تداخل با بریدگی ناچ، جزیره پویا و آیکون باتری */
-            padding-top: max(env(safe-area-inset-top, 0px), 12px) !important;
-            padding-bottom: 10px !important;
+            /* پدینگ محاسبه‌شده با لحاظ کردن حاشیه امن سخت‌افزاری + فضای تنفس استاندارد */
+            padding-top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
+            padding-bottom: 12px !important;
             padding-right: max(env(safe-area-inset-right, 0px), 14px) !important;
             padding-left: max(env(safe-area-inset-left, 0px), 14px) !important;
-            min-height: calc(56px + env(safe-area-inset-top, 0px));
+            min-height: calc(58px + env(safe-area-inset-top, 0px));
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
             box-sizing: border-box;
             transition: all 0.25s ease;
+        }
+
+        /* ─── تنظیمات اختصاصی آیفون (iOS) در هر دو حالت وب و وب‌اپلیکیشن (PWA / Standalone) ─── */
+        /* جلوگیری قطعی از تداخل دکمه منوی همبرگری با علامت باتری و آنتن و دکمه تم با ساعت آیفون */
+        @supports (-webkit-touch-callout: none) {
+            @media (orientation: portrait) {
+                .mobile-top-bar {
+                    /* در آیفون در حالت عمودی وب: فاصله کافی و استاندارد برای قرارگیری زیر نوار وضعیت */
+                    padding-top: max(calc(env(safe-area-inset-top, 0px) + 10px), 48px) !important;
+                    min-height: max(calc(58px + env(safe-area-inset-top, 0px)), 98px);
+                }
+            }
+            @media all and (display-mode: standalone) and (orientation: portrait) {
+                .mobile-top-bar {
+                    /* در حالت PWA تمام‌صفحه در آیفون: پدینگ ایمن ۵۴ پیکسل جهت عبور از داینامیک آیلند، ناچ و نشانگرهای سیگنال */
+                    padding-top: max(calc(env(safe-area-inset-top, 0px) + 12px), 54px) !important;
+                    min-height: max(calc(58px + env(safe-area-inset-top, 0px)), 106px);
+                }
+            }
+        }
+
+        /* پشتیبانی کمکی با کلاس‌های جاوااسکریپت برای تضمین کامل عملکرد در وب‌ویوهای مختلف iOS */
+        html.is-ios:not(.is-ios-standalone) .mobile-top-bar {
+            padding-top: max(calc(env(safe-area-inset-top, 0px) + 10px), 48px) !important;
+            min-height: max(calc(58px + env(safe-area-inset-top, 0px)), 98px);
+        }
+        html.is-ios-standalone .mobile-top-bar {
+            padding-top: max(calc(env(safe-area-inset-top, 0px) + 12px), 54px) !important;
+            min-height: max(calc(58px + env(safe-area-inset-top, 0px)), 106px);
         }
 
         /* دکمه منوی همبرگری موبایل با ابعاد استاندارد لمسی (Apple HIG Touch Target 44x44px) */
@@ -2173,8 +2219,8 @@
                 right: -285px !important;
                 transform: none !important;
                 box-shadow: none !important;
-                padding-top: max(env(safe-area-inset-top, 0px), 0px) !important;
-                padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px) !important;
+                padding-top: max(calc(env(safe-area-inset-top, 0px) + 8px), 12px) !important;
+                padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px) !important;
                 padding-right: max(env(safe-area-inset-right, 0px), 0px) !important;
                 padding-left: max(env(safe-area-inset-left, 0px), 0px) !important;
             }
@@ -2183,6 +2229,19 @@
                 transform: none !important;
                 box-shadow: -6px 0 25px rgba(0, 0, 0, 0.35) !important;
             }
+        }
+
+        /* حاشیه بالای سایدبار در آیفون برای عدم تداخل با دکمه بستن و عنوان برند */
+        @supports (-webkit-touch-callout: none) {
+            @media (max-width: 992px) and (orientation: portrait) {
+                .sidebar {
+                    padding-top: max(calc(env(safe-area-inset-top, 0px) + 10px), 48px) !important;
+                }
+            }
+        }
+        html.is-ios-standalone .sidebar {
+            padding-top: max(calc(env(safe-area-inset-top, 0px) + 12px), 52px) !important;
+        }
             .main-content {
                 margin-right: 0 !important;
                 padding: 14px 12px !important;
@@ -4480,6 +4539,13 @@ body.tab-hidden *::after {
         function applyTheme(theme) {
             document.documentElement.setAttribute('data-bs-theme', theme);
             localStorage.setItem('app_theme', theme);
+
+            // بروزرسانی رنگ نوار وضعیت مروگرهای موبایل و iOS
+            const metaTheme = document.querySelector('meta[name="theme-color"]');
+            if (metaTheme) {
+                metaTheme.setAttribute('content', theme === 'dark' ? '#0f172a' : '#ffffff');
+            }
+
             const icon = document.getElementById('themeIcon');
             const label = document.getElementById('themeLabel');
             if (icon && label) {

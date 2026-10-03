@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 """
 =============================================================================
-🛡️ Nexus License Guard (Client Edition) - TGBot Protection Core
+🛡️ KeyIO License Guard (Client Edition) - TGBot Protection Core (keyio.ir)
 =============================================================================
 ماژول امنیتی و اعتبارسنجی لایسنس سمت کلاینت:
 - تولید اثر انگشت پایدار سخت‌افزاری (Machine ID) برای لینوکس و ویندوز
 - پشتیبانی از حالت مستر (Master Mode) جهت کارکرد مادام‌العمر سرور شخصی بدون وابستگی
-- اعتبارسنجی آنلاین و ارسال ضربان سلامت (Heartbeat) به سرور لایسنس
+- اعتبارسنجی آنلاین و ارسال ضربان سلامت (Heartbeat) به سرور لایسنس کی‌آی‌او (KeyIO)
 - تاب‌آوری شبکه در شرایط فیلترینگ و قطعی موقت (Grace Period 72h)
 - مدیریت ماژولار دسترسی‌ها (Feature Flags)
 - مکانیزم واکنش به فرمان‌های تعلیق و تخریب از راه دور (Kill-Switch)
@@ -63,9 +63,9 @@ try:
 except ImportError:
     CLIENT_VERSION = "3.28.0"
 
-DEFAULT_SERVER_URL = "http://127.0.0.1:8890"  # آدرس سرور لایسنس شما
+DEFAULT_SERVER_URL = "https://keyio.ir"  # آدرس سرور پلتفرم کی‌آی‌او (KeyIO)
 GRACE_PERIOD_SECONDS = 72 * 3600  # ۷۲ ساعت مهلت در صورت قطعی اینترنت
-SHARED_SALT = b"NexusLicenseGuard_2026_SecureSalt"
+SHARED_SALT = b"KeyIOLicenseGuard_2026_SecureSalt"
 
 
 class LicenseGuard:
@@ -267,7 +267,7 @@ class LicenseGuard:
         json_bytes = json.dumps(data).encode("utf-8")
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": f"NexusGuardClient/{CLIENT_VERSION}"
+            "User-Agent": f"KeyIO-GuardClient/{CLIENT_VERSION}"
         }
 
         if HAS_HTTPX:
@@ -564,7 +564,7 @@ if __name__ == "__main__":
     if hasattr(sys.stdout, 'reconfigure'):
         sys.stdout.reconfigure(encoding='utf-8')
     print("=" * 65)
-    print("🛡️ Nexus License Guard (Client Diagnostics)")
+    print("🛡️ KeyIO License Guard (Client Diagnostics)")
     print("=" * 65)
     print(f"🖥️ شناسه سخت‌افزاری سرور (Machine ID): {guard.machine_id}")
     print(f"🔑 کلید لایسنس فعلی: {guard.license_key or '(تعریف نشده)'}")

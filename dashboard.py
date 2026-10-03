@@ -10632,6 +10632,34 @@ def admin_domains_renew_all():
 # بخش حسابداری پیشرفته و مدیریت سود و زیان (Accounting & Profit Desk)
 # ═══════════════════════════════════════════════════════════════════════
 
+ACCOUNTING_EXPENSE_CATEGORIES = [
+    "خرید سرور و زیرساخت",
+    "شارژ پنل پیامک",
+    "دامنه و CDN",
+    "تبلیغات و مارکتینگ",
+    "پشتیبانی و کارمندان",
+    "خرید ترافیک",
+    "کارمزد بانکی",
+    "سایر هزینه‌ها"
+]
+ACCOUNTING_WITHDRAWAL_CATEGORIES = [
+    "حقوق مدیریت",
+    "حقوق پرسنل و کارمندان",
+    "علی‌الحساب",
+    "برداشت سهم سود شرکا",
+    "برداشت شخصی / سرمایه",
+    "پاداش و عیدی",
+    "تسویه حساب متفرقه"
+]
+ACCOUNTING_INCOME_CATEGORIES = [
+    "فروش دستی اشتراک",
+    "واریز دستی به حساب",
+    "افزایش سرمایه / آورده نقدی",
+    "تسویه طلب / بازگشت وجه",
+    "متفرقه"
+]
+
+
 @app.route("/accounting", methods=["GET"])
 @permission_required("accounting")
 def accounting():
@@ -10648,18 +10676,12 @@ def accounting():
     monthly_stats = db.get_jalali_monthly_accounting(year=year)
     
     # لیست آخرین تراکنش‌های دستی برای نمایش یا مدیریت
-    records = db.get_accounting_records(limit=50)
+    records = db.get_accounting_records(limit=100)
 
-    categories = [
-        "خرید سرور",
-        "شارژ پنل پیامک",
-        "دامنه و CDN",
-        "تبلیغات و مارکتینگ",
-        "پشتیبانی و کارمندان",
-        "حقوق مدیریت",
-        "خرید ترافیک",
-        "متفرقه"
-    ]
+    # حساب‌ها و کارت‌های بانکی مدیریت جهت انتساب مبدأ/مقصد اسناد و تغییر مانده
+    financial_summary = db.get_financial_accounts_summary("admin", 0)
+    accounts = financial_summary.get("accounts", [])
+    default_account = db.get_customer_default_account("admin", 0)
 
     return render_template(
         "accounting.html",
@@ -10667,7 +10689,12 @@ def accounting():
         monthly_stats=monthly_stats,
         current_year=year,
         records=records,
-        categories=categories
+        accounts=accounts,
+        default_account=default_account,
+        expense_categories=ACCOUNTING_EXPENSE_CATEGORIES,
+        withdrawal_categories=ACCOUNTING_WITHDRAWAL_CATEGORIES,
+        income_categories=ACCOUNTING_INCOME_CATEGORIES,
+        categories=ACCOUNTING_EXPENSE_CATEGORIES + ACCOUNTING_WITHDRAWAL_CATEGORIES
     )
 
 
@@ -10752,17 +10779,25 @@ def admin_accounting_settle():
 @app.route("/accounting/record/add", methods=["POST"])
 @admin_required
 def accounting_add_record():
-    """ثبت سند جدید درآمد یا مخارج در سیستم حسابداری"""
-    rec_type = request.form.get("type", "expense").strip()
+    """ثبت سند جدید درآمد، هزینه یا برداشت با اتصال به حساب‌های بانکی و بروزرسانی آنی مانده و گردش"""
+    rec_type = request.form.get("type", "expense").strip().lower()
     category = request.form.get("category", "متفرقه").strip()
     title = request.form.get("title", "").strip()
-    amount = int(request.form.get("amount", 0))
+    amount_raw = request.form.get("amount", "0").replace(",", "").strip()
+    amount = int(amount_raw) if amount_raw.isdigit() else 0
     date = request.form.get("date", "").strip()
     description = request.form.get("description", "").strip()
+    card_id_raw = request.form.get("card_id", "").strip()
+    card_id = int(card_id_raw) if card_id_raw.isdigit() and int(card_id_raw) > 0 else None
+
+    referrer = request.referrer or ""
+    redirect_target = url_for("admin_wallet") if ("admin_wallet" in referrer or "wallet" in referrer) else url_for("accounting")
 
     if not title or amount <= 0:
         flash("لطفاً عنوان سند و مبلغ معتبر وارد کنید.", "warning")
-        return redirect(url_for("accounting"))
+        return redirect(redirect_target)
+
+    actor = session.get("username") or session.get("name") or "مدیریت"
 
     res = db.add_accounting_record(
         type=rec_type,
@@ -10771,16 +10806,28 @@ def accounting_add_record():
         amount=amount,
         source="manual",
         description=description,
-        date=date
+        date=date,
+        card_id=card_id,
+        actor=actor
     )
 
     if res.get("success"):
-        label = "درآمد" if rec_type == "income" else "هزینه/مخارج"
-        flash(f"سند {label} «{title}» با مبلغ {amount:,} تومان با موفقیت ثبت شد.", "success")
+        type_labels = {
+            "income": "درآمد",
+            "expense": "هزینه",
+            "withdrawal": "برداشت/حقوق"
+        }
+        label = type_labels.get(rec_type, "سند")
+        card_info = ""
+        if card_id:
+            c = db.get_bank_card(card_id) if hasattr(db, "get_bank_card") else None
+            c_name = f"{c.get('bank_name')} ({c.get('card_holder')})" if c else f"کارت #{card_id}"
+            card_info = f" و مانده و گردش حساب «{c_name}» به‌روزرسانی شد."
+        flash(f"سند {label} «{title}» با مبلغ {amount:,} تومان با موفقیت ثبت{card_info}", "success")
     else:
         flash(f"خطا در ثبت سند: {res.get('error')}", "danger")
 
-    return redirect(url_for("accounting"))
+    return redirect(redirect_target)
 
 
 @app.route("/accounting/record/delete/<int:record_id>")
@@ -13523,7 +13570,10 @@ def admin_wallet():
         jalali_months=jalali_months,
         monthly_counts=monthly_counts,
         daily_counts=daily_counts,
-        calendar_weeks=calendar_weeks
+        calendar_weeks=calendar_weeks,
+        expense_categories=ACCOUNTING_EXPENSE_CATEGORIES,
+        withdrawal_categories=ACCOUNTING_WITHDRAWAL_CATEGORIES,
+        income_categories=ACCOUNTING_INCOME_CATEGORIES
     )
 
 
@@ -16579,7 +16629,7 @@ def admin_sms_test():
 @app.route("/api/admin/ota/check", methods=["POST"])
 @admin_required
 def api_admin_ota_check():
-    """بررسی دستی وجود نسخه جدید نرم‌افزار از مرکز لایسنس‌هاب"""
+    """بررسی دستی وجود نسخه جدید نرم‌افزار از سرور کی‌آی‌او (KeyIO)"""
     try:
         from license_guard import LicenseGuard
         res = LicenseGuard().verify(force_online=True)
@@ -16926,7 +16976,7 @@ def admin_ota_update():
 @app.route("/api/admin/ota/check", methods=["GET"])
 @super_admin_required
 def api_ota_check():
-    """بررسی آنلاین نسخه جدید از لایسنس‌هاب بر اساس کانال انتخابی"""
+    """بررسی آنلاین نسخه جدید از سرور کی‌آی‌او (KeyIO) بر اساس کانال انتخابی"""
     from license_guard import LicenseGuard
     guard = LicenseGuard()
     channel = request.args.get("channel") or db.get_setting("ota_channel", "stable")

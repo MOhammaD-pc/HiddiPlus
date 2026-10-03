@@ -5,7 +5,7 @@
 🚀 TGBot OTA Safe Updater Core
 =============================================================================
 ماژول اجرای به‌روزرسانی امن و اتمیک سمت کلاینت:
-- دانلود امن از طریق لایسنس‌هاب و اعتبارسنجی هش SHA256
+- دانلود امن از طریق مرکز کی‌آی‌او (KeyIO - keyio.ir) و اعتبارسنجی هش SHA256
 - بک‌آپ خودکار از دیتابیس (database.db) و تنظیمات (.env) قبل از هر تغییر
 - اعمال مایگریشن‌های دیتابیس در صورت نیاز
 - مدیریت ری‌استارت سرویس لینوکس (Systemd) به صورت Detached بدون قطعی
@@ -104,7 +104,7 @@ class OTAUpdater:
         product_slug: str,
         target_path: Path,
     ) -> bool:
-        """دانلود پکیج آپدیت از طریق پروکسی امن لایسنس‌هاب"""
+        """دانلود پکیج آپدیت از طریق پروکسی امن کی‌آی‌او (KeyIO)"""
         target_path.parent.mkdir(parents=True, exist_ok=True)
         url = f"{server_url.rstrip('/')}{download_path}"
 
@@ -118,7 +118,7 @@ class OTAUpdater:
             "X-License-Key": license_key,
             "X-Machine-ID": machine_id,
             "X-Product-Slug": product_slug,
-            "User-Agent": "TGBot-OTA-Client/1.0",
+            "User-Agent": "KeyIO-OTA-Client/1.0",
         }
 
         if HAS_HTTPX:
@@ -182,7 +182,7 @@ class OTAUpdater:
                 target_path=package_path,
             )
             if not ok or not package_path.exists():
-                return {"success": False, "message": "خطا در دانلود بسته آپدیت از مرکز لایسنس‌هاب."}
+                return {"success": False, "message": "خطا در دانلود بسته آپدیت از مرکز کی‌آی‌او (KeyIO)."}
 
             # هش چک
             if file_sha256 and not cls.verify_sha256(package_path, file_sha256):
@@ -540,7 +540,7 @@ async def handle_ota_callback(update: Any, context: Any):
 
         await query.edit_message_text(
             f"⏳ <b>فرآیند دریافت و نصب نسخه v{version} آغاز شد...</b>\n\n"
-            "۱. دانلود امن پکیج از لایسنس‌هاب\n"
+            "۱. دانلود امن پکیج از سرور کی‌آی‌او (KeyIO)\n"
             "۲. اعتبارسنجی هش SHA256\n"
             "۳. تهیه نسخه پشتیبان کامل از دیتابیس و تنظیمات\n"
             "۴. راه‌اندازی مجدد سرویس\n\n"
