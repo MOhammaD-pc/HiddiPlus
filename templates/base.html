@@ -2229,6 +2229,17 @@
                 transform: none !important;
                 box-shadow: -6px 0 25px rgba(0, 0, 0, 0.35) !important;
             }
+            .main-content {
+                margin-right: 0 !important;
+                padding: 14px 12px !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow-x: clip !important;
+            }
+            .table-search-wrapper {
+                max-width: 100%;
+                margin-bottom: 8px;
+            }
         }
 
         /* حاشیه بالای سایدبار در آیفون برای عدم تداخل با دکمه بستن و عنوان برند */
@@ -2241,18 +2252,6 @@
         }
         html.is-ios-standalone .sidebar {
             padding-top: max(calc(env(safe-area-inset-top, 0px) + 12px), 52px) !important;
-        }
-            .main-content {
-                margin-right: 0 !important;
-                padding: 14px 12px !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                overflow-x: clip !important;
-            }
-            .table-search-wrapper {
-                max-width: 100%;
-                margin-bottom: 8px;
-            }
         }
 
         /* ══════════════════════════════════════════════════════════════
@@ -3029,11 +3028,9 @@
     }
     [data-bs-theme="dark"] .card {
         background-color: rgba(17, 24, 39, 0.94) !important;
-        border-color: rgba(255, 255, 255, 0.10) !important;
     }
     [data-bs-theme="light"] .card {
         background-color: #ffffff !important;
-        border-color: #cbd5e1 !important;
     }
 }
 
@@ -3218,6 +3215,11 @@ body.tab-hidden *::after {
         width: 100% !important;
     }
 }
+
+    /* ─── اعمال اولویت نهایی پالت و سبک کارت‌ها ─── */
+    {% if palette_css %}
+    {{ palette_css|safe }}
+    {% endif %}
 </style>
     {% block styles %}{% endblock %}
     {% block extra_head %}{% endblock %}

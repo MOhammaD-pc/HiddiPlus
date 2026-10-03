@@ -711,12 +711,15 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
     }
-    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {
+    .card, .card.border-0, .card.border-secondary, .bento-card, .glass-card, .modal-content {
+        border: 1px solid rgba(255, 255, 255, 0.09) !important;
+    }
+    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .card.border-0, [data-bs-theme="dark"] .card.border-secondary, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {
         background-color: #111827 !important;
         border: 1px solid rgba(255, 255, 255, 0.09) !important;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
     }
-    [data-bs-theme="light"] .card, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {
+    [data-bs-theme="light"] .card, [data-bs-theme="light"] .card.border-0, [data-bs-theme="light"] .card.border-secondary, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {
         background-color: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
@@ -746,13 +749,16 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
         if border_substyle == "gradient":
             sub_css = """
     /* زیرسبک حاشیه: گرادیان دو رنگه متالیک */
-    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {
-        background: linear-gradient(#111827, #111827) padding-box, linear-gradient(135deg, var(--palette-primary), var(--palette-accent)) border-box !important;
+    .card, .card.border-0, .card.border-secondary, .bento-card, .glass-card, .modal-content {
+        border: 1.5px solid transparent !important;
+    }
+    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .card.border-0, [data-bs-theme="dark"] .card.border-secondary, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {
+        background: linear-gradient(#111827, #111827) padding-box, linear-gradient(135deg, var(--palette-primary, #2563eb), var(--palette-accent, #00d2ff)) border-box !important;
         border: 1.5px solid transparent !important;
         box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35) !important;
     }
-    [data-bs-theme="light"] .card, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {
-        background: linear-gradient(#ffffff, #ffffff) padding-box, linear-gradient(135deg, var(--palette-primary), var(--palette-accent)) border-box !important;
+    [data-bs-theme="light"] .card, [data-bs-theme="light"] .card.border-0, [data-bs-theme="light"] .card.border-secondary, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {
+        background: linear-gradient(#ffffff, #ffffff) padding-box, linear-gradient(135deg, var(--palette-primary, #2563eb), var(--palette-accent, #00d2ff)) border-box !important;
         border: 1.5px solid transparent !important;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
     }
@@ -760,55 +766,74 @@ def generate_palette_css(palette_config: Dict[str, Any]) -> str:
         elif border_substyle == "top_line":
             sub_css = """
     /* زیرسبک حاشیه: خط شاخص بالای کارت */
-    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {
+    .card, .card.border-0, .card.border-secondary, .bento-card, .glass-card, .modal-content {
+        border-top: 3.5px solid var(--palette-primary, #2563eb) !important;
+    }
+    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .card.border-0, [data-bs-theme="dark"] .card.border-secondary, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {
         background-color: #111827 !important;
         border: 1px solid rgba(255, 255, 255, 0.09) !important;
-        border-top: 3.5px solid var(--palette-primary) !important;
+        border-top: 3.5px solid var(--palette-primary, #2563eb) !important;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
     }
-    [data-bs-theme="light"] .card, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {
+    [data-bs-theme="light"] .card, [data-bs-theme="light"] .card.border-0, [data-bs-theme="light"] .card.border-secondary, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {
         background-color: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
-        border-top: 3.5px solid var(--palette-primary) !important;
+        border-top: 3.5px solid var(--palette-primary, #2563eb) !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
     }
     [data-bs-theme="dark"] .card:hover, [data-bs-theme="dark"] .bento-card:hover {
-        border-top-color: var(--palette-accent) !important;
+        border-top-color: var(--palette-accent, #00d2ff) !important;
+    }
+    [data-bs-theme="light"] .card:hover, [data-bs-theme="light"] .bento-card:hover {
+        border-top-color: var(--palette-accent, #00d2ff) !important;
     }
     """
         elif border_substyle == "neon_glow":
             sub_css = f"""
     /* زیرسبک حاشیه: شب‌تاب نئونی ملایم */
-    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {{
-        background-color: #111827 !important;
-        border: 1.5px solid var(--palette-primary) !important;
-        box-shadow: 0 0 16px rgba({brand_rgb}, 0.22), 0 4px 18px rgba(0, 0, 0, 0.4) !important;
+    .card, .card.border-0, .card.border-secondary, .bento-card, .glass-card, .modal-content {{
+        border: 1.5px solid var(--palette-primary, #2563eb) !important;
     }}
-    [data-bs-theme="light"] .card, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {{
+    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .card.border-0, [data-bs-theme="dark"] .card.border-secondary, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {{
+        background-color: #111827 !important;
+        border: 1.5px solid var(--palette-primary, #2563eb) !important;
+        box-shadow: 0 0 16px rgba({brand_rgb}, 0.28), 0 4px 18px rgba(0, 0, 0, 0.4) !important;
+    }}
+    [data-bs-theme="light"] .card, [data-bs-theme="light"] .card.border-0, [data-bs-theme="light"] .card.border-secondary, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {{
         background-color: #ffffff !important;
-        border: 1.5px solid var(--palette-primary) !important;
-        box-shadow: 0 0 14px rgba({brand_rgb}, 0.16), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+        border: 1.5px solid var(--palette-primary, #2563eb) !important;
+        box-shadow: 0 0 14px rgba({brand_rgb}, 0.18), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
     }}
     [data-bs-theme="dark"] .card:hover, [data-bs-theme="dark"] .bento-card:hover {{
-        border-color: var(--palette-accent) !important;
-        box-shadow: 0 0 22px rgba({brand_rgb}, 0.32), 0 6px 22px rgba(0, 0, 0, 0.45) !important;
+        border-color: var(--palette-accent, #00d2ff) !important;
+        box-shadow: 0 0 22px rgba({brand_rgb}, 0.38), 0 6px 22px rgba(0, 0, 0, 0.45) !important;
+    }}
+    [data-bs-theme="light"] .card:hover, [data-bs-theme="light"] .bento-card:hover {{
+        border-color: var(--palette-accent, #00d2ff) !important;
+        box-shadow: 0 0 20px rgba({brand_rgb}, 0.26), 0 6px 18px rgba(0, 0, 0, 0.12) !important;
     }}
     """
         else: # minimal
             sub_css = """
     /* زیرسبک حاشیه: خط باریک ظریف تمام‌دور */
-    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {
+    .card, .card.border-0, .card.border-secondary, .bento-card, .glass-card, .modal-content {
+        border: 1.5px solid var(--palette-primary, #2563eb) !important;
+    }
+    [data-bs-theme="dark"] .card, [data-bs-theme="dark"] .card.border-0, [data-bs-theme="dark"] .card.border-secondary, [data-bs-theme="dark"] .bento-card, [data-bs-theme="dark"] .glass-card, [data-bs-theme="dark"] .modal-content {
         background-color: #111827 !important;
-        border: 1.5px solid var(--palette-primary) !important;
+        border: 1.5px solid var(--palette-primary, #2563eb) !important;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
     }
-    [data-bs-theme="light"] .card, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {
+    [data-bs-theme="light"] .card, [data-bs-theme="light"] .card.border-0, [data-bs-theme="light"] .card.border-secondary, [data-bs-theme="light"] .bento-card, [data-bs-theme="light"] .glass-card, [data-bs-theme="light"] .modal-content {
         background-color: #ffffff !important;
-        border: 1.5px solid var(--palette-primary) !important;
+        border: 1.5px solid var(--palette-primary, #2563eb) !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
     }
     [data-bs-theme="dark"] .card:hover, [data-bs-theme="dark"] .bento-card:hover {
-        border-color: var(--palette-accent) !important;
+        border-color: var(--palette-accent, #00d2ff) !important;
+    }
+    [data-bs-theme="light"] .card:hover, [data-bs-theme="light"] .bento-card:hover {
+        border-color: var(--palette-accent, #00d2ff) !important;
     }
     """
         card_style_css = base_border_reset + sub_css

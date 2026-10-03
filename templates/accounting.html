@@ -3,194 +3,197 @@
 {% block title %}سیستم حسابداری و تراز مالی سراسری{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4" dir="rtl">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="mb-0 fw-bold text-white"><i class="fas fa-chart-pie me-2 text-warning"></i>سیستم حسابداری و تراز مالی سراسری</h3>
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-0"><i class="fas fa-chart-pie text-warning me-2"></i> سیستم حسابداری و تراز مالی سراسری</h1>
+        <p class="text-muted mb-0">گزارش جامع درآمد، مخارج، تقسیم سود شرکا و تاریخچه اسناد مالی</p>
+    </div>
+    <div>
         <button class="btn btn-warning fw-bold px-4 rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#addRecordModal">
             <i class="fas fa-plus-circle me-1"></i> ثبت سند جدید (برداشت / حقوق / هزینه / درآمد)
         </button>
     </div>
+</div>
 
-    <!-- Boxes -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-3">
-            <div class="card bg-dark text-white border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #2d3748, #1a202c);">
-                <div class="card-body p-4 text-center">
-                    <h6 class="text-white-50 fw-bold mb-3">درآمد خالص سامانه</h6>
-                    <h3 class="fw-bolder text-success mb-0">{{ "{:,}".format(partners_data.total_income) }} <small class="fs-6 text-white-50">تومان</small></h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-dark text-white border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #2d3748, #1a202c);">
-                <div class="card-body p-4 text-center">
-                    <h6 class="text-white-50 fw-bold mb-3">مخارج و هزینه‌ها</h6>
-                    <h3 class="fw-bolder text-danger mb-0">{{ "{:,}".format(partners_data.total_expense) }} <small class="fs-6 text-white-50">تومان</small></h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-dark text-white border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #2d3748, #1a202c);">
-                <div class="card-body p-4 text-center">
-                    <h6 class="text-white-50 fw-bold mb-3">موجودی صندوق پس‌انداز</h6>
-                    <h3 class="fw-bolder text-info mb-0">{{ "{:,}".format(partners_data.total_partner_paid) }} <small class="fs-6 text-white-50">تومان</small></h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-dark text-white border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #2d3748, #1a202c);">
-                <div class="card-body p-4 text-center">
-                    <h6 class="text-white-50 fw-bold mb-3">سود قابل تقسیم شرکا</h6>
-                    <h3 class="fw-bolder text-warning mb-0">{{ "{:,}".format(partners_data.distributable_profit) }} <small class="fs-6 text-white-50">تومان</small></h3>
-                </div>
+<!-- Boxes -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm rounded-4 h-100">
+            <div class="card-body p-4 text-center">
+                <h6 class="text-muted fw-bold mb-3">درآمد خالص سامانه</h6>
+                <h3 class="fw-bolder text-success mb-0">{{ "{:,}".format(partners_data.total_income) }} <small class="fs-6 text-muted">تومان</small></h3>
             </div>
         </div>
     </div>
-
-    <!-- Monthly Chart -->
-    <div class="card bg-dark text-white border-secondary mb-4 rounded-4 shadow-sm">
-        <div class="card-header border-secondary bg-transparent py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-alt me-2 text-info"></i>گزارش مالی ماه‌های سال {{ current_year }}</h5>
-            <div class="btn-group">
-                <a href="{{ url_for('accounting', year=current_year - 1) }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-chevron-right"></i> سال قبل</a>
-                <a href="{{ url_for('accounting', year=current_year + 1) }}" class="btn btn-outline-secondary btn-sm">سال بعد <i class="fas fa-chevron-left"></i></a>
+    <div class="col-md-3">
+        <div class="card shadow-sm rounded-4 h-100">
+            <div class="card-body p-4 text-center">
+                <h6 class="text-muted fw-bold mb-3">مخارج و هزینه‌ها</h6>
+                <h3 class="fw-bolder text-danger mb-0">{{ "{:,}".format(partners_data.total_expense) }} <small class="fs-6 text-muted">تومان</small></h3>
             </div>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-dark table-hover table-borderless text-center align-middle mb-0">
-                    <thead class="bg-secondary bg-opacity-25 text-white-50">
-                        <tr>
-                            <th class="py-3">ماه</th>
-                            <th class="py-3">درآمد (تومان)</th>
-                            <th class="py-3">مخارج (تومان)</th>
-                            <th class="py-3">سود خالص (تومان)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for stat in monthly_stats %}
-                        <tr class="border-bottom border-secondary">
-                            <td class="fw-bold">{{ stat.name }}</td>
-                            <td class="text-success">{{ "{:,}".format(stat.income) }}</td>
-                            <td class="text-danger">{{ "{:,}".format(stat.expense) }}</td>
-                            <td class="{% if stat.net > 0 %}text-info{% elif stat.net < 0 %}text-warning{% else %}text-white-50{% endif %} fw-bold" dir="ltr">{{ "{:,}".format(stat.net) }}</td>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm rounded-4 h-100">
+            <div class="card-body p-4 text-center">
+                <h6 class="text-muted fw-bold mb-3">موجودی صندوق پس‌انداز</h6>
+                <h3 class="fw-bolder text-info mb-0">{{ "{:,}".format(partners_data.total_partner_paid) }} <small class="fs-6 text-muted">تومان</small></h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm rounded-4 h-100">
+            <div class="card-body p-4 text-center">
+                <h6 class="text-muted fw-bold mb-3">سود قابل تقسیم شرکا</h6>
+                <h3 class="fw-bolder text-warning mb-0">{{ "{:,}".format(partners_data.distributable_profit) }} <small class="fs-6 text-muted">تومان</small></h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Chart -->
+<div class="card shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-alt me-2 text-info"></i>گزارش مالی ماه‌های سال {{ current_year }}</h5>
+        <div class="btn-group">
+            <a href="{{ url_for('accounting', year=current_year - 1) }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-chevron-right"></i> سال قبل</a>
+            <a href="{{ url_for('accounting', year=current_year + 1) }}" class="btn btn-outline-secondary btn-sm">سال بعد <i class="fas fa-chevron-left"></i></a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle text-center mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="py-3">ماه</th>
+                        <th class="py-3">درآمد (تومان)</th>
+                        <th class="py-3">مخارج (تومان)</th>
+                        <th class="py-3">سود خالص (تومان)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in monthly_stats %}
+                    <tr class="border-bottom">
+                        <td class="fw-bold">{{ stat.name }}</td>
+                        <td class="text-success">{{ "{:,}".format(stat.income) }}</td>
+                        <td class="text-danger">{{ "{:,}".format(stat.expense) }}</td>
+                        <td class="{% if stat.net > 0 %}text-info{% elif stat.net < 0 %}text-warning{% else %}text-muted{% endif %} fw-bold" dir="ltr">{{ "{:,}".format(stat.net) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Partners Share -->
+<div class="card shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-transparent py-3">
+        <h5 class="mb-0 fw-bold"><i class="fas fa-handshake me-2 text-warning"></i>تقسیم سود شرکا</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-center">
+                <thead class="table-light">
+                    <tr>
+                        <th class="py-3 text-start ps-4">شریک</th>
+                        <th class="py-3">درصد سود</th>
+                        <th class="py-3">سهم از سود خالص</th>
+                        <th class="py-3">واریزی به صندوق</th>
+                        <th class="py-3">مانده طلب</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if partners_data.partners %}
+                        {% for p in partners_data.partners %}
+                        <tr class="border-bottom">
+                            <td class="text-start ps-4 fw-bold">
+                                <i class="fas fa-user-tie text-muted me-2"></i> {{ p.name }}
+                            </td>
+                            <td><span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">{{ p.percent }}%</span></td>
+                            <td class="text-success">{{ "{:,}".format(p.share_amount|int) }} تومان</td>
+                            <td class="text-info">{{ "{:,}".format(p.paid_amount|int) }} تومان</td>
+                            <td class="text-warning fw-bold">{{ "{:,}".format(p.remaining_amount|int) }} تومان</td>
                         </tr>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="py-4 text-muted">هیچ شریک مالی ثبت نشده است. برای ثبت شریک، از بخش کارت‌های بانکی حساب "صندوق پس‌انداز (شریک)" اضافه کنید.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
         </div>
     </div>
+</div>
 
-    <!-- Partners Share -->
-    <div class="card bg-dark text-white border-secondary mb-4 rounded-4 shadow-sm">
-        <div class="card-header border-secondary bg-transparent py-3">
-            <h5 class="mb-0 fw-bold"><i class="fas fa-handshake me-2 text-warning"></i>تقسیم سود شرکا</h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-dark table-hover table-borderless align-middle mb-0 text-center">
-                    <thead class="bg-secondary bg-opacity-25 text-white-50">
-                        <tr>
-                            <th class="py-3 text-start ps-4">شریک</th>
-                            <th class="py-3">درصد سود</th>
-                            <th class="py-3">سهم از سود خالص</th>
-                            <th class="py-3">واریزی به صندوق</th>
-                            <th class="py-3">مانده طلب</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if partners_data.partners %}
-                            {% for p in partners_data.partners %}
-                            <tr class="border-bottom border-secondary">
-                                <td class="text-start ps-4 fw-bold">
-                                    <i class="fas fa-user-tie text-muted me-2"></i> {{ p.name }}
-                                </td>
-                                <td><span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">{{ p.percent }}%</span></td>
-                                <td class="text-success">{{ "{:,}".format(p.share_amount|int) }} تومان</td>
-                                <td class="text-info">{{ "{:,}".format(p.paid_amount|int) }} تومان</td>
-                                <td class="text-warning fw-bold">{{ "{:,}".format(p.remaining_amount|int) }} تومان</td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="5" class="py-4 text-white-50">هیچ شریک مالی ثبت نشده است. برای ثبت شریک، از بخش کارت‌های بانکی حساب "صندوق پس‌انداز (شریک)" اضافه کنید.</td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+<!-- Manual Records List -->
+<div class="card shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0 fw-bold"><i class="fas fa-list me-2 text-warning"></i>تاریخچه اسناد مالی و برداشت‌ها ({{ records|length }} مورد اخیر)</h5>
+        <small class="text-muted">تراکنش‌های متصل به حساب، همزمان مانده و ریز گردش کارت بانکی را به‌روزرسانی می‌کنند</small>
     </div>
-    
-    <!-- Manual Records List -->
-    <div class="card bg-dark text-white border-secondary rounded-4 shadow-sm">
-        <div class="card-header border-secondary bg-transparent py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h5 class="mb-0 fw-bold"><i class="fas fa-list me-2 text-warning"></i>تاریخچه اسناد مالی و برداشت‌ها ({{ records|length }} مورد اخیر)</h5>
-            <small class="text-white-50">تراکنش‌های متصل به حساب، همزمان مانده و ریز گردش کارت بانکی را به‌روزرسانی می‌کنند</small>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-dark table-hover table-striped align-middle mb-0 text-center">
-                    <thead class="bg-secondary bg-opacity-25 text-white-50">
-                        <tr>
-                            <th class="py-3">نوع سند</th>
-                            <th class="py-3">عنوان</th>
-                            <th class="py-3">دسته‌بندی</th>
-                            <th class="py-3">مبلغ (تومان)</th>
-                            <th class="py-3">حساب / کارت بانکی</th>
-                            <th class="py-3">تاریخ سند</th>
-                            <th class="py-3">عملیات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for rec in records %}
-                        <tr class="border-bottom border-secondary">
-                            <td>
-                                {% if rec.type == 'income' %}
-                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="fas fa-arrow-down me-1"></i>درآمد</span>
-                                {% elif rec.type == 'withdrawal' %}
-                                <span class="badge bg-warning text-dark fw-bold px-2 py-1"><i class="fas fa-hand-holding-dollar me-1"></i>برداشت / حقوق</span>
-                                {% else %}
-                                <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1"><i class="fas fa-arrow-up me-1"></i>هزینه</span>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle mb-0 text-center">
+                <thead class="table-light">
+                    <tr>
+                        <th class="py-3">نوع سند</th>
+                        <th class="py-3">عنوان</th>
+                        <th class="py-3">دسته‌بندی</th>
+                        <th class="py-3">مبلغ (تومان)</th>
+                        <th class="py-3">حساب / کارت بانکی</th>
+                        <th class="py-3">تاریخ سند</th>
+                        <th class="py-3">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in records %}
+                    <tr class="border-bottom">
+                        <td>
+                            {% if rec.type == 'income' %}
+                            <span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="fas fa-arrow-down me-1"></i>درآمد</span>
+                            {% elif rec.type == 'withdrawal' %}
+                            <span class="badge bg-warning text-dark fw-bold px-2 py-1"><i class="fas fa-hand-holding-dollar me-1"></i>برداشت / حقوق</span>
+                            {% else %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1"><i class="fas fa-arrow-up me-1"></i>هزینه</span>
+                            {% endif %}
+                        </td>
+                        <td class="fw-bold">{{ rec.title }}</td>
+                        <td><span class="badge bg-secondary">{{ rec.category }}</span></td>
+                        <td class="font-monospace fw-bold {% if rec.type == 'income' %}text-success{% elif rec.type == 'withdrawal' %}text-warning{% else %}text-danger{% endif %}" dir="ltr">
+                            {% if rec.type == 'income' %}+{% else %}-{% endif %}{{ "{:,}".format(rec.amount) }} <small class="text-muted">تومان</small>
+                        </td>
+                        <td>
+                            {% if rec.bank_name %}
+                            <div class="d-flex flex-column align-items-center justify-content-center">
+                                <span class="text-primary fw-semibold"><i class="fas fa-credit-card me-1"></i>{{ rec.bank_name }}</span>
+                                {% if rec.card_holder %}
+                                <small class="text-muted">{{ rec.card_holder }}</small>
                                 {% endif %}
-                            </td>
-                            <td class="fw-bold">{{ rec.title }}</td>
-                            <td><span class="badge bg-secondary">{{ rec.category }}</span></td>
-                            <td class="font-monospace fw-bold {% if rec.type == 'income' %}text-success{% elif rec.type == 'withdrawal' %}text-warning{% else %}text-danger{% endif %}" dir="ltr">
-                                {% if rec.type == 'income' %}+{% else %}-{% endif %}{{ "{:,}".format(rec.amount) }} <small class="text-white-50">تومان</small>
-                            </td>
-                            <td>
-                                {% if rec.bank_name %}
-                                <div class="d-flex flex-column align-items-center justify-content-center">
-                                    <span class="text-info fw-semibold"><i class="fas fa-credit-card me-1"></i>{{ rec.bank_name }}</span>
-                                    {% if rec.card_holder %}
-                                    <small class="text-white-50">{{ rec.card_holder }}</small>
-                                    {% endif %}
-                                    {% if rec.card_number %}
-                                    <span class="font-monospace text-secondary small" dir="ltr" style="font-size: 0.72rem;">{{ rec.card_number }}</span>
-                                    {% endif %}
-                                </div>
-                                {% else %}
-                                <span class="badge bg-dark text-white-50 border border-secondary">ثبت دفتری</span>
+                                {% if rec.card_number %}
+                                <span class="font-monospace text-secondary small" dir="ltr" style="font-size: 0.72rem;">{{ rec.card_number }}</span>
                                 {% endif %}
-                            </td>
-                            <td dir="rtl">
-                                <div class="fw-bold text-light">{{ rec.date | shamsi_date }}</div>
-                                <small class="text-white-50 font-monospace" dir="ltr" style="font-size: 0.72rem;">{{ rec.date }}</small>
-                            </td>
-                            <td>
-                                <a href="{{ url_for('accounting_delete_record', record_id=rec.id) }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('آیا از حذف این رکورد اطمینان دارید؟ در صورت اتصال به کارت بانکی، مانده حساب به حالت قبل بازمی‌گردد.');" title="حذف سند و بازگرداندن مانده حساب"><i class="fas fa-trash"></i></a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="7" class="py-4 text-white-50">هنوز هیچ سند مالی یا برداشتی ثبت نشده است.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                            </div>
+                            {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary border">ثبت دفتری</span>
+                            {% endif %}
+                        </td>
+                        <td dir="rtl">
+                            <div class="fw-bold">{{ rec.date | shamsi_date }}</div>
+                            <small class="text-muted font-monospace" dir="ltr" style="font-size: 0.72rem;">{{ rec.date }}</small>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('accounting_delete_record', record_id=rec.id) }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('آیا از حذف این رکورد اطمینان دارید؟ در صورت اتصال به کارت بانکی، مانده حساب به حالت قبل بازمی‌گردد.');" title="حذف سند و بازگرداندن مانده حساب"><i class="fas fa-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="py-4 text-muted">هنوز هیچ سند مالی یا برداشتی ثبت نشده است.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -198,23 +201,23 @@
 <!-- Add Record Modal -->
 <div class="modal fade" id="addRecordModal" tabindex="-1" dir="rtl">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" action="{{ url_for('accounting_add_record') }}" class="modal-content bg-dark text-white border-secondary">
-            <div class="modal-header border-secondary">
+        <form method="POST" action="{{ url_for('accounting_add_record') }}" class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title fw-bold"><i class="fas fa-plus-circle me-2 text-warning"></i>ثبت سند مالی (برداشت / حقوق / هزینه / درآمد)</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label text-white-50">نوع سند <span class="text-danger">*</span></label>
-                    <select name="type" id="accountingTypeSelect" class="form-select bg-dark text-white border-secondary" required onchange="handleAccountingTypeChange()">
+                    <label class="form-label">نوع سند <span class="text-danger">*</span></label>
+                    <select name="type" id="accountingTypeSelect" class="form-select" required onchange="handleAccountingTypeChange()">
                         <option value="withdrawal" selected>برداشت / حقوق و علی‌الحساب (کسر از حساب)</option>
                         <option value="expense">هزینه / مخارج جاری و سرور (کسر از حساب)</option>
                         <option value="income">درآمد / آورده نقدی یا واریز (افزایش موجودی حساب)</option>
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label id="cardLabel" class="form-label text-white-50">حساب / کارت بانکی مبدأ پرداخت</label>
-                    <select name="card_id" id="accountingCardSelect" class="form-select bg-dark text-white border-secondary">
+                    <label id="cardLabel" class="form-label">حساب / کارت بانکی مبدأ پرداخت</label>
+                    <select name="card_id" id="accountingCardSelect" class="form-select">
                         <option value="">-- ثبت دفتری (بدون اثر بر موجودی کارت‌های بانکی) --</option>
                         {% for a in accounts %}
                         <option value="{{ a.id }}" {% if default_account and a.id == default_account.id %}selected{% endif %}>
@@ -222,35 +225,35 @@
                         </option>
                         {% endfor %}
                     </select>
-                    <div id="cardHelp" class="form-text text-white-50 small mt-1">
+                    <div id="cardHelp" class="form-text small mt-1">
                         با انتخاب حساب، مبلغ مستقیماً از مانده کسر شده و گردش حساب ثبت می‌گردد.
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label text-white-50">عنوان سند <span class="text-danger">*</span></label>
-                    <input type="text" name="title" id="accountingTitleInput" class="form-control bg-dark text-white border-secondary" placeholder="مثال: علی‌الحساب حقوق اسفند" required>
+                    <label class="form-label">عنوان سند <span class="text-danger">*</span></label>
+                    <input type="text" name="title" id="accountingTitleInput" class="form-control" placeholder="مثال: علی‌الحساب حقوق اسفند" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label text-white-50">دسته‌بندی <span class="text-danger">*</span></label>
-                    <select name="category" id="accountingCategorySelect" class="form-select bg-dark text-white border-secondary" required>
+                    <label class="form-label">دسته‌بندی <span class="text-danger">*</span></label>
+                    <select name="category" id="accountingCategorySelect" class="form-select" required>
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label text-white-50">مبلغ (تومان) <span class="text-danger">*</span></label>
-                    <input type="text" name="amount" id="accountingAmountInput" class="form-control bg-dark text-white border-secondary font-monospace" placeholder="مثال: 5,000,000" required oninput="formatTomanInput(this, 'accAmountPreview')">
+                    <label class="form-label">مبلغ (تومان) <span class="text-danger">*</span></label>
+                    <input type="text" name="amount" id="accountingAmountInput" class="form-control font-monospace" placeholder="مثال: 5,000,000" required oninput="formatTomanInput(this, 'accAmountPreview')">
                     <div id="accAmountPreview" class="text-warning small mt-1 fw-bold"></div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label text-white-50">تاریخ سند (شمسی و میلادی):</label>
-                    <input type="text" name="date" class="form-control bg-dark text-white border-secondary font-monospace" data-dual-picker="date" placeholder="انتخاب تاریخ سند...">
-                    <small class="text-white-50 d-block mt-1" style="font-size: 0.75rem;">در صورت خالی بودن، تاریخ امروز ثبت می‌شود.</small>
+                    <label class="form-label">تاریخ سند (شمسی و میلادی):</label>
+                    <input type="text" name="date" class="form-control font-monospace" data-dual-picker="date" placeholder="انتخاب تاریخ سند...">
+                    <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">در صورت خالی بودن، تاریخ امروز ثبت می‌شود.</small>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label text-white-50">توضیحات تکمیلی</label>
-                    <textarea name="description" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="توضیحات، شماره پیگیری، نام شخص یا بابت..."></textarea>
+                    <label class="form-label">توضیحات تکمیلی</label>
+                    <textarea name="description" class="form-control" rows="2" placeholder="توضیحات، شماره پیگیری، نام شخص یا بابت..."></textarea>
                 </div>
             </div>
-            <div class="modal-footer border-secondary">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
                 <button type="submit" class="btn btn-warning fw-bold px-4">ثبت سند</button>
             </div>
